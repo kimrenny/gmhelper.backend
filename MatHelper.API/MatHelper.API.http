@@ -1,0 +1,13 @@
+
+POST https://localhost:7057/api/user/register HTTP/1.1
+Content-Type: application/json
+
+{
+  "userName": "kimrenny",
+  "email": "user@example.com",
+  "password": "SecurePassword123",
+  "captchaToken": "03AFcWeA4y1wq4eJNbTne7BkQrBIlGFGSzytypX-SGE8zKpkEJ…HpKb1FVCIZOdJBeujBOjWqXn-Uh6vcTZOPAzdZrd1ThXu7h8Q"
+}
+
+
+###
