@@ -26,18 +26,23 @@ namespace MatHelper.BLL.Services
 
         public async Task<bool> RegisterUserAsync(UserDto userDto)
         {
-            var existingUser = await _userRepository.GetUserByEmailAsync(userDto.Email);
-            if (existingUser != null) return false;
+            var existingUserByEmail = await _userRepository.GetUserByEmailAsync(userDto.Email);
+            if (existingUserByEmail != null) throw new InvalidOperationException("Email is already used by another user.");
+
+            var existingUserByUsername = await _userRepository.GetUserByUsernameAsync(userDto.UserName);
+            if (existingUserByUsername != null) throw new InvalidOperationException("Username is already used by another user.");
 
             var salt = GenerateSalt();
             var hashedPassword = HashPassword(userDto.Password, salt);
+
             var user = new User
             {
+                Id = Guid.NewGuid(),
                 Username = userDto.UserName,
                 Email = userDto.Email,
                 PasswordHash = hashedPassword,
                 PasswordSalt = salt,
-                Avatar = [],
+                Avatar = null,
                 Role = "User",
             };
 
@@ -48,7 +53,14 @@ namespace MatHelper.BLL.Services
         public async Task<string> LoginUserAsync(LoginDto loginDto)
         {
             var user = await _userRepository.GetUserByEmailAsync(loginDto.Email);
-            if (user == null || !VerifyPassword(loginDto.Password, user.PasswordHash, user.PasswordSalt)) throw new Exception("Invalid credentials.");
+            if (user == null)
+            {
+                throw new InvalidOperationException("User not found.");
+            }
+
+            if(!VerifyPassword(loginDto.Password, user.PasswordHash, user.PasswordSalt)){
+                throw new UnauthorizedAccessException("Invalid password.");
+            }
 
             var accessToken = GenerateJwtToken(user, loginDto.DeviceInfo);
             var refreshToken = GenerateRefreshToken();
@@ -60,8 +72,10 @@ namespace MatHelper.BLL.Services
                 Expiration = DateTime.UtcNow.AddMinutes(15),
                 RefreshTokenExpiration = DateTime.UtcNow.AddDays(7),
                 UserId = user.Id,
-                DeviceInfo = loginDto.DeviceInfo
+                DeviceInfo = loginDto.DeviceInfo,
+                IsActive = true
             };
+
             user.LoginTokens.Add(loginToken);
             await _userRepository.SaveChangesAsync();
 
@@ -116,41 +130,55 @@ namespace MatHelper.BLL.Services
 
         private string HashPassword(string password, string salt)
         {
-            using var sha256 = SHA256.Create();
-            var combined = password + salt;
-            return Convert.ToBase64String(sha256.ComputeHash(Encoding.UTF8.GetBytes(combined)));
+            if (string.IsNullOrWhiteSpace(password)) throw new ArgumentException("Password is required.");
+            if (string.IsNullOrWhiteSpace(salt)) throw new ArgumentException("Salt is required.");
+
+            using (var hmac = new HMACSHA256(Encoding.UTF8.GetBytes(salt)))
+            {
+                var passwordBytes = Encoding.UTF8.GetBytes(password);
+                var hashBytes = hmac.ComputeHash(passwordBytes);
+                var hashString = Convert.ToBase64String(hashBytes);
+                return hashString;
+            };
         }
 
         private bool VerifyPassword(string password, string hash, string salt)
         {
-            return HashPassword(password, salt) == hash;
+            var hashedPassword = HashPassword(password, salt);
+
+            return hashedPassword == hash;
         }
 
         private string GenerateSalt()
         {
-            return Guid.NewGuid().ToString("N");
+            using (var rng = new RNGCryptoServiceProvider())
+            {
+                byte[] saltBytes = new byte[32];
+                rng.GetBytes(saltBytes);
+                return Convert.ToBase64String(saltBytes);
+            }
         }
 
         public async Task SaveUserAvatarAsync(string userId, byte[] avatarBytes) {
-            var user = await _userRepository.GetUserByIdAsync(int.Parse(userId));
+            var user = await _userRepository.GetUserByIdAsync(Guid.Parse(userId));
             if (user == null) throw new Exception("User not found.");
 
             user.Avatar = avatarBytes;
             await _userRepository.SaveChangesAsync();
         }
 
-        public async Task<byte[]> GetUserAvatarAsync(string userId)
+        public async Task<byte[]> GetUserAvatarAsync(Guid userId)
         {
-            var user = await _userRepository.GetUserByIdAsync(int.Parse(userId));
+            var user = await _userRepository.GetUserByIdAsync(userId);
             if (user == null)
                 throw new Exception("User not found.");
 
             return user.Avatar;
         }
 
-        public async Task<User> GetUserDetailsAsync(string userId)
+        public async Task<User> GetUserDetailsAsync(Guid userId)
         {
-            var user = await _userRepository.GetUserByIdAsync(int.Parse(userId));
+            var user = await _userRepository.GetUserByIdAsync(userId);
             if (user == null) throw new Exception("User not found.");
 
             return user;

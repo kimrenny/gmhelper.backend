@@ -9,8 +9,8 @@ namespace MatHelper.BLL.Interfaces
         Task<string> LoginUserAsync(LoginDto loginDto);
         Task<bool> RecoverPasswordAsync(PasswordRecoveryDto recoveryDto);
         Task SaveUserAvatarAsync(string userId, byte[] avatarBytes);
-        Task<byte[]> GetUserAvatarAsync(string userId);
-        Task<User> GetUserDetailsAsync(string userId);
+        Task<byte[]> GetUserAvatarAsync(Guid userId);
+        Task<User> GetUserDetailsAsync(Guid userId);
         Task<string> RefreshAccessTokenAsync(string refreshToken);
     }
 }

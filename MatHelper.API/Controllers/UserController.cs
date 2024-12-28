@@ -34,14 +34,27 @@ namespace MatHelper.API.Controllers
                 return BadRequest("Invalid CAPTCHA token.");
             }
 
-            if (!await _userService.RegisterUserAsync(userDto))
+            try
             {
-                _logger.LogInformation("Register failed for user: {Email}", userDto.Email);
-                return BadRequest("User with this email already exists.");
+                var result = await _userService.RegisterUserAsync(userDto);
+                if (result)
+                {
+                    _logger.LogInformation("Register successful for user: {Email}", userDto.Email);
+                    return Ok();
+                }
+            }
+            catch(InvalidOperationException ex)
+            {
+                _logger.LogWarning("Register failed for user: {Email} due to error: {Error}", userDto.Email, ex.Message);
+                return BadRequest(ex.Message);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError("Register failed for user: {Email} due to error: {Error}", userDto.Email, ex.Message);
+                return BadRequest(ex.Message);
             }
 
-            _logger.LogInformation("Register successful for user: {Email}", userDto.Email);
-            return Ok();
+            return BadRequest("Unknown error occured during registration.");
         }
 
         [HttpPost("login")]
@@ -60,17 +73,22 @@ namespace MatHelper.API.Controllers
                 var token = await _userService.LoginUserAsync(loginDto);
                 if (token == null)
                 {
-                    _logger.LogWarning("Login failed for user: {Email}", loginDto.Email);
+                    _logger.LogWarning($"Login failed for user: {loginDto.Email}.");
                     return Unauthorized("Invalid credentials.");
                 }
 
                 _logger.LogInformation("Login successful for user: {Email}", loginDto.Email);
                 return Ok(new { Token = token });
             }
+            catch(UnauthorizedAccessException ex)
+            {
+                _logger.LogError($"Login failed for user: {loginDto.Email}. Reason: {ex.Message}");
+                return Unauthorized(new { Message = ex.Message });
+            }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error during login for user: {Email}", loginDto.Email);
-                return StatusCode(500, "Internal server error.");
+                return StatusCode(500, "An unexpected error occured.");
             }
         }
 
@@ -120,8 +138,8 @@ namespace MatHelper.API.Controllers
         [HttpGet("avatar")]
         public async Task<IActionResult> GetAvatar()
         {
-            var userId = User.FindFirst(ClaimTypes.Name)?.Value;
-            if (string.IsNullOrEmpty(userId))
+            var userIdString = User.FindFirst(ClaimTypes.Name)?.Value;
+            if (string.IsNullOrEmpty(userIdString) || !Guid.TryParse(userIdString, out var userId))
             {
                 return Unauthorized("Invalid token.");
             }
@@ -140,8 +158,8 @@ namespace MatHelper.API.Controllers
         {
             try
             {
-                var userId = User.FindFirst(ClaimTypes.Name)?.Value;
-                if (string.IsNullOrEmpty(userId))
+                var userIdString = User.FindFirst(ClaimTypes.Name)?.Value;
+                if (string.IsNullOrEmpty(userIdString) || !Guid.TryParse(userIdString, out var userId))
                 {
                     return Unauthorized("Invalid token.");
                 }

@@ -33,12 +33,22 @@ namespace MatHelper.DAL.Migrations
                     b.Property<DateTime>("Expiration")
                         .HasColumnType("datetime2");
 
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("RefreshToken")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime>("RefreshTokenExpiration")
+                        .HasColumnType("datetime2");
+
                     b.Property<string>("Token")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<int>("UserId")
-                        .HasColumnType("int");
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uniqueidentifier");
 
                     b.HasKey("Id");
 
@@ -49,11 +59,12 @@ namespace MatHelper.DAL.Migrations
 
             modelBuilder.Entity("MatHelper.CORE.Models.User", b =>
                 {
-                    b.Property<int>("Id")
+                    b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
+                        .HasColumnType("uniqueidentifier");
 
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+                    b.Property<byte[]>("Avatar")
+                        .HasColumnType("varbinary(max)");
 
                     b.Property<string>("Email")
                         .IsRequired()
@@ -64,7 +75,9 @@ namespace MatHelper.DAL.Migrations
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("PasswordSalt")
-                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Role")
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("Username")
@@ -85,6 +98,30 @@ namespace MatHelper.DAL.Migrations
                         .WithMany("LoginTokens")
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.OwnsOne("MatHelper.CORE.Models.DeviceInfo", "DeviceInfo", b1 =>
+                        {
+                            b1.Property<int>("LoginTokenId")
+                                .HasColumnType("int");
+
+                            b1.Property<string>("Platform")
+                                .IsRequired()
+                                .HasColumnType("nvarchar(max)");
+
+                            b1.Property<string>("UserAgent")
+                                .IsRequired()
+                                .HasColumnType("nvarchar(max)");
+
+                            b1.HasKey("LoginTokenId");
+
+                            b1.ToTable("LoginTokens");
+
+                            b1.WithOwner()
+                                .HasForeignKey("LoginTokenId");
+                        });
+
+                    b.Navigation("DeviceInfo")
                         .IsRequired();
 
                     b.Navigation("User");

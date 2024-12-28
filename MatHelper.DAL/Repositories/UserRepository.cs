@@ -21,17 +21,22 @@ namespace MatHelper.DAL.Repositories
             await _context.SaveChangesAsync();
         }
 
-        public async Task<User> GetUserByEmailAsync(string email)
+        public async Task<User?> GetUserByEmailAsync(string email)
         {
             return await _context.Users.Include(u => u.LoginTokens).FirstOrDefaultAsync(u => u.Email == email);
         }
 
-        public async Task<User> GetUserByIdAsync(int id)
+        public async Task<User?> GetUserByUsernameAsync(string username)
+        {
+            return await _context.Users.Include(u => u.LoginTokens).FirstOrDefaultAsync(u => u.Username == username);
+        }
+
+        public async Task<User?> GetUserByIdAsync(Guid id)
         {
             return await _context.Users.Include(u => u.LoginTokens).FirstOrDefaultAsync(u => u.Id == id);
         }
 
-        public async Task<LoginToken> GetLoginTokenByRefreshTokenAsync(string refreshToken)
+        public async Task<LoginToken?> GetLoginTokenByRefreshTokenAsync(string refreshToken)
         {
             var query = _context.LoginTokens.Where(t => t.RefreshToken == refreshToken);
             return await query.FirstOrDefaultAsync();
@@ -39,7 +44,23 @@ namespace MatHelper.DAL.Repositories
 
         public async Task SaveChangesAsync()
         {
-            await _context.SaveChangesAsync();
+            try
+            {
+                await _context.SaveChangesAsync();
+            }
+            catch(DbUpdateConcurrencyException ex)
+            {
+                foreach(var entry in ex.Entries)
+                {
+                    if(entry.Entity is User)
+                    {
+                        var proposedValues = entry.CurrentValues;
+                        var databaseValues = entry.GetDatabaseValues();
+                    }
+                }
+
+                throw new Exception("Concurrent exception due updating the data");
+            }
         }
     }
 }
