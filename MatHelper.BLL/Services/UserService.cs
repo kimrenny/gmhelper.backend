@@ -62,6 +62,24 @@ namespace MatHelper.BLL.Services
                 throw new UnauthorizedAccessException("Invalid password.");
             }
 
+            var existingToken = user.LoginTokens.Where(t => t.DeviceInfo.UserAgent == loginDto.DeviceInfo.UserAgent && t.DeviceInfo.Platform == loginDto.DeviceInfo.Platform && t.IsActive && t.Expiration > DateTime.UtcNow).OrderByDescending(t => t.Expiration).FirstOrDefault();
+            
+            if(existingToken != null)
+            {
+                if(existingToken.Expiration > DateTime.UtcNow)
+                {
+                    return existingToken.Token;
+                }
+
+                existingToken.Token = GenerateJwtToken(user, loginDto.DeviceInfo);
+                existingToken.Expiration = DateTime.UtcNow.AddMinutes(15);
+                existingToken.RefreshToken = GenerateRefreshToken();
+                existingToken.RefreshTokenExpiration = DateTime.UtcNow.AddDays(7);
+                await _userRepository.SaveChangesAsync();
+
+                return existingToken.Token;
+            }
+
             var accessToken = GenerateJwtToken(user, loginDto.DeviceInfo);
             var refreshToken = GenerateRefreshToken();
 
