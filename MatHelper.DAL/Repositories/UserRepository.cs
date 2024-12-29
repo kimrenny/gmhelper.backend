@@ -23,23 +23,53 @@ namespace MatHelper.DAL.Repositories
 
         public async Task<User?> GetUserByEmailAsync(string email)
         {
-            return await _context.Users.Include(u => u.LoginTokens).FirstOrDefaultAsync(u => u.Email == email);
+            var user = await _context.Users.Include(u => u.LoginTokens).FirstOrDefaultAsync(u => u.Email == email);
+            if (user != null && user.IsBlocked)
+            {
+                throw new InvalidOperationException("User is blocked.");
+            }
+            return user;
         }
 
         public async Task<User?> GetUserByUsernameAsync(string username)
         {
-            return await _context.Users.Include(u => u.LoginTokens).FirstOrDefaultAsync(u => u.Username == username);
+            var user = await _context.Users.Include(u => u.LoginTokens).FirstOrDefaultAsync(u => u.Username == username);
+            if (user != null && user.IsBlocked)
+            {
+                throw new InvalidOperationException("User is blocked.");
+            }
+            return user;
         }
 
         public async Task<User?> GetUserByIdAsync(Guid id)
         {
-            return await _context.Users.Include(u => u.LoginTokens).FirstOrDefaultAsync(u => u.Id == id);
+            var user = await _context.Users.Include(u => u.LoginTokens).FirstOrDefaultAsync(u => u.Id == id);
+            if (user != null && user.IsBlocked)
+            {
+                throw new InvalidOperationException("User is blocked.");
+            }
+            return user;
+        }
+
+        public async Task<List<User>> GetUsersByIpAsync(string ipAddress)
+        {
+            return await _context.Users.Where(u => u.LoginTokens.Any(t => t.IpAddress == ipAddress)).ToListAsync();
+        }
+
+        public async Task<int> GetUserCountByIpAsync(string ipAddress)
+        {
+            return await _context.LoginTokens.Where(t => t.IpAddress == ipAddress).Select(t => t.UserId).Distinct().CountAsync();
         }
 
         public async Task<LoginToken?> GetLoginTokenByRefreshTokenAsync(string refreshToken)
         {
             var query = _context.LoginTokens.Where(t => t.RefreshToken == refreshToken);
             return await query.FirstOrDefaultAsync();
+        }
+
+        public async Task<List<LoginToken>> GetAllLoginTokensAsync()
+        {
+            return await _context.LoginTokens.Include(t => t.User).ToListAsync();
         }
 
         public async Task SaveChangesAsync()

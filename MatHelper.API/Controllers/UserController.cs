@@ -26,6 +26,12 @@ namespace MatHelper.API.Controllers
         [HttpPost("register")]
         public async Task<IActionResult> Register([FromBody] UserDto userDto)
         {
+            if(userDto == null)
+            {
+                _logger.LogError("Received null userDto.");
+                return BadRequest("Invalid data.");
+            }
+
             _logger.LogInformation("Register attempt for user: {Email}", userDto.Email);
 
             if (!await _captchaValidationService.ValidateCaptchaAsync(userDto.CaptchaToken))
@@ -45,6 +51,12 @@ namespace MatHelper.API.Controllers
             }
             catch(InvalidOperationException ex)
             {
+                if(ex.Message == "Violation of service rules. All user accounts have been blocked.")
+                {
+                    _logger.LogWarning("Register failed for user: {Email} due to violation of service rules.", userDto.Email);
+                    return BadRequest("Violation of service rules. All user accounts have been blocked.");
+                }
+
                 _logger.LogWarning("Register failed for user: {Email} due to error: {Error}", userDto.Email, ex.Message);
                 return BadRequest(ex.Message);
             }

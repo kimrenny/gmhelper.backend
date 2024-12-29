@@ -13,5 +13,6 @@ namespace MatHelper.CORE.Models
         public User User { get; set; }
         public DeviceInfo DeviceInfo { get; set; }
         public bool IsActive { get; set; }
+        public string IpAddress { get; set; }
     }
 }

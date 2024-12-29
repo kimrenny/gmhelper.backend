@@ -10,8 +10,9 @@ namespace MatHelper.CORE.Models
         public string Email { get; set; }
         public string PasswordHash { get; set; }
         public string? PasswordSalt { get; set; }
-        public string? Role { get; set; }
         public byte[]? Avatar { get; set; }
-        public ICollection<LoginToken>? LoginTokens { get; set; }
+        public string? Role { get; set; }
+        public List<LoginToken>? LoginTokens { get; set; }
+        public bool IsBlocked { get; set; }
     }
 }

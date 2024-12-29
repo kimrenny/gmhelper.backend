@@ -20,8 +20,9 @@ namespace MatHelper.DAL.Migrations
                     Email = table.Column<string>(type: "nvarchar(450)", nullable: false),
                     PasswordHash = table.Column<string>(type: "nvarchar(max)", nullable: false),
                     PasswordSalt = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    Avatar = table.Column<byte[]>(type: "varbinary(max)", nullable: true),
                     Role = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    Avatar = table.Column<byte[]>(type: "varbinary(max)", nullable: true)
+                    IsBlocked = table.Column<bool>(type: "bit", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -41,7 +42,8 @@ namespace MatHelper.DAL.Migrations
                     UserId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
                     DeviceInfo_UserAgent = table.Column<string>(type: "nvarchar(max)", nullable: false),
                     DeviceInfo_Platform = table.Column<string>(type: "nvarchar(max)", nullable: false),
-                    IsActive = table.Column<bool>(type: "bit", nullable: false)
+                    IsActive = table.Column<bool>(type: "bit", nullable: false),
+                    IpAddress = table.Column<string>(type: "nvarchar(max)", nullable: false)
                 },
                 constraints: table =>
                 {

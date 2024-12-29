@@ -12,8 +12,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace MatHelper.DAL.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20241228102739_InitMigration")]
-    partial class InitMigration
+    [Migration("20241229183306_SecurityChanges")]
+    partial class SecurityChanges
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -35,6 +35,10 @@ namespace MatHelper.DAL.Migrations
 
                     b.Property<DateTime>("Expiration")
                         .HasColumnType("datetime2");
+
+                    b.Property<string>("IpAddress")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<bool>("IsActive")
                         .HasColumnType("bit");
@@ -72,6 +76,9 @@ namespace MatHelper.DAL.Migrations
                     b.Property<string>("Email")
                         .IsRequired()
                         .HasColumnType("nvarchar(450)");
+
+                    b.Property<bool>("IsBlocked")
+                        .HasColumnType("bit");
 
                     b.Property<string>("PasswordHash")
                         .IsRequired()
