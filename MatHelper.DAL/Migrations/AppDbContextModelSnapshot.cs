@@ -22,6 +22,35 @@ namespace MatHelper.DAL.Migrations
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
 
+            modelBuilder.Entity("MatHelper.CORE.Models.LoginHistory", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("DeviceInfo")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("IpAddress")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime>("LoginDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("LoginHistories");
+                });
+
             modelBuilder.Entity("MatHelper.CORE.Models.LoginToken", b =>
                 {
                     b.Property<int>("Id")
@@ -99,6 +128,17 @@ namespace MatHelper.DAL.Migrations
                     b.ToTable("Users");
                 });
 
+            modelBuilder.Entity("MatHelper.CORE.Models.LoginHistory", b =>
+                {
+                    b.HasOne("MatHelper.CORE.Models.User", "User")
+                        .WithMany("LoginHistories")
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("User");
+                });
+
             modelBuilder.Entity("MatHelper.CORE.Models.LoginToken", b =>
                 {
                     b.HasOne("MatHelper.CORE.Models.User", "User")
@@ -136,6 +176,8 @@ namespace MatHelper.DAL.Migrations
 
             modelBuilder.Entity("MatHelper.CORE.Models.User", b =>
                 {
+                    b.Navigation("LoginHistories");
+
                     b.Navigation("LoginTokens");
                 });
 #pragma warning restore 612, 618

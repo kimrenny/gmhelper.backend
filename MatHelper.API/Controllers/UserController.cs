@@ -95,7 +95,12 @@ namespace MatHelper.API.Controllers
             catch(UnauthorizedAccessException ex)
             {
                 _logger.LogError($"Login failed for user: {loginDto.Email}. Reason: {ex.Message}");
-                return Unauthorized(new { Message = ex.Message });
+                return Unauthorized("User is banned.");
+            }
+            catch(InvalidOperationException ex)
+            {
+                _logger.LogError($"Login failed for user: {loginDto.Email}. Reason: {ex.Message}");
+                return Unauthorized("User is banned.");
             }
             catch (Exception ex)
             {

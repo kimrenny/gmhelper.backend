@@ -2,11 +2,13 @@ using MatHelper.BLL.Interfaces;
 using MatHelper.CORE.Models;
 using MatHelper.CORE.Options;
 using MatHelper.DAL.Repositories;
+using Microsoft.Extensions.Logging;
 using Microsoft.IdentityModel.Tokens;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Text;
+using System.Threading.Tasks;
 
 namespace MatHelper.BLL.Services
 {
@@ -14,15 +16,24 @@ namespace MatHelper.BLL.Services
     {
         private readonly UserRepository _userRepository;
         private readonly JwtOptions _jwtOptions;
+        private readonly ILogger _logger;
 
-        public UserService(UserRepository userRepository, JwtOptions jwtOptions)
+        public UserService(UserRepository userRepository, JwtOptions jwtOptions, ILogger<UserService> logger)
         {
             _userRepository = userRepository;
             _jwtOptions = jwtOptions;
+            _logger = logger;
         }
 
         public async Task<bool> RegisterUserAsync(UserDto userDto)
         {
+            if (string.IsNullOrWhiteSpace(userDto.Email))
+                throw new ArgumentException("Email cannot be null or empty.");
+            if (string.IsNullOrWhiteSpace(userDto.UserName))
+                throw new ArgumentException("Username cannot be null or empty.");
+            if (string.IsNullOrWhiteSpace(userDto.IpAddress))
+                throw new ArgumentException("IP Address cannot be null or empty.");
+
             var existingUserByEmail = await _userRepository.GetUserByEmailAsync(userDto.Email);
             if (existingUserByEmail != null) throw new InvalidOperationException("Email is already used by another user.");
 
@@ -38,18 +49,28 @@ namespace MatHelper.BLL.Services
                 if (usersToBlock == null || !usersToBlock.Any())
                     throw new InvalidOperationException("No users found with the specified IP address.");
 
-                foreach (var blockedUser in usersToBlock)
+                if(usersToBlock != null && usersToBlock.Count > 0)
                 {
-                    blockedUser.IsBlocked = true;
-
-                    foreach (var token in blockedUser.LoginTokens.Where(t => t.IsActive))
+                    foreach (var blockedUser in usersToBlock)
                     {
-                        token.IsActive = false;
+                        if (blockedUser != null)
+                        {
+                            blockedUser.IsBlocked = true;
+                            IEnumerable<LoginToken> tokens = blockedUser.LoginTokens.Where(t => t.IsActive);
+                            if (tokens.Count() > 0)
+                            {
+                                foreach (var token in tokens)
+                                {
+                                    if (token != null)
+                                        token.IsActive = false;
+                                }
+                            }
+                        }
                     }
                 }
 
                 await _userRepository.SaveChangesAsync();
-                throw new InvalidOperationException("Violation of service rules. All user accounts have been blocked.");
+                throw new UnauthorizedAccessException("Violation of service rules. All user accounts have been blocked.");
             }
 
             var salt = GenerateSalt();
@@ -84,7 +105,7 @@ namespace MatHelper.BLL.Services
 
             if (createdUser != null)
             {
-                createdUser.LoginTokens.Add(loginToken);
+                createdUser!.LoginTokens.Add(loginToken);
                 await _userRepository.SaveChangesAsync();
             }
             else
@@ -171,7 +192,7 @@ namespace MatHelper.BLL.Services
             var claims = new List<Claim>
             {
                 new Claim(ClaimTypes.Name, user.Id.ToString()),
-                new Claim(ClaimTypes.Role, user.Role),
+                new Claim(ClaimTypes.Role, user!.Role),
                 new Claim("Device", deviceInfo.UserAgent),
                 new Claim("Platform", deviceInfo.Platform)
             };
@@ -206,7 +227,14 @@ namespace MatHelper.BLL.Services
                 throw new Exception("Invalid or expired refresh token.");
 
             var user = await _userRepository.GetUserByIdAsync(token.UserId);
-            return GenerateJwtToken(user, token.DeviceInfo);
+            if(user != null)
+            {
+                return GenerateJwtToken(user, token.DeviceInfo);
+            }
+            else
+            {
+                throw new Exception("User not found.");
+            }
         }
 
         private string HashPassword(string password, string salt)
@@ -232,7 +260,7 @@ namespace MatHelper.BLL.Services
 
         private string GenerateSalt()
         {
-            using (var rng = new RNGCryptoServiceProvider())
+            using (var rng = RandomNumberGenerator.Create())
             {
                 byte[] saltBytes = new byte[32];
                 rng.GetBytes(saltBytes);
@@ -253,7 +281,7 @@ namespace MatHelper.BLL.Services
                     if (user != null)
                     {
                         user.IsBlocked = true;
-                        var userTokens = user.LoginTokens.Where(t => t.IsActive).ToList();
+                        var userTokens = user!.LoginTokens.Where(t => t.IsActive).ToList();
                         foreach (var token in userTokens)
                         {
                             token.IsActive = false;
@@ -283,7 +311,7 @@ namespace MatHelper.BLL.Services
             if (user == null)
                 throw new Exception("User not found.");
 
-            return user.Avatar;
+            return user!.Avatar;
         }
 
         public async Task<User> GetUserDetailsAsync(Guid userId)

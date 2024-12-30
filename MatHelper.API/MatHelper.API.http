@@ -19,7 +19,7 @@ POST https://localhost:7057/api/user/login HTTP/1.1
 Content-Type: application/json
 
 {
-  "email": "qa@gmail.com",
+  "email": "tester@gmail.com",
   "password": "1233211@Ab",
   "captchaToken": "03AFcWeA4y1wq4eJNbTne7BkQrBIlGFGSzytypX-SGE8zKpkEJ…HpKb1FVCIZOdJBeujBOjWqXn-Uh6vcTZOPAzdZrd1ThXu7h8Q",
   "deviceInfo": {

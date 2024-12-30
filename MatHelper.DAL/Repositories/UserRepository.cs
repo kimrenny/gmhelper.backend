@@ -23,6 +23,11 @@ namespace MatHelper.DAL.Repositories
 
         public async Task<User?> GetUserByEmailAsync(string email)
         {
+            if (string.IsNullOrWhiteSpace(email))
+            {
+                throw new InvalidDataException("email is null or empty");
+            }
+
             var user = await _context.Users.Include(u => u.LoginTokens).FirstOrDefaultAsync(u => u.Email == email);
             if (user != null && user.IsBlocked)
             {
@@ -33,6 +38,11 @@ namespace MatHelper.DAL.Repositories
 
         public async Task<User?> GetUserByUsernameAsync(string username)
         {
+            if (string.IsNullOrWhiteSpace(username))
+            {
+                throw new InvalidDataException("username is null or empty");
+            }
+
             var user = await _context.Users.Include(u => u.LoginTokens).FirstOrDefaultAsync(u => u.Username == username);
             if (user != null && user.IsBlocked)
             {
@@ -43,6 +53,11 @@ namespace MatHelper.DAL.Repositories
 
         public async Task<User?> GetUserByIdAsync(Guid id)
         {
+            if (string.IsNullOrWhiteSpace(id.ToString()))
+            {
+                throw new InvalidDataException("id is null or empty");
+            }
+
             var user = await _context.Users.Include(u => u.LoginTokens).FirstOrDefaultAsync(u => u.Id == id);
             if (user != null && user.IsBlocked)
             {
@@ -53,11 +68,21 @@ namespace MatHelper.DAL.Repositories
 
         public async Task<List<User>> GetUsersByIpAsync(string ipAddress)
         {
-            return await _context.Users.Where(u => u.LoginTokens.Any(t => t.IpAddress == ipAddress)).ToListAsync();
+            if (string.IsNullOrWhiteSpace(ipAddress))
+            {
+                throw new InvalidDataException("ipAddress is null or empty");
+            }
+
+            return await _context.Users.Include(u => u.LoginTokens).Where(u => u.LoginTokens != null && u.LoginTokens.Any(t => t.IpAddress == ipAddress)).ToListAsync();
         }
 
         public async Task<int> GetUserCountByIpAsync(string ipAddress)
         {
+            if (string.IsNullOrWhiteSpace(ipAddress))
+            {
+                return 0;
+            }
+
             return await _context.LoginTokens.Where(t => t.IpAddress == ipAddress).Select(t => t.UserId).Distinct().CountAsync();
         }
 
