@@ -148,14 +148,7 @@ namespace MatHelper.BLL.Services
                     return existingToken.Token;
                 }
 
-                existingToken.Token = GenerateJwtToken(user, loginDto.DeviceInfo);
-                existingToken.Expiration = DateTime.UtcNow.AddMinutes(15);
-                existingToken.RefreshToken = GenerateRefreshToken();
-                existingToken.RefreshTokenExpiration = DateTime.UtcNow.AddDays(7);
-                existingToken.IpAddress = loginDto.IpAddress;
-                await _userRepository.SaveChangesAsync();
-
-                return existingToken.Token;
+                await _userRepository.RemoveLoginTokenAsync(existingToken);
             }
 
             var accessToken = GenerateJwtToken(user, loginDto.DeviceInfo);
@@ -317,9 +310,28 @@ namespace MatHelper.BLL.Services
         public async Task<User> GetUserDetailsAsync(Guid userId)
         {
             var user = await _userRepository.GetUserByIdAsync(userId);
-            if (user == null) throw new Exception("User not found.");
+            if (user == null) throw new InvalidDataException("User not found.");
 
             return user;
+        }
+
+        public async Task<IEnumerable<object>> GetLoggedDevicesAsync(Guid userId)
+        {
+            var user = await _userRepository.GetUserByIdAsync(userId);
+            if (user == null)
+            {
+                throw new Exception("User not found.");
+            }
+
+            return user.LoginTokens
+                .Where(t => t.IsActive && t.Expiration > DateTime.UtcNow)
+                .Select(t => new 
+                {
+                    Platform = t.DeviceInfo.Platform,
+                    UserAgent = t.DeviceInfo.UserAgent,
+                    IpAddress = t.IpAddress
+                })
+                .ToList();
         }
     }
 }

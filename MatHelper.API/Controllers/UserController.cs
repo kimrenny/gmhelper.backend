@@ -5,6 +5,7 @@ using MatHelper.CORE.Models;
 using System.Threading.Tasks;
 using System.Security.Claims;
 using Microsoft.OpenApi.Validations;
+using Microsoft.AspNetCore.Authorization;
 
 namespace MatHelper.API.Controllers
 {
@@ -193,9 +194,32 @@ namespace MatHelper.API.Controllers
                     avatar = user.Avatar,
                 });
             }
+            catch(InvalidDataException ex)
+            {
+                return Unauthorized("Invalid data.");
+            }
             catch (Exception ex) {
                 return StatusCode(500, ex.Message);
             }
+        }
+
+        [HttpGet("devices")]
+        [Authorize]
+        public async Task<IActionResult> GetLoggedDevices()
+        {
+            var userId = User.FindFirstValue(ClaimTypes.Name);
+            if (string.IsNullOrWhiteSpace(userId))
+            {
+                return Unauthorized("User ID is not available in the token.");
+            }
+
+            var devices = await _userService.GetLoggedDevicesAsync(Guid.Parse(userId));
+            if(devices == null || !devices.Any())
+            {
+                return NotFound("No devices found for this user.");
+            }
+
+            return Ok(devices);
         }
     }
 }
