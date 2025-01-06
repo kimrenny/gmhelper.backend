@@ -324,12 +324,13 @@ namespace MatHelper.BLL.Services
             }
 
             return user.LoginTokens
-                .Where(t => t.IsActive && t.Expiration > DateTime.UtcNow)
-                .Select(t => new 
+                .Where(t => t.IsActive)
+                .Select(t => new
                 {
                     Platform = t.DeviceInfo.Platform,
                     UserAgent = t.DeviceInfo.UserAgent,
-                    IpAddress = t.IpAddress
+                    IpAddress = t.IpAddress,
+                    AuthorizationDate = t.Expiration - TimeSpan.FromMinutes(15)
                 })
                 .ToList();
         }
