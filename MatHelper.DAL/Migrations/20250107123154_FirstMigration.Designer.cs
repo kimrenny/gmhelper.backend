@@ -12,8 +12,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace MatHelper.DAL.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20241229183306_SecurityChanges")]
-    partial class SecurityChanges
+    [Migration("20250107123154_FirstMigration")]
+    partial class FirstMigration
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)

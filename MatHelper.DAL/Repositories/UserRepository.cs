@@ -98,6 +98,11 @@ namespace MatHelper.DAL.Repositories
             await _context.SaveChangesAsync();
         }
 
+        public void RemoveToken(LoginToken token)
+        {
+            _context.LoginTokens.Remove(token);
+        }
+
         public async Task<List<LoginToken>> GetAllLoginTokensAsync()
         {
             return await _context.LoginTokens.Include(t => t.User).ToListAsync();

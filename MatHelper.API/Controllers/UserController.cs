@@ -83,22 +83,22 @@ namespace MatHelper.API.Controllers
 
             try
             {
-                var token = await _userService.LoginUserAsync(loginDto);
-                if (token == null)
+                var (accessToken, refreshToken) = await _userService.LoginUserAsync(loginDto);
+                if (accessToken == null || refreshToken == null)
                 {
                     _logger.LogWarning($"Login failed for user: {loginDto.Email}.");
                     return Unauthorized("Invalid credentials.");
                 }
 
                 _logger.LogInformation("Login successful for user: {Email}", loginDto.Email);
-                return Ok(new { Token = token });
+                return Ok(new { AccessToken = accessToken, RefreshToken = refreshToken });
             }
-            catch(UnauthorizedAccessException ex)
+            catch (InvalidOperationException ex)
             {
                 _logger.LogError($"Login failed for user: {loginDto.Email}. Reason: {ex.Message}");
-                return Unauthorized("User is banned.");
+                return Unauthorized("User not found.");
             }
-            catch(InvalidOperationException ex)
+            catch (UnauthorizedAccessException ex)
             {
                 _logger.LogError($"Login failed for user: {loginDto.Email}. Reason: {ex.Message}");
                 return Unauthorized("User is banned.");
@@ -126,15 +126,28 @@ namespace MatHelper.API.Controllers
         }
 
         [HttpPost("refresh-token")]
-        public async Task<IActionResult> RefreshToken([FromBody] string refreshToken)
+        public async Task<IActionResult> RefreshToken([FromBody] RefreshTokenRequest request)
         {
+            if (string.IsNullOrEmpty(request.RefreshToken))
+            {
+                _logger.LogWarning("Attempt to refresh token with an empty token.");
+                return BadRequest("Refresh token is required.");
+            }
+
             try
             {
-                var accessToken = await _userService.RefreshAccessTokenAsync(refreshToken);
-                return Ok(new { AccessToken = accessToken });
+                _logger.LogInformation("Attempting to refresh token.");
+                var tokens = await _userService.RefreshAccessTokenAsync(request.RefreshToken);
+                _logger.LogInformation("Token refreshed successfully for refreshToken: {RefreshToken}", request.RefreshToken);
+
+                return Ok(new { 
+                AccessToken = tokens.AccessToken,
+                RefreshToken = tokens.RefreshToken
+                });
             }
             catch (Exception ex)
             {
+                _logger.LogError(ex, "Error during refreshing token for refreshToken: {RefreshToken}", request.RefreshToken);
                 return Unauthorized(ex.Message);
             }
         }

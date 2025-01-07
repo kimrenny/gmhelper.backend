@@ -93,7 +93,7 @@ namespace MatHelper.BLL.Services
             {
                 Token = GenerateJwtToken(user, userDto.DeviceInfo),
                 RefreshToken = GenerateRefreshToken(),
-                Expiration = DateTime.UtcNow.AddMinutes(15),
+                Expiration = DateTime.UtcNow.AddMinutes(30),
                 RefreshTokenExpiration = DateTime.UtcNow.AddDays(7),
                 UserId = user.Id,
                 DeviceInfo = userDto.DeviceInfo,
@@ -121,7 +121,7 @@ namespace MatHelper.BLL.Services
             return true;
         }
 
-        public async Task<string> LoginUserAsync(LoginDto loginDto)
+        public async Task<(string AccessToken, string RefreshToken)> LoginUserAsync(LoginDto loginDto)
         {
             var user = await _userRepository.GetUserByEmailAsync(loginDto.Email);
             if (user == null)
@@ -139,16 +139,28 @@ namespace MatHelper.BLL.Services
                 throw new UnauthorizedAccessException("Invalid password.");
             }
 
-            var existingToken = user.LoginTokens.Where(t => t.DeviceInfo.UserAgent == loginDto.DeviceInfo.UserAgent && t.DeviceInfo.Platform == loginDto.DeviceInfo.Platform && t.IsActive && t.Expiration > DateTime.UtcNow && t.IpAddress == loginDto.IpAddress).OrderByDescending(t => t.Expiration).FirstOrDefault();
-
-            if (existingToken != null)
+           var expiredTokens = user.LoginTokens!.Where(t => t.Expiration <= DateTime.UtcNow).ToList();
+            foreach(var expiredToken in expiredTokens)
             {
-                if (existingToken.Expiration > DateTime.UtcNow)
-                {
-                    return existingToken.Token;
-                }
+                user.LoginTokens.Remove(expiredToken);
+            }
 
-                await _userRepository.RemoveLoginTokenAsync(existingToken);
+            var activeTokens = user.LoginTokens!.Where(t => t.DeviceInfo.UserAgent == loginDto.DeviceInfo.UserAgent && t.DeviceInfo.Platform == loginDto.DeviceInfo.Platform && t.IpAddress == loginDto.IpAddress && t.IsActive).ToList();
+
+            foreach(var activeToken in activeTokens)
+            {
+                activeToken.IsActive = false;
+            }
+
+            var activeTokenCount = user.LoginTokens!.Count(t => t.IsActive);
+            if(activeTokenCount >= 5)
+            {
+                var oldestToken = user.LoginTokens!.Where(t => t.IsActive).OrderBy(t => t.Expiration).FirstOrDefault();
+
+                if(oldestToken != null)
+                {
+                    oldestToken.IsActive = false;
+                }
             }
 
             var accessToken = GenerateJwtToken(user, loginDto.DeviceInfo);
@@ -158,7 +170,7 @@ namespace MatHelper.BLL.Services
             {
                 Token = accessToken,
                 RefreshToken = refreshToken,
-                Expiration = DateTime.UtcNow.AddMinutes(15),
+                Expiration = DateTime.UtcNow.AddMinutes(30),
                 RefreshTokenExpiration = DateTime.UtcNow.AddDays(7),
                 UserId = user.Id,
                 DeviceInfo = loginDto.DeviceInfo,
@@ -166,7 +178,7 @@ namespace MatHelper.BLL.Services
                 IsActive = true
             };
 
-            user.LoginTokens.Add(loginToken);
+            user.LoginTokens!.Add(loginToken);
             await _userRepository.SaveChangesAsync();
 
             if (await CheckSuspiciousActivityAsync(loginDto.IpAddress, loginDto.DeviceInfo.UserAgent, loginDto.DeviceInfo.Platform))
@@ -174,7 +186,7 @@ namespace MatHelper.BLL.Services
                 throw new UnauthorizedAccessException("Suspicious activity detected. Accounts blocked.");
             }
 
-            return accessToken;
+            return (AccessToken: accessToken, RefreshToken: refreshToken);
         }
 
         private string GenerateJwtToken(User user, DeviceInfo deviceInfo)
@@ -194,7 +206,7 @@ namespace MatHelper.BLL.Services
                 issuer: _jwtOptions.Issuer,
                 audience: _jwtOptions.Audience,
                 claims: claims,
-                expires: DateTime.UtcNow.AddMinutes(15),
+                expires: DateTime.UtcNow.AddMinutes(30),
                 signingCredentials: creds);
 
             return new JwtSecurityTokenHandler().WriteToken(token);
@@ -213,19 +225,43 @@ namespace MatHelper.BLL.Services
             return true;
         }
 
-        public async Task<string> RefreshAccessTokenAsync(string refreshToken)
+        public async Task<(string AccessToken, string RefreshToken)> RefreshAccessTokenAsync(string refreshToken)
         {
+            _logger.LogInformation("Searching for refresh token: {RefreshToken}", refreshToken);
+
             var token = await _userRepository.GetLoginTokenByRefreshTokenAsync(refreshToken);
             if (token == null || token.RefreshTokenExpiration < DateTime.UtcNow)
+            {
+                if(token != null)
+                {
+                    _logger.LogWarning("Refresh token expired: {RefreshToken}", refreshToken);
+                    _userRepository.RemoveToken(token);
+                    await _userRepository.SaveChangesAsync();
+                    throw new Exception("Invalid or expired refresh token.");
+                }
+                _logger.LogWarning("Refresh token not found or expired: {RefreshToken}", refreshToken);
                 throw new Exception("Invalid or expired refresh token.");
+            }
 
+            _logger.LogInformation("Refresh token valid. Fetching user: {UserId}", token.UserId);
             var user = await _userRepository.GetUserByIdAsync(token.UserId);
+
             if(user != null)
             {
-                return GenerateJwtToken(user, token.DeviceInfo);
+                _logger.LogInformation("User found. Generating new tokens for UserId: {UserId}", token.UserId);
+
+                var newRefreshToken = GenerateRefreshToken();
+                token.RefreshToken = newRefreshToken;
+                token.RefreshTokenExpiration = DateTime.UtcNow.AddDays(7);
+                await _userRepository.SaveChangesAsync();
+
+                var accessToken = GenerateJwtToken(user, token.DeviceInfo);
+                _logger.LogInformation("New tokens generated for UserId: {UserId}", token.UserId);
+                return (accessToken, newRefreshToken);
             }
             else
             {
+                _logger.LogError("User not found for token refresh. UserId: {UserId}", token.UserId);
                 throw new Exception("User not found.");
             }
         }
@@ -324,13 +360,13 @@ namespace MatHelper.BLL.Services
             }
 
             return user.LoginTokens
-                .Where(t => t.IsActive)
+                !.Where(t => t.IsActive)
                 .Select(t => new
                 {
                     Platform = t.DeviceInfo.Platform,
                     UserAgent = t.DeviceInfo.UserAgent,
                     IpAddress = t.IpAddress,
-                    AuthorizationDate = t.Expiration - TimeSpan.FromMinutes(15)
+                    AuthorizationDate = t.Expiration - TimeSpan.FromMinutes(30)
                 })
                 .ToList();
         }
