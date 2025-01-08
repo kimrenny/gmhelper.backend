@@ -108,6 +108,12 @@ namespace MatHelper.DAL.Repositories
             return await _context.LoginTokens.Include(t => t.User).ToListAsync();
         }
 
+        public async Task UpdateUserAsync(User user)
+        {
+            _context.Users.Update(user);
+            await _context.SaveChangesAsync();
+        }
+
         public async Task SaveChangesAsync()
         {
             try

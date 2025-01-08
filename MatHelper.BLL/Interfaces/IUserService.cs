@@ -13,6 +13,6 @@ namespace MatHelper.BLL.Interfaces
         Task<User> GetUserDetailsAsync(Guid userId);
         Task<(string AccessToken, string RefreshToken)> RefreshAccessTokenAsync(string refreshToken);
         Task<IEnumerable<object>> GetLoggedDevicesAsync(Guid userId);
-
+        Task UpdateUserAsync(Guid userId, UpdateUserRequest request);
     }
 }

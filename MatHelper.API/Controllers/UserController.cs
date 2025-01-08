@@ -242,5 +242,29 @@ namespace MatHelper.API.Controllers
 
             return Ok(devices);
         }
+
+        [HttpPut("update")]
+        [Authorize]
+        public async Task<IActionResult> UpdateUser([FromForm] UpdateUserRequest request)
+        {
+            var userId = User.FindFirstValue(ClaimTypes.Name);
+            if (string.IsNullOrWhiteSpace(userId)) {
+                return Unauthorized(new { message = "User ID is not available in the token." });
+            }
+
+            try
+            {
+                await _userService.UpdateUserAsync(Guid.Parse(userId), request);
+                return Ok(new { message = "User data updated successfully." });
+            }
+            catch (InvalidOperationException ex)
+            {
+                return BadRequest(ex.Message);
+            }
+            catch (Exception ex) {
+                _logger.LogError(ex, "Error updating user data.");
+                return StatusCode(500, new { message = "An unexpected error occured." });
+            }
+        }
     }
 }
