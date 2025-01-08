@@ -158,12 +158,20 @@ namespace MatHelper.API.Controllers
             if (avatar == null || avatar.Length == 0)
                 return BadRequest("Invalid file.");
 
-            using var memoryStream = new MemoryStream();
-            await avatar.CopyToAsync(memoryStream);
-            var avatarBytes = memoryStream.ToArray();
+            try
+            {
+                using var memoryStream = new MemoryStream();
+                await avatar.CopyToAsync(memoryStream);
+                var avatarBytes = memoryStream.ToArray();
 
-            await _userService.SaveUserAvatarAsync(User.Identity.Name, avatarBytes);
-            return Ok("Avatar uploaded successfully.");
+                await _userService.SaveUserAvatarAsync(User.Identity.Name, avatarBytes);
+                return Ok(new { message = "Avatar uploaded successfully." });
+            }
+            catch(Exception ex)
+            {
+                return StatusCode(500, new { message = $"Internal server error: {ex.Message}" });
+            }
+            
         }
 
         [HttpGet("avatar")]
