@@ -39,7 +39,10 @@ builder.Services.AddDbContext<AppDbContext>((provider, ctx) =>
 var jwtOptions = builder.Configuration.GetSection("Jwt").Get<JwtOptions>();
 builder.Services.AddSingleton(jwtOptions);
 
-builder.Services.AddScoped<IUserService, UserService>();
+builder.Services.AddScoped<IAuthenticationService, AuthenticationService>();
+builder.Services.AddScoped<ISecurityService, SecurityService>();
+builder.Services.AddScoped<ITokenService, TokenService>();
+builder.Services.AddScoped<IUserManagementService, UserManagementService>();
 builder.Services.AddScoped<UserRepository>();
 builder.Services.AddScoped<CaptchaValidationService>();
 

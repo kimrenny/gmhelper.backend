@@ -13,13 +13,17 @@ namespace MatHelper.API.Controllers
     [Route("api/[controller]")]
     public class UserController : ControllerBase
     {
-        private readonly IUserService _userService;
+        private readonly IAuthenticationService _authenticationService;
+        private readonly ITokenService _tokenService;
+        private readonly IUserManagementService _userManagementService;
         private readonly ILogger<UserController> _logger;
         private readonly CaptchaValidationService _captchaValidationService;
 
-        public UserController(IUserService userService, ILogger<UserController> logger, CaptchaValidationService captchaValidationService)
+        public UserController(IAuthenticationService authenticationService, ITokenService tokenService, IUserManagementService userManagementService, ILogger<UserController> logger, CaptchaValidationService captchaValidationService)
         {
-            _userService = userService;
+            _authenticationService = authenticationService;
+            _tokenService = tokenService;
+            _userManagementService = userManagementService;
             _logger = logger;
             _captchaValidationService = captchaValidationService;
         }
@@ -43,7 +47,7 @@ namespace MatHelper.API.Controllers
 
             try
             {
-                var result = await _userService.RegisterUserAsync(userDto);
+                var result = await _authenticationService.RegisterUserAsync(userDto);
                 if (result)
                 {
                     _logger.LogInformation("Register successful for user: {Email}", userDto.Email);
@@ -83,7 +87,7 @@ namespace MatHelper.API.Controllers
 
             try
             {
-                var (accessToken, refreshToken) = await _userService.LoginUserAsync(loginDto);
+                var (accessToken, refreshToken) = await _authenticationService.LoginUserAsync(loginDto);
                 if (accessToken == null || refreshToken == null)
                 {
                     _logger.LogWarning($"Login failed for user: {loginDto.Email}.");
@@ -119,7 +123,7 @@ namespace MatHelper.API.Controllers
                 return BadRequest("Invalid CAPTCHA token.");
             }
 
-            if (!await _userService.RecoverPasswordAsync(recoveryDto))
+            if (!await _authenticationService.RecoverPasswordAsync(recoveryDto))
                 return NotFound("User not found.");
 
             return Ok("Password recovery instructions sent.");
@@ -137,7 +141,7 @@ namespace MatHelper.API.Controllers
             try
             {
                 _logger.LogInformation("Attempting to refresh token.");
-                var tokens = await _userService.RefreshAccessTokenAsync(request.RefreshToken);
+                var tokens = await _tokenService.RefreshAccessTokenAsync(request.RefreshToken);
                 _logger.LogInformation("Token refreshed successfully for refreshToken: {RefreshToken}", request.RefreshToken);
 
                 return Ok(new { 
@@ -164,7 +168,7 @@ namespace MatHelper.API.Controllers
                 await avatar.CopyToAsync(memoryStream);
                 var avatarBytes = memoryStream.ToArray();
 
-                await _userService.SaveUserAvatarAsync(User.Identity.Name, avatarBytes);
+                await _userManagementService.SaveUserAvatarAsync(User.Identity.Name, avatarBytes);
                 return Ok(new { message = "Avatar uploaded successfully." });
             }
             catch(Exception ex)
@@ -183,7 +187,7 @@ namespace MatHelper.API.Controllers
                 return Unauthorized("Invalid token.");
             }
 
-            var avatar = await _userService.GetUserAvatarAsync(userId);
+            var avatar = await _userManagementService.GetUserAvatarAsync(userId);
             if(avatar == null || avatar.Length == 0)
             {
                 return NotFound("Avatar not found.");
@@ -203,7 +207,7 @@ namespace MatHelper.API.Controllers
                     return Unauthorized("Invalid token.");
                 }
 
-                var user = await _userService.GetUserDetailsAsync(userId);
+                var user = await _userManagementService.GetUserDetailsAsync(userId);
                 if (user == null)
                 {
                     return NotFound("User not found.");
@@ -234,7 +238,7 @@ namespace MatHelper.API.Controllers
                 return Unauthorized("User ID is not available in the token.");
             }
 
-            var devices = await _userService.GetLoggedDevicesAsync(Guid.Parse(userId));
+            var devices = await _userManagementService.GetLoggedDevicesAsync(Guid.Parse(userId));
             if(devices == null || !devices.Any())
             {
                 return NotFound("No devices found for this user.");
@@ -254,7 +258,7 @@ namespace MatHelper.API.Controllers
 
             try
             {
-                await _userService.UpdateUserAsync(Guid.Parse(userId), request);
+                await _userManagementService.UpdateUserAsync(Guid.Parse(userId), request);
                 return Ok(new { message = "User data updated successfully." });
             }
             catch (InvalidOperationException ex)
