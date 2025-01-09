@@ -83,11 +83,18 @@ namespace MatHelper.BLL.Services
 
             _logger.LogInformation("Attempting to update user with ID {UserId}. CurrentPassword: {CurrentPassword}", userId, request.CurrentPassword);
 
+            if (string.IsNullOrEmpty(request.CurrentPassword) || !this._securityService.VerifyPassword(request.CurrentPassword, user.PasswordHash, user.PasswordSalt))
+            {
+                _logger.LogWarning("Invalid current password for user {UserId}.", userId);
+                throw new InvalidOperationException("Invalid current password.");
+            }
+
             if (!string.IsNullOrEmpty(request.Email) && request.Email != user.Email)
             {
                 var existingUser = await _userRepository.GetUserByEmailAsync(request.Email);
                 if (existingUser != null)
                 {
+                    _logger.LogWarning("Email is already used by another user");
                     throw new InvalidOperationException("Email is already used by another user.");
                 }
                 user.Email = request.Email;
@@ -98,6 +105,7 @@ namespace MatHelper.BLL.Services
                 var existingUser = await _userRepository.GetUserByUsernameAsync(request.Nickname);
                 if(existingUser != null)
                 {
+                    _logger.LogWarning("Username is already used by another user");
                     throw new InvalidOperationException("Username is already used by another user.");
                 }
 
@@ -106,13 +114,8 @@ namespace MatHelper.BLL.Services
 
             if (!string.IsNullOrEmpty(request.NewPassword))
             {
-                if(string.IsNullOrEmpty(request.CurrentPassword) || !this._securityService.VerifyPassword(request.CurrentPassword, user.PasswordHash, user.PasswordSalt))
-                {
-                    _logger.LogWarning("Invalid current password for user {UserId}.", userId);
-                    throw new InvalidOperationException("Invalid current password.");
-                }
 
-                if(request.NewPassword.Length < 6)
+                if(request.NewPassword.Length < 8)
                 {
                     throw new InvalidOperationException("New password is too short.");
                 }
