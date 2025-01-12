@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using System.Security.Claims;
 using Microsoft.OpenApi.Validations;
 using Microsoft.AspNetCore.Authorization;
+using System.Collections.Concurrent;
 
 namespace MatHelper.API.Controllers
 {
@@ -18,6 +19,7 @@ namespace MatHelper.API.Controllers
         private readonly IUserManagementService _userManagementService;
         private readonly ILogger<UserController> _logger;
         private readonly CaptchaValidationService _captchaValidationService;
+        private static readonly ConcurrentDictionary<string, bool> ProcessingTokens = new();
 
         public UserController(IAuthenticationService authenticationService, ITokenService tokenService, IUserManagementService userManagementService, ILogger<UserController> logger, CaptchaValidationService captchaValidationService)
         {
@@ -138,21 +140,32 @@ namespace MatHelper.API.Controllers
                 return BadRequest("Refresh token is required.");
             }
 
+            if (!ProcessingTokens.TryAdd(request.RefreshToken, true))
+            {
+                _logger.LogWarning("Refresh token request already in progress: {RefreshToken}", request.RefreshToken);
+                return Conflict("Token refresh already in progress.");
+            }
+
             try
             {
                 _logger.LogInformation("Attempting to refresh token.");
                 var tokens = await _tokenService.RefreshAccessTokenAsync(request.RefreshToken);
                 _logger.LogInformation("Token refreshed successfully for refreshToken: {RefreshToken}", request.RefreshToken);
 
-                return Ok(new { 
-                AccessToken = tokens.AccessToken,
-                RefreshToken = tokens.RefreshToken
+                return Ok(new 
+                { 
+                    AccessToken = tokens.AccessToken,
+                    RefreshToken = tokens.RefreshToken
                 });
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error during refreshing token for refreshToken: {RefreshToken}", request.RefreshToken);
                 return Unauthorized(ex.Message);
+            }
+            finally
+            {
+                ProcessingTokens.TryRemove(request.RefreshToken, out _);
             }
         }
 
