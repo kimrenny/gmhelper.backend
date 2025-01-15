@@ -127,7 +127,7 @@ namespace MatHelper.BLL.Services
             await _userRepository.UpdateUserAsync(user);
         }
 
-        public async Task<string> RemoveDeviceAsync(Guid userId, string userAgent, string platform)
+        public async Task<string> RemoveDeviceAsync(Guid userId, string userAgent, string platform, string ipAddress)
         {
             try
             {
@@ -138,7 +138,7 @@ namespace MatHelper.BLL.Services
                     return "User not found.";
                 }
 
-                var loginToken = user.LoginTokens?.FirstOrDefault(t => t.DeviceInfo.UserAgent == userAgent && t.DeviceInfo.Platform == platform && t.IsActive);
+                var loginToken = user.LoginTokens?.FirstOrDefault(t => t.DeviceInfo.UserAgent == userAgent && t.DeviceInfo.Platform == platform && t.IpAddress == ipAddress && t.IsActive);
                 if(loginToken == null)
                 {
                     _logger.LogWarning("Device not found or inactive for user {UserId}.", userId);

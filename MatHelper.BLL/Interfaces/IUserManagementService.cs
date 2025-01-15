@@ -11,6 +11,6 @@ namespace MatHelper.BLL.Interfaces
         Task<IEnumerable<object>> GetLoggedDevicesAsync(Guid userId);
         Task SaveUserAvatarAsync(string userId, byte[] avatarBytes);
         Task UpdateUserAsync(Guid userId, UpdateUserRequest request);
-        Task<string> RemoveDeviceAsync(Guid userId, string userAgent, string platform);
+        Task<string> RemoveDeviceAsync(Guid userId, string userAgent, string platform, string ipAddress);
     }
 }
