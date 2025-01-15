@@ -5,9 +5,10 @@ namespace MatHelper.BLL.Interfaces
 {
     public interface ITokenService
     {
-        public string GenerateJwtToken(User user, DeviceInfo deviceInfo);
-        public string GenerateRefreshToken();
+        string GenerateJwtToken(User user, DeviceInfo deviceInfo);
+        string GenerateRefreshToken();
         Task<(string AccessToken, string RefreshToken)> RefreshAccessTokenAsync(string refreshToken);
+        Task<bool> IsTokenDisabled(string token);
 
     }
 }

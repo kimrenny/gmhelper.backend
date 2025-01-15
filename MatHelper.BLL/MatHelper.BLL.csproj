@@ -5,6 +5,10 @@
     <ProjectReference Include="..\MatHelper.DAL\MatHelper.DAL.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <PackageReference Include="microsoft.aspnetcore.mvc" Version="2.3.0" />
+  </ItemGroup>
+
   <PropertyGroup>
     <TargetFramework>net8.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>

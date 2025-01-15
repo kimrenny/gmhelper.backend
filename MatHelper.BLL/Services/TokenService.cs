@@ -93,5 +93,16 @@ namespace MatHelper.BLL.Services
                 throw new Exception("User not found.");
             }
         }
+
+        public async Task<bool> IsTokenDisabled(string token)
+        {
+            var loginToken = await _userRepository.GetLoginTokenAsync(token);
+            if (loginToken == null || loginToken.Expiration < DateTime.UtcNow || !loginToken.IsActive)
+            {
+                return true;
+            }
+
+            return false;
+        }
     }
 }

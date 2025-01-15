@@ -170,8 +170,15 @@ namespace MatHelper.API.Controllers
         }
 
         [HttpPost("upload-avatar")]
+        [Authorize]
         public async Task<IActionResult> UploadAvatar([FromForm] IFormFile avatar)
         {
+            var token = Request.Headers["Authorization"].ToString().Split(" ").Last();
+            if (await _tokenService.IsTokenDisabled(token))
+            {
+                return Unauthorized(new { message = "User token is not active." });
+            }
+
             if (avatar == null || avatar.Length == 0)
                 return BadRequest("Invalid file.");
 
@@ -192,8 +199,15 @@ namespace MatHelper.API.Controllers
         }
 
         [HttpGet("avatar")]
+        [Authorize]
         public async Task<IActionResult> GetAvatar()
         {
+            var token = Request.Headers["Authorization"].ToString().Split(" ").Last();
+            if (await _tokenService.IsTokenDisabled(token))
+            {
+                return Unauthorized(new { message = "User token is not active." });
+            }
+
             var userIdString = User.FindFirst(ClaimTypes.Name)?.Value;
             if (string.IsNullOrEmpty(userIdString) || !Guid.TryParse(userIdString, out var userId))
             {
@@ -210,8 +224,21 @@ namespace MatHelper.API.Controllers
         }
 
         [HttpGet("details")]
+        [Authorize]
         public async Task<IActionResult> GetUserDetails()
         {
+            var authorizationHeader = Request.Headers["Authorization"].ToString();
+            if (string.IsNullOrEmpty(authorizationHeader) || !authorizationHeader.StartsWith("Bearer "))
+            {
+                return Unauthorized(new { message = "Authorization header is missing or invalid" });
+            }
+            var token = authorizationHeader.Substring("Bearer ".Length).Trim();
+
+            if (await _tokenService.IsTokenDisabled(token))
+            {
+                return Unauthorized(new { message = "User token is not active." });
+            }
+
             try
             {
                 var userIdString = User.FindFirst(ClaimTypes.Name)?.Value;
@@ -245,6 +272,18 @@ namespace MatHelper.API.Controllers
         [Authorize]
         public async Task<IActionResult> GetLoggedDevices()
         {
+            var authorizationHeader = Request.Headers["Authorization"].ToString();
+            if (string.IsNullOrEmpty(authorizationHeader) || !authorizationHeader.StartsWith("Bearer "))
+            {
+                return Unauthorized(new { message = "Authorization header is missing or invalid" });
+            }
+            var token = authorizationHeader.Substring("Bearer ".Length).Trim();
+
+            if (await _tokenService.IsTokenDisabled(token))
+            {
+                return Unauthorized(new { message = "User token is not active." });
+            }
+
             var userId = User.FindFirstValue(ClaimTypes.Name);
             if (string.IsNullOrWhiteSpace(userId))
             {
@@ -264,6 +303,18 @@ namespace MatHelper.API.Controllers
         [Authorize]
         public async Task<IActionResult> UpdateUser([FromForm] UpdateUserRequest request)
         {
+            var authorizationHeader = Request.Headers["Authorization"].ToString();
+            if (string.IsNullOrEmpty(authorizationHeader) || !authorizationHeader.StartsWith("Bearer "))
+            {
+                return Unauthorized(new { message = "Authorization header is missing or invalid" });
+            }
+            var token = authorizationHeader.Substring("Bearer ".Length).Trim();
+
+            if (await _tokenService.IsTokenDisabled(token))
+            {
+                return Unauthorized(new { message = "User token is not active." });
+            }
+
             var userId = User.FindFirstValue(ClaimTypes.Name);
             if (string.IsNullOrWhiteSpace(userId)) {
                 return Unauthorized(new { message = "User ID is not available in the token." });
@@ -280,6 +331,45 @@ namespace MatHelper.API.Controllers
             }
             catch (Exception ex) {
                 _logger.LogError(ex, "Error updating user data.");
+                return StatusCode(500, new { message = "An unexpected error occured." });
+            }
+        }
+
+        [HttpPatch("devices/deactivate")]
+        [Authorize]
+        public async Task<IActionResult> RemoveDevice([FromBody] RemoveDeviceRequest request)
+        {
+            var authorizationHeader = Request.Headers["Authorization"].ToString();
+            if (string.IsNullOrEmpty(authorizationHeader) || !authorizationHeader.StartsWith("Bearer "))
+            {
+                return Unauthorized(new { message = "Authorization header is missing or invalid" });
+            }
+            var token = authorizationHeader.Substring("Bearer ".Length).Trim();
+
+            if (await _tokenService.IsTokenDisabled(token))
+            {
+                return Unauthorized(new { message = "User token is not active." });
+            }
+
+            var userId = User.FindFirstValue(ClaimTypes.Name);
+            if (string.IsNullOrWhiteSpace(userId))
+            {
+                return Unauthorized(new { message = "User ID is not available in the token." });
+            }
+
+            try
+            {
+                var result = await _userManagementService.RemoveDeviceAsync(Guid.Parse(userId), request.UserAgent, request.Platform);
+                if(result.ToString() == "User not found." || result.ToString() == "Device not found or inactive." || result.ToString() == "An unexpected error occured.")
+                {
+                    return BadRequest(new { message = result });
+                }
+
+                return Ok(new { message = result });
+
+            } catch(Exception ex)
+            {
+                _logger.LogError(ex, "Error while removing device for user {UserId}", userId);
                 return StatusCode(500, new { message = "An unexpected error occured." });
             }
         }

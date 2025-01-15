@@ -4,6 +4,7 @@ using MatHelper.CORE.Options;
 using MatHelper.DAL.Repositories;
 using Microsoft.Extensions.Logging;
 using Microsoft.IdentityModel.Tokens;
+using Microsoft.AspNetCore.Mvc;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Security.Cryptography;
@@ -124,6 +125,38 @@ namespace MatHelper.BLL.Services
             }
 
             await _userRepository.UpdateUserAsync(user);
+        }
+
+        public async Task<string> RemoveDeviceAsync(Guid userId, string userAgent, string platform)
+        {
+            try
+            {
+                var user = await _userRepository.GetUserByIdAsync(userId);
+                if(user == null)
+                {
+                    _logger.LogWarning("User with ID {UserId} not found.", userId);
+                    return "User not found.";
+                }
+
+                var loginToken = user.LoginTokens?.FirstOrDefault(t => t.DeviceInfo.UserAgent == userAgent && t.DeviceInfo.Platform == platform && t.IsActive);
+                if(loginToken == null)
+                {
+                    _logger.LogWarning("Device not found or inactive for user {UserId}.", userId);
+                    return "Device not found or inactive.";
+                }
+
+                loginToken.IsActive = false;
+                await _userRepository.SaveChangesAsync();
+
+                _logger.LogInformation("Device removed successfully for user: {UserId}, UserAgent: {UserAgent}, Platform: {Platform}", userId, userAgent, platform);
+                return "Device removed successfully.";
+                
+            } 
+            catch(Exception ex)
+            {
+                _logger.LogError(ex, "Error removing device for user: {UserId}.", userId);
+                return "An unexpected error occured.";
+            }
         }
     }
 }

@@ -92,6 +92,11 @@ namespace MatHelper.DAL.Repositories
             return await query.FirstOrDefaultAsync();
         }
 
+        public async Task<LoginToken?> GetLoginTokenAsync(string token)
+        {
+            return _context.LoginTokens.Where(t => t.Token == token).FirstOrDefault();
+        }
+
         public async Task RemoveLoginTokenAsync(LoginToken token)
         {
             _context.LoginTokens.Remove(token);
