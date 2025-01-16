@@ -230,13 +230,13 @@ namespace MatHelper.API.Controllers
             var authorizationHeader = Request.Headers["Authorization"].ToString();
             if (string.IsNullOrEmpty(authorizationHeader) || !authorizationHeader.StartsWith("Bearer "))
             {
-                return Unauthorized(new { message = "Authorization header is missing or invalid" });
+                return Unauthorized("Authorization header is missing or invalid");
             }
             var token = authorizationHeader.Substring("Bearer ".Length).Trim();
 
             if (await _tokenService.IsTokenDisabled(token))
             {
-                return Unauthorized(new { message = "User token is not active." });
+                return Unauthorized("User token is not active.");
             }
 
             try
@@ -275,13 +275,13 @@ namespace MatHelper.API.Controllers
             var authorizationHeader = Request.Headers["Authorization"].ToString();
             if (string.IsNullOrEmpty(authorizationHeader) || !authorizationHeader.StartsWith("Bearer "))
             {
-                return Unauthorized(new { message = "Authorization header is missing or invalid" });
+                return Unauthorized("Authorization header is missing or invalid");
             }
             var token = authorizationHeader.Substring("Bearer ".Length).Trim();
 
             if (await _tokenService.IsTokenDisabled(token))
             {
-                return Unauthorized(new { message = "User token is not active." });
+                return Unauthorized("User token is not active.");
             }
 
             var userId = User.FindFirstValue(ClaimTypes.Name);
