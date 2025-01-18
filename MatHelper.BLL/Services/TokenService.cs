@@ -78,13 +78,16 @@ namespace MatHelper.BLL.Services
             {
                 _logger.LogInformation("User found. Generating new tokens for UserId: {UserId}", token.UserId);
 
+                var accessToken = GenerateJwtToken(user, token.DeviceInfo);
                 var newRefreshToken = GenerateRefreshToken();
+                token.Token = accessToken;
                 token.RefreshToken = newRefreshToken;
                 token.RefreshTokenExpiration = DateTime.UtcNow.AddDays(7);
+
                 await _userRepository.SaveChangesAsync();
 
-                var accessToken = GenerateJwtToken(user, token.DeviceInfo);
                 _logger.LogInformation("New tokens generated for UserId: {UserId}", token.UserId);
+
                 return (accessToken, newRefreshToken);
             }
             else

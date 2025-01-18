@@ -230,12 +230,14 @@ namespace MatHelper.API.Controllers
             var authorizationHeader = Request.Headers["Authorization"].ToString();
             if (string.IsNullOrEmpty(authorizationHeader) || !authorizationHeader.StartsWith("Bearer "))
             {
+                this._logger.LogError("Authorization header is missing or invalid {authorizationHeader}.", authorizationHeader);
                 return Unauthorized("Authorization header is missing or invalid");
             }
             var token = authorizationHeader.Substring("Bearer ".Length).Trim();
 
             if (await _tokenService.IsTokenDisabled(token))
             {
+                this._logger.LogError("User token is not active: {token}", token);
                 return Unauthorized("User token is not active.");
             }
 
@@ -244,12 +246,14 @@ namespace MatHelper.API.Controllers
                 var userIdString = User.FindFirst(ClaimTypes.Name)?.Value;
                 if (string.IsNullOrEmpty(userIdString) || !Guid.TryParse(userIdString, out var userId))
                 {
+                    this._logger.LogError("Invalid token: {token}", token);
                     return Unauthorized("Invalid token.");
                 }
 
                 var user = await _userManagementService.GetUserDetailsAsync(userId);
                 if (user == null)
                 {
+                    this._logger.LogError("User not found for token: {token}", token);
                     return NotFound("User not found.");
                 }
 

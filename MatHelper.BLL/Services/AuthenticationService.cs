@@ -146,7 +146,7 @@ namespace MatHelper.BLL.Services
            var expiredTokens = user.LoginTokens!.Where(t => t.Expiration <= DateTime.UtcNow).ToList();
             foreach(var expiredToken in expiredTokens)
             {
-                user.LoginTokens.Remove(expiredToken);
+                user.LoginTokens!.Remove(expiredToken);
             }
 
             var activeTokens = user.LoginTokens!.Where(t => t.DeviceInfo.UserAgent == loginDto.DeviceInfo.UserAgent && t.DeviceInfo.Platform == loginDto.DeviceInfo.Platform && t.IpAddress == loginDto.IpAddress && t.IsActive).ToList();
