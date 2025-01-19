@@ -81,6 +81,7 @@ namespace MatHelper.BLL.Services
                 var accessToken = GenerateJwtToken(user, token.DeviceInfo);
                 var newRefreshToken = GenerateRefreshToken();
                 token.Token = accessToken;
+                token.Expiration = DateTime.UtcNow.AddMinutes(30);
                 token.RefreshToken = newRefreshToken;
                 token.RefreshTokenExpiration = DateTime.UtcNow.AddDays(7);
 
