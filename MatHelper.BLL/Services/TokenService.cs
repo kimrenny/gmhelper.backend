@@ -83,7 +83,6 @@ namespace MatHelper.BLL.Services
                 token.Token = accessToken;
                 token.Expiration = DateTime.UtcNow.AddMinutes(30);
                 token.RefreshToken = newRefreshToken;
-                token.RefreshTokenExpiration = DateTime.UtcNow.AddDays(7);
 
                 await _userRepository.SaveChangesAsync();
 
