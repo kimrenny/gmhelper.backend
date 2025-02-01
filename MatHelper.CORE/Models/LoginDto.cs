@@ -7,5 +7,6 @@ namespace MatHelper.CORE.Models
         public DeviceInfo DeviceInfo { get; set; }
         public string IpAddress { get; set; }
         public string CaptchaToken { get; set; }
+        public bool Remember { get; set; }
     }
 }

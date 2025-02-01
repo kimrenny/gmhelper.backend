@@ -167,6 +167,8 @@ namespace MatHelper.BLL.Services
                 }
             }
 
+            var refreshTokenExpiration = loginDto.Remember == true ? DateTime.UtcNow.AddDays(28) : DateTime.UtcNow.AddHours(6);
+
             var accessToken = this._tokenService.GenerateJwtToken(user, loginDto.DeviceInfo);
             var refreshToken = this._tokenService.GenerateRefreshToken();
 
@@ -175,7 +177,7 @@ namespace MatHelper.BLL.Services
                 Token = accessToken,
                 RefreshToken = refreshToken,
                 Expiration = DateTime.UtcNow.AddMinutes(30),
-                RefreshTokenExpiration = DateTime.UtcNow.AddDays(7),
+                RefreshTokenExpiration = refreshTokenExpiration,
                 UserId = user.Id,
                 DeviceInfo = loginDto.DeviceInfo,
                 IpAddress = loginDto.IpAddress,
