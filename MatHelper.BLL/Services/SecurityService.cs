@@ -84,5 +84,16 @@ namespace MatHelper.BLL.Services
 
             return false;
         }
+
+        public async Task<bool> HasAdminPermissions(Guid userId)
+        {
+            var user = await _userRepository.GetUserByIdAsync(userId);
+            if(user == null)
+            {
+                return false;
+            }
+
+            return user.Role == "Admin" || user.Role == "Owner";
+        }
     }
 }

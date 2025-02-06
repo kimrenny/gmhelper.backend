@@ -9,5 +9,6 @@ namespace MatHelper.BLL.Interfaces
         bool VerifyPassword(string password, string hash, string salt);
         string GenerateSalt();
         Task<bool> CheckSuspiciousActivityAsync(string ipAddress, string userAgent, string platform);
+        Task<bool> HasAdminPermissions(Guid userId);
     }
 }
