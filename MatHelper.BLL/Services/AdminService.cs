@@ -94,5 +94,62 @@ namespace MatHelper.BLL.Services
                 throw new InvalidOperationException("Could not action user.", ex);
             }
         }
+
+        public async Task<List<TokenDto>> GetTokensAsync()
+        {
+            try
+            {
+                var tokens = await _userRepository.GetAllTokensAsync();
+
+                if (tokens == null)
+                {
+                    _logger.LogWarning("No users found in the database.");
+                    throw new InvalidOperationException("No users found.");
+                }
+
+                var tokensDto = tokens.Select(t =>
+                {
+                       var deviceInfo = t.DeviceInfo != null
+                         ? new DeviceInfo
+                         {
+                                Platform = t.DeviceInfo.Platform,
+                                UserAgent = t.DeviceInfo.UserAgent
+                         }
+                         : new DeviceInfo();
+
+                    return new TokenDto
+                    {
+                        Id = t.Id,
+                        Token = t.Token,
+                        Expiration = t.Expiration,
+                        RefreshTokenExpiration = t.RefreshTokenExpiration,
+                        UserId = t.UserId,
+                        DeviceInfo = deviceInfo,
+                        IpAddress = t.IpAddress,
+                        IsActive = t.IsActive,
+                    };
+                }).ToList() ?? new List<TokenDto>();
+
+                return tokensDto;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "An error occured during fetching all tokens.");
+                throw new InvalidOperationException("Could not fetch tokens.", ex);
+            }
+        }
+
+        public async Task ActionTokenAsync(string token, string action)
+        {
+            try
+            {
+                await _userRepository.ActionTokenAsync(token, action);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "An error occured during action user.");
+                throw new InvalidOperationException("Could not action user.", ex);
+            }
+        }
     }
 }

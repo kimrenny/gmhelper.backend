@@ -119,6 +119,12 @@ namespace MatHelper.DAL.Repositories
             return users ?? new List<User>();
         }
 
+        public async Task<List<LoginToken>> GetAllTokensAsync()
+        {
+            var tokens = await _context.LoginTokens.ToListAsync();
+            return tokens ?? new List<LoginToken>();
+        }
+
         public async Task UpdateUserAsync(User user)
         {
             _context.Users.Update(user);
@@ -129,7 +135,7 @@ namespace MatHelper.DAL.Repositories
         {
             if (string.IsNullOrWhiteSpace(id.ToString()))
             {
-                throw new InvalidDataException("id is null or empty");
+                throw new InvalidDataException("Id is null or empty");
             }
 
             var user = await _context.Users.Include(u => u.LoginTokens).FirstOrDefaultAsync(u => u.Id == id);
@@ -146,6 +152,32 @@ namespace MatHelper.DAL.Repositories
             else if (action == "unban")
             {
                 user.IsBlocked = false;
+            }
+
+            await _context.SaveChangesAsync();
+        }
+
+        public async Task ActionTokenAsync(string authToken, string action)
+        {
+            if (string.IsNullOrWhiteSpace(authToken))
+            {
+                throw new InvalidDataException("Id is null or empty");
+            }
+
+            var token = await _context.LoginTokens.FirstOrDefaultAsync(u => u.Token == authToken);
+
+            if (token == null)
+            {
+                throw new InvalidOperationException("Token not found.");
+            }
+
+            if (action == "disable")
+            {
+                token.IsActive = false;
+            }
+            else if (action == "activate")
+            {
+                token.IsActive = true;
             }
 
             await _context.SaveChangesAsync();

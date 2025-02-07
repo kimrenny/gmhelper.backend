@@ -88,7 +88,6 @@ namespace MatHelper.API.Controllers
                 return BadRequest("Invalid data.");
             }
 
-
             try
             {
                 var authorizationHeader = Request.Headers["Authorization"].ToString();
@@ -119,6 +118,105 @@ namespace MatHelper.API.Controllers
                 }
 
                 await _adminService.ActionUserAsync(Guid.Parse(adminActionDto.Id), adminActionDto.Action);
+                return Ok();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "An error occurred while processing the request.");
+                return StatusCode(500, "Internal server error.");
+            }
+        }
+
+        [HttpGet("tokens")]
+        [Authorize]
+        public async Task<IActionResult> GetTokens()
+        {
+            try
+            {
+                var authorizationHeader = Request.Headers["Authorization"].ToString();
+                if (string.IsNullOrEmpty(authorizationHeader) || !authorizationHeader.StartsWith("Bearer "))
+                {
+                    _logger.LogWarning("Authorization header is missing or invalid.");
+                    return Unauthorized("Authorization header is missing or invalid");
+                }
+                var token = authorizationHeader.Substring("Bearer ".Length).Trim();
+
+                if (await _tokenService.IsTokenDisabled(token))
+                {
+                    _logger.LogWarning("User token is not active.");
+                    return Unauthorized("User token is not active.");
+                }
+
+                var userId = User.FindFirstValue(ClaimTypes.Name);
+                if (string.IsNullOrWhiteSpace(userId))
+                {
+                    _logger.LogWarning("User ID is not available in the token.");
+                    return Unauthorized("User ID is not available in the token.");
+                }
+
+                _logger.LogInformation($"User ID found in token: {userId}");
+
+                if (!await _securityService.HasAdminPermissions(Guid.Parse(userId)))
+                {
+                    _logger.LogWarning("User does not have admin permissions.");
+                    return Forbid("User does not have permissions.");
+                }
+
+                var tokens = await _adminService.GetTokensAsync();
+                if (tokens == null || !tokens.Any())
+                {
+                    _logger.LogError("Users data not found.");
+                    return NotFound("Users data not found.");
+                }
+
+                return Ok(tokens);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "An error occurred while processing the request.");
+                return StatusCode(500, "Internal server error.");
+            }
+        }
+
+        [HttpPut("tokens/action")]
+        [Authorize]
+        public async Task<IActionResult> ActionToken([FromBody] AdminActionDto adminActionDto)
+        {
+            if (adminActionDto == null)
+            {
+                return BadRequest("Invalid data.");
+            }
+
+            try
+            {
+                var authorizationHeader = Request.Headers["Authorization"].ToString();
+                if (string.IsNullOrEmpty(authorizationHeader) || !authorizationHeader.StartsWith("Bearer "))
+                {
+                    _logger.LogWarning("Authorization header is missing or invalid.");
+                    return Unauthorized("Authorization header is missing or invalid");
+                }
+                var token = authorizationHeader.Substring("Bearer ".Length).Trim();
+
+                if (await _tokenService.IsTokenDisabled(token))
+                {
+                    _logger.LogWarning("User token is not active.");
+                    return Unauthorized("User token is not active.");
+                }
+
+                var userId = User.FindFirstValue(ClaimTypes.Name);
+                if (string.IsNullOrWhiteSpace(userId))
+                {
+                    _logger.LogWarning("User ID is not available in the token.");
+                    return Unauthorized("User ID is not available in the token.");
+                }
+
+                if (!await _securityService.HasAdminPermissions(Guid.Parse(userId)))
+                {
+                    _logger.LogWarning("User does not have admin permissions.");
+                    return Forbid("User does not have permissions.");
+                }
+
+                await _adminService.ActionTokenAsync(adminActionDto.Id, adminActionDto.Action);
                 return Ok();
             }
             catch (Exception ex)

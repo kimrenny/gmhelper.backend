@@ -7,5 +7,7 @@ namespace MatHelper.BLL.Interfaces
     {
         Task<List<AdminUserDto>> GetUsersAsync();
         Task ActionUserAsync(Guid userId, string action);
+        Task<List<TokenDto>> GetTokensAsync();
+        Task ActionTokenAsync(string token, string action);
     }
 }

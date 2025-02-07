@@ -96,7 +96,6 @@ namespace MatHelper.API.Controllers
                     return Unauthorized("Invalid credentials.");
                 }
 
-                _logger.LogInformation("Login successful for user: {Email}", loginDto.Email);
                 return Ok(new { AccessToken = accessToken, RefreshToken = refreshToken });
             }
             catch (InvalidOperationException ex)
@@ -148,9 +147,7 @@ namespace MatHelper.API.Controllers
 
             try
             {
-                _logger.LogInformation("Attempting to refresh token.");
                 var tokens = await _tokenService.RefreshAccessTokenAsync(request.RefreshToken);
-                _logger.LogInformation("Token refreshed successfully for refreshToken: {RefreshToken}", request.RefreshToken);
 
                 return Ok(new 
                 { 
