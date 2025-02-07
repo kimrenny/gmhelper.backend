@@ -5,13 +5,14 @@ namespace MatHelper.CORE.Models
 {
     public class User
     {
-        public Guid Id { get; set; }
-        public string Username { get; set; }
-        public string Email { get; set; }
-        public string PasswordHash { get; set; }
-        public string? PasswordSalt { get; set; }
+        public required Guid Id { get; set; }
+        public required string Username { get; set; }
+        public required string Email { get; set; }
+        public required DateTime RegistrationDate { get; set; }
+        public required string PasswordHash { get; set; }
+        public required string PasswordSalt { get; set; }
         public byte[]? Avatar { get; set; }
-        public string? Role { get; set; }
+        public required string Role { get; set; }
         public List<LoginToken>? LoginTokens { get; set; }
         public bool IsBlocked { get; set; }
     }

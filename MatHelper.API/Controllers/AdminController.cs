@@ -34,8 +34,6 @@ namespace MatHelper.API.Controllers
         {
             try
             {
-                _logger.LogInformation("Starting the process of fetching users.");
-
                 var authorizationHeader = Request.Headers["Authorization"].ToString();
                 if (string.IsNullOrEmpty(authorizationHeader) || !authorizationHeader.StartsWith("Bearer "))
                 {
@@ -65,8 +63,6 @@ namespace MatHelper.API.Controllers
                     return Forbid("User does not have permissions.");
                 }
 
-                _logger.LogInformation("User has admin permissions, fetching user data...");
-
                 var users = await _adminService.GetUsersAsync();
                 if (users == null || !users.Any())
                 {
@@ -74,8 +70,56 @@ namespace MatHelper.API.Controllers
                     return NotFound("Users data not found.");
                 }
 
-                _logger.LogInformation("Successfully fetched user data.");
                 return Ok(users);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "An error occurred while processing the request.");
+                return StatusCode(500, "Internal server error.");
+            }
+        }
+
+        [HttpPut("users/action")]
+        [Authorize]
+        public async Task<IActionResult> ActionUser([FromBody] AdminActionDto adminActionDto)
+        {
+            if(adminActionDto == null)
+            {
+                return BadRequest("Invalid data.");
+            }
+
+
+            try
+            {
+                var authorizationHeader = Request.Headers["Authorization"].ToString();
+                if (string.IsNullOrEmpty(authorizationHeader) || !authorizationHeader.StartsWith("Bearer "))
+                {
+                    _logger.LogWarning("Authorization header is missing or invalid.");
+                    return Unauthorized("Authorization header is missing or invalid");
+                }
+                var token = authorizationHeader.Substring("Bearer ".Length).Trim();
+
+                if (await _tokenService.IsTokenDisabled(token))
+                {
+                    _logger.LogWarning("User token is not active.");
+                    return Unauthorized("User token is not active.");
+                }
+
+                var userId = User.FindFirstValue(ClaimTypes.Name);
+                if (string.IsNullOrWhiteSpace(userId))
+                {
+                    _logger.LogWarning("User ID is not available in the token.");
+                    return Unauthorized("User ID is not available in the token.");
+                }
+
+                if (!await _securityService.HasAdminPermissions(Guid.Parse(userId)))
+                {
+                    _logger.LogWarning("User does not have admin permissions.");
+                    return Forbid("User does not have permissions.");
+                }
+
+                await _adminService.ActionUserAsync(Guid.Parse(adminActionDto.Id), adminActionDto.Action);
+                return Ok();
             }
             catch (Exception ex)
             {

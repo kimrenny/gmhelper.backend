@@ -6,5 +6,6 @@ namespace MatHelper.BLL.Interfaces
     public interface IAdminService
     {
         Task<List<AdminUserDto>> GetUsersAsync();
+        Task ActionUserAsync(Guid userId, string action);
     }
 }

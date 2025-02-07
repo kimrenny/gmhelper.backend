@@ -113,9 +113,41 @@ namespace MatHelper.DAL.Repositories
             return await _context.LoginTokens.Include(t => t.User).ToListAsync();
         }
 
+        public async Task<List<User>> GetAllUsersAsync()
+        {
+            var users = await _context.Users.ToListAsync();
+            return users ?? new List<User>();
+        }
+
         public async Task UpdateUserAsync(User user)
         {
             _context.Users.Update(user);
+            await _context.SaveChangesAsync();
+        }
+
+        public async Task ActionUserAsync(Guid id, string action)
+        {
+            if (string.IsNullOrWhiteSpace(id.ToString()))
+            {
+                throw new InvalidDataException("id is null or empty");
+            }
+
+            var user = await _context.Users.Include(u => u.LoginTokens).FirstOrDefaultAsync(u => u.Id == id);
+
+            if (user == null)
+            {
+                throw new InvalidOperationException("User not found.");
+            }
+
+            if (action == "ban")
+            {
+                user.IsBlocked = true;
+            }
+            else if (action == "unban")
+            {
+                user.IsBlocked = false;
+            }
+
             await _context.SaveChangesAsync();
         }
 

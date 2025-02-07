@@ -85,6 +85,7 @@ namespace MatHelper.BLL.Services
                 Id = Guid.NewGuid(),
                 Username = userDto.UserName,
                 Email = userDto.Email,
+                RegistrationDate = DateTime.UtcNow,
                 PasswordHash = hashedPassword,
                 PasswordSalt = salt,
                 Avatar = null,

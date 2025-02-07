@@ -3,12 +3,6 @@ using MatHelper.CORE.Models;
 using MatHelper.CORE.Options;
 using MatHelper.DAL.Repositories;
 using Microsoft.Extensions.Logging;
-using Microsoft.IdentityModel.Tokens;
-using System.IdentityModel.Tokens.Jwt;
-using System.Security.Claims;
-using System.Security.Cryptography;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace MatHelper.BLL.Services
 {
@@ -63,10 +57,11 @@ namespace MatHelper.BLL.Services
 
                         return new AdminUserDto
                         {
+                            Id = u.Id,
                             Username = u.Username,
                             Email = u.Email,
                             Role = u.Role,
-                            RegistrationDate = DateTime.Now,
+                            RegistrationDate = u.RegistrationDate,
                             IsBlocked = u.IsBlocked,
                             LoginTokens = loginTokens
                         };
@@ -84,6 +79,19 @@ namespace MatHelper.BLL.Services
             {
                 _logger.LogError(ex, "An error occured during fetching all users.");
                 throw new InvalidOperationException("Could not fetch users.", ex);
+            }
+        }
+
+        public async Task ActionUserAsync(Guid userId, string action)
+        {
+            try
+            {
+                await _userRepository.ActionUserAsync(userId, action);
+            }
+            catch(Exception ex)
+            {
+                _logger.LogError(ex, "An error occured during action user.");
+                throw new InvalidOperationException("Could not action user.", ex);
             }
         }
     }
