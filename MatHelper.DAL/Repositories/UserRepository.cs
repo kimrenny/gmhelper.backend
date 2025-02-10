@@ -183,6 +183,24 @@ namespace MatHelper.DAL.Repositories
             await _context.SaveChangesAsync();
         }
 
+        public async Task<List<RegistrationsDto>> GetUserRegistrationsGroupedByDateAsync()
+        {
+            var users = await _context.Users
+                                      .Select(u => u.RegistrationDate)
+                                      .ToListAsync();
+
+            var groupedByDate = users
+                .GroupBy(date => date.Date)
+                .Select(group => new RegistrationsDto
+                { 
+                    Date = DateOnly.FromDateTime(group.Key), 
+                    Registrations = (ushort)group.Count() 
+                })
+                .ToList();
+
+            return groupedByDate;
+        }
+
         public async Task SaveChangesAsync()
         {
             try

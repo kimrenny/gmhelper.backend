@@ -151,5 +151,20 @@ namespace MatHelper.BLL.Services
                 throw new InvalidOperationException("Could not action user.", ex);
             }
         }
+
+        public async Task<List<RegistrationsDto>> GetRegistrationsAsync()
+        {
+            try
+            {
+                var groupedByDate = await _userRepository.GetUserRegistrationsGroupedByDateAsync();
+
+                return groupedByDate;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "An error occured during fetching all tokens.");
+                throw new InvalidOperationException("Could not fetch tokens.", ex);
+            }
+        }
     }
 }
