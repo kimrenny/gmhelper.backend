@@ -70,10 +70,13 @@ namespace MatHelper.BLL.Services
                     if (user != null)
                     {
                         user.IsBlocked = true;
-                        var userTokens = user!.LoginTokens.Where(t => t.IsActive).ToList();
-                        foreach (var token in userTokens)
+                        if (user.LoginTokens != null)
                         {
-                            token.IsActive = false;
+                            var userTokens = user.LoginTokens.Where(t => t.IsActive).ToList();
+                            foreach (var token in userTokens)
+                            {
+                                token.IsActive = false;
+                            }
                         }
                     }
                 }

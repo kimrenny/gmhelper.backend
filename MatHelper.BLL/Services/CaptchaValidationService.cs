@@ -42,7 +42,7 @@ namespace MatHelper.BLL.Services
                 }
 
                 var json = await response.Content.ReadAsStringAsync();
-                dynamic result = JsonSerializer.Deserialize<CaptchaResponse>(json);
+                var result = JsonSerializer.Deserialize<CaptchaResponse>(json);
                 return true;
                 //return result.success == true;
             }

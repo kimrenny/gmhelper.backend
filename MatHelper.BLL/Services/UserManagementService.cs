@@ -41,6 +41,8 @@ namespace MatHelper.BLL.Services
             var user = await _userRepository.GetUserByIdAsync(userId);
             if (user == null)
                 throw new Exception("User not found.");
+            if (user.Avatar == null)
+                throw new Exception("Avatar not found.");
 
             return user!.Avatar;
         }

@@ -60,13 +60,16 @@ namespace MatHelper.BLL.Services
                         if (blockedUser != null)
                         {
                             blockedUser.IsBlocked = true;
-                            IEnumerable<LoginToken> tokens = blockedUser.LoginTokens.Where(t => t.IsActive);
-                            if (tokens.Count() > 0)
+                            if(blockedUser.LoginTokens != null)
                             {
-                                foreach (var token in tokens)
+                                IEnumerable<LoginToken> tokens = blockedUser.LoginTokens.Where(t => t.IsActive);
+                                if (tokens.Count() > 0)
                                 {
-                                    if (token != null)
-                                        token.IsActive = false;
+                                    foreach (var token in tokens)
+                                    {
+                                        if (token != null)
+                                            token.IsActive = false;
+                                    }
                                 }
                             }
                         }
@@ -77,8 +80,8 @@ namespace MatHelper.BLL.Services
                 throw new UnauthorizedAccessException("Violation of service rules. All user accounts have been blocked.");
             }
 
-            var salt = this._securityService.GenerateSalt();
-            var hashedPassword = this._securityService.HashPassword(userDto.Password, salt);
+            var salt = _securityService.GenerateSalt();
+            var hashedPassword = _securityService.HashPassword(userDto.Password, salt);
 
             var user = new User
             {
@@ -96,8 +99,8 @@ namespace MatHelper.BLL.Services
 
             var loginToken = new LoginToken
             {
-                Token = this._tokenService.GenerateJwtToken(user, userDto.DeviceInfo),
-                RefreshToken = this._tokenService.GenerateRefreshToken(),
+                Token = _tokenService.GenerateJwtToken(user, userDto.DeviceInfo),
+                RefreshToken = _tokenService.GenerateRefreshToken(),
                 Expiration = DateTime.UtcNow.AddMinutes(30),
                 RefreshTokenExpiration = DateTime.UtcNow.AddDays(7),
                 UserId = user.Id,
@@ -110,7 +113,8 @@ namespace MatHelper.BLL.Services
 
             if (createdUser != null)
             {
-                createdUser!.LoginTokens.Add(loginToken);
+                createdUser.LoginTokens ??= new List<LoginToken>();
+                createdUser.LoginTokens.Add(loginToken);
                 await _userRepository.SaveChangesAsync();
             }
             else
@@ -118,7 +122,13 @@ namespace MatHelper.BLL.Services
                 throw new InvalidOperationException("Error due add token to the user.");
             }
 
-            if (await this._securityService.CheckSuspiciousActivityAsync(userDto.IpAddress, userDto.DeviceInfo.UserAgent, userDto.DeviceInfo.Platform))
+            if (userDto.DeviceInfo.UserAgent == null || userDto.DeviceInfo.Platform == null)
+            {
+                _logger.LogError("deviceInfo does not meet the requirements");
+                throw new InvalidDataException("deviceInfo does not meet the requirements");
+            }
+
+            if (await _securityService.CheckSuspiciousActivityAsync(userDto.IpAddress, userDto.DeviceInfo.UserAgent, userDto.DeviceInfo.Platform))
             {
                 throw new UnauthorizedAccessException("Suspicious activity detected. Accounts blocked.");
             }
@@ -139,7 +149,7 @@ namespace MatHelper.BLL.Services
                 throw new UnauthorizedAccessException("User is blocked");
             }
 
-            if (!this._securityService.VerifyPassword(loginDto.Password, user.PasswordHash, user.PasswordSalt))
+            if (!_securityService.VerifyPassword(loginDto.Password, user.PasswordHash, user.PasswordSalt))
             {
                 throw new UnauthorizedAccessException("Invalid password.");
             }
@@ -170,9 +180,9 @@ namespace MatHelper.BLL.Services
 
             var refreshTokenExpiration = loginDto.Remember == true ? DateTime.UtcNow.AddDays(28) : DateTime.UtcNow.AddHours(6);
 
-            var accessToken = this._tokenService.GenerateJwtToken(user, loginDto.DeviceInfo);
-            var refreshToken = this._tokenService.GenerateRefreshToken();
-
+            var accessToken = _tokenService.GenerateJwtToken(user, loginDto.DeviceInfo);
+            var refreshToken = _tokenService.GenerateRefreshToken();
+                
             var loginToken = new LoginToken
             {
                 Token = accessToken,
@@ -188,7 +198,13 @@ namespace MatHelper.BLL.Services
             user.LoginTokens!.Add(loginToken);
             await _userRepository.SaveChangesAsync();
 
-            if (await this._securityService.CheckSuspiciousActivityAsync(loginDto.IpAddress, loginDto.DeviceInfo.UserAgent, loginDto.DeviceInfo.Platform))
+            if (loginDto.DeviceInfo.UserAgent == null || loginDto.DeviceInfo.Platform == null)
+            {
+                _logger.LogError("deviceInfo does not meet the requirements");
+                throw new InvalidDataException("deviceInfo does not meet the requirements");
+            }
+
+            if (await _securityService.CheckSuspiciousActivityAsync(loginDto.IpAddress, loginDto.DeviceInfo.UserAgent, loginDto.DeviceInfo.Platform))
             {
                 throw new UnauthorizedAccessException("Suspicious activity detected. Accounts blocked.");
             }

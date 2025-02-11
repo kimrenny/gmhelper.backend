@@ -2,11 +2,11 @@ namespace MatHelper.CORE.Models
 {
     public class LoginDto
     {
-        public string Email { get; set; }
-        public string Password { get; set; }
-        public DeviceInfo DeviceInfo { get; set; }
-        public string IpAddress { get; set; }
-        public string CaptchaToken { get; set; }
-        public bool Remember { get; set; }
+        public required string Email { get; set; }
+        public required string Password { get; set; }
+        public required DeviceInfo DeviceInfo { get; set; }
+        public required string IpAddress { get; set; }
+        public required string CaptchaToken { get; set; }
+        public required bool Remember { get; set; }
     }
 }

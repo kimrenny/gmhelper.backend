@@ -179,13 +179,19 @@ namespace MatHelper.API.Controllers
             if (avatar == null || avatar.Length == 0)
                 return BadRequest("Invalid file.");
 
+            var userId = User.Identity?.Name;
+            if (string.IsNullOrEmpty(userId))
+            {
+                return Unauthorized(new { message = "User is not authenticated." });
+            }
+
             try
             {
                 using var memoryStream = new MemoryStream();
                 await avatar.CopyToAsync(memoryStream);
                 var avatarBytes = memoryStream.ToArray();
 
-                await _userManagementService.SaveUserAvatarAsync(User.Identity.Name, avatarBytes);
+                await _userManagementService.SaveUserAvatarAsync(userId, avatarBytes);
                 return Ok(new { message = "Avatar uploaded successfully." });
             }
             catch(Exception ex)
@@ -262,7 +268,8 @@ namespace MatHelper.API.Controllers
             }
             catch(InvalidDataException ex)
             {
-                return Unauthorized("Invalid data.");
+                this._logger.LogError("Invalid data: {ex}", ex);
+                return Unauthorized("Invalid data");
             }
             catch (Exception ex) {
                 return StatusCode(500, ex.Message);

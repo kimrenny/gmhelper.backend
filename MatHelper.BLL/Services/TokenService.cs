@@ -30,6 +30,12 @@ namespace MatHelper.BLL.Services
             var key = new SymmetricSecurityKey(Convert.FromBase64String(_jwtOptions.SecretKey));
             var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
 
+            if (deviceInfo.UserAgent == null || deviceInfo.Platform == null)
+            {
+                _logger.LogError("deviceInfo does not meet the requirements");
+                throw new InvalidDataException("deviceInfo does not meet the requirements");
+            }
+
             var claims = new List<Claim>
             {
                 new Claim(ClaimTypes.Name, user.Id.ToString()),

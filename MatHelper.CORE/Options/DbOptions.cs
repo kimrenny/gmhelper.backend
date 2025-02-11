@@ -8,6 +8,6 @@ namespace MatHelper.CORE.Options
 {
     public class DbOptions
     {
-        public string ConnectionString { get; set; }
+        public required string ConnectionString { get; set; }
     }
 }

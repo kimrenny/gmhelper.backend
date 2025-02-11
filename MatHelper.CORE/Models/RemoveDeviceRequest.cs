@@ -2,8 +2,8 @@
 {
     public class RemoveDeviceRequest
     {
-        public string UserAgent { get; set; }
-        public string Platform { get; set; }
-        public string IpAddress { get; set; }
+        public required string UserAgent { get; set; }
+        public required string Platform { get; set; }
+        public required string IpAddress { get; set; }
     }
 }
