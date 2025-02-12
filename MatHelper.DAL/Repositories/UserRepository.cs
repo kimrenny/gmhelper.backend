@@ -94,7 +94,7 @@ namespace MatHelper.DAL.Repositories
 
         public async Task<LoginToken?> GetLoginTokenAsync(string token)
         {
-            return _context.LoginTokens.Where(t => t.Token == token).FirstOrDefault();
+            return await _context.LoginTokens.Where(t => t.Token == token).FirstOrDefaultAsync();
         }
 
         public async Task RemoveLoginTokenAsync(LoginToken token)
@@ -199,6 +199,29 @@ namespace MatHelper.DAL.Repositories
                 .ToList();
 
             return groupedByDate;
+        }
+
+        public async Task<int> GetActiveTokensAsync()
+        {
+            var activeUserTokens = await _context.Users
+                .Where(u => u.LoginTokens!.Any())
+                .SelectMany(u => u.LoginTokens!)
+                .Where(t => t.Expiration > DateTime.UtcNow && t.IsActive)
+                .GroupBy(t => t.UserId)
+                .Where(g => g.Count() > 0)
+                .Select(g => g.OrderByDescending(t => t.Expiration).First())
+                .ToListAsync();
+
+            return activeUserTokens.Count;
+        }
+
+        public async Task<int> GetTotalTokensAsync()
+        {
+            var totalLoginTokens = await _context.Users
+                .Where(u => u.LoginTokens!.Any())
+                .SumAsync(u => u.LoginTokens!.Count);
+
+            return totalLoginTokens;
         }
 
         public async Task SaveChangesAsync()

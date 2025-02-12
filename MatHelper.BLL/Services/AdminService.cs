@@ -166,5 +166,25 @@ namespace MatHelper.BLL.Services
                 throw new InvalidOperationException("Could not fetch tokens.", ex);
             }
         }
+
+        public async Task<DashboardTokensDto> GetDashboardTokensAsync()
+        {
+            try
+            {
+                var activeTokens = await _userRepository.GetActiveTokensAsync();
+                var totalTokens = await _userRepository.GetTotalTokensAsync();
+
+                return new DashboardTokensDto
+                {
+                    ActiveTokens = activeTokens,
+                    TotalTokens = totalTokens
+                };
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "An error occured during fetching all active users.");
+                throw new InvalidOperationException("Could not fetch tokens.", ex);
+            }
+        }
     }
 }
