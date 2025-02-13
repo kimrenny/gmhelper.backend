@@ -1,8 +1,6 @@
 using MatHelper.CORE.Models;
 using MatHelper.DAL.Database;
 using Microsoft.EntityFrameworkCore;
-using System.Linq;
-using System.Threading.Tasks;
 
 namespace MatHelper.DAL.Repositories
 {

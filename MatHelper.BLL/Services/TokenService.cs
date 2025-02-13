@@ -1,3 +1,4 @@
+using Azure.Core;
 using MatHelper.BLL.Interfaces;
 using MatHelper.CORE.Models;
 using MatHelper.CORE.Options;
@@ -7,6 +8,7 @@ using Microsoft.IdentityModel.Tokens;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Security.Cryptography;
+using Microsoft.AspNetCore.Http;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -14,12 +16,14 @@ namespace MatHelper.BLL.Services
 {
     public class TokenService : ITokenService
     {
+        private readonly ISecurityService _securityService;
         private readonly UserRepository _userRepository;
         private readonly JwtOptions _jwtOptions;
         private readonly ILogger _logger;
 
-        public TokenService(UserRepository userRepository, JwtOptions jwtOptions, ILogger<TokenService> logger)
+        public TokenService(ISecurityService secutiryService, UserRepository userRepository, JwtOptions jwtOptions, ILogger<TokenService> logger)
         {
+            _securityService = secutiryService;
             _userRepository = userRepository;
             _jwtOptions = jwtOptions;
             _logger = logger;
@@ -112,6 +116,33 @@ namespace MatHelper.BLL.Services
             }
 
             return false;
+        }
+
+        public async Task<string?> ExtractTokenAsync(HttpRequest request)
+        {
+            var authorizationHeader = request.Headers["Authorization"].ToString();
+            if (string.IsNullOrEmpty(authorizationHeader) || !authorizationHeader.StartsWith("Bearer "))
+            {
+                _logger.LogWarning("Authorization header is missing or invalid.");
+                return null;
+            }
+            return authorizationHeader.Substring("Bearer ".Length).Trim();
+        }
+
+        public async Task<Guid?> GetUserIdFromTokenAsync(ClaimsPrincipal user)
+        {
+            var userIdClaim = user.FindFirst(ClaimTypes.Name);
+            if(userIdClaim == null || !Guid.TryParse(userIdClaim.Value, out var userId))
+            {
+                _logger.LogWarning("User ID is not available in the token.");
+                return null;
+            }
+            return userId;
+        }
+
+        public async Task<bool> HasAdminPermissionsAsync(Guid userId)
+        {
+            return await _securityService.HasAdminPermissionsAsync(userId);
         }
     }
 }

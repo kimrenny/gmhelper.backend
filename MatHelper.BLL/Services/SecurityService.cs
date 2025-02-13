@@ -88,7 +88,7 @@ namespace MatHelper.BLL.Services
             return false;
         }
 
-        public async Task<bool> HasAdminPermissions(Guid userId)
+        public async Task<bool> HasAdminPermissionsAsync(Guid userId)
         {
             var user = await _userRepository.GetUserByIdAsync(userId);
             if(user == null)

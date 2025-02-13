@@ -7,9 +7,11 @@ using System.Security.Claims;
 using Microsoft.OpenApi.Validations;
 using Microsoft.AspNetCore.Authorization;
 using System.Collections.Concurrent;
+using MatHelper.DAL.Repositories;
 
 namespace MatHelper.API.Controllers
 {
+    [Authorize(Roles = "Admin, Owner")]
     [ApiController]
     [Route("api/[controller]")]
     public class AdminController : ControllerBase
@@ -19,13 +21,15 @@ namespace MatHelper.API.Controllers
         private readonly ISecurityService _securityService;
         private readonly ILogger<UserController> _logger;
         private static readonly ConcurrentDictionary<string, bool> ProcessingTokens = new();
+        private readonly IRequestLogService _logService;
 
-        public AdminController(IAdminService adminService, ITokenService tokenService, ISecurityService securityService, ILogger<UserController> logger)
+        public AdminController(IAdminService adminService, ITokenService tokenService, ISecurityService securityService, ILogger<UserController> logger, IRequestLogService logService)
         {
             _adminService = adminService;
             _tokenService = tokenService;
             _securityService = securityService;
             _logger = logger;
+            _logService = logService;
         }
 
         [HttpGet("users")]
@@ -34,32 +38,25 @@ namespace MatHelper.API.Controllers
         {
             try
             {
-                var authorizationHeader = Request.Headers["Authorization"].ToString();
-                if (string.IsNullOrEmpty(authorizationHeader) || !authorizationHeader.StartsWith("Bearer "))
+                var token = await _tokenService.ExtractTokenAsync(Request);
+                if (token == null)
                 {
-                    _logger.LogWarning("Authorization header is missing or invalid.");
                     return Unauthorized("Authorization header is missing or invalid");
                 }
-                var token = authorizationHeader.Substring("Bearer ".Length).Trim();
 
                 if (await _tokenService.IsTokenDisabled(token))
                 {
-                    _logger.LogWarning("User token is not active.");
                     return Unauthorized("User token is not active.");
                 }
 
-                var userId = User.FindFirstValue(ClaimTypes.Name);
-                if (string.IsNullOrWhiteSpace(userId))
+                var userId = await _tokenService.GetUserIdFromTokenAsync(User);
+                if (userId == null)
                 {
-                    _logger.LogWarning("User ID is not available in the token.");
                     return Unauthorized("User ID is not available in the token.");
                 }
 
-                _logger.LogInformation($"User ID found in token: {userId}");
-
-                if (!await _securityService.HasAdminPermissions(Guid.Parse(userId)))
+                if (!await _tokenService.HasAdminPermissionsAsync(userId.Value))
                 {
-                    _logger.LogWarning("User does not have admin permissions.");
                     return Forbid("User does not have permissions.");
                 }
 
@@ -90,30 +87,25 @@ namespace MatHelper.API.Controllers
 
             try
             {
-                var authorizationHeader = Request.Headers["Authorization"].ToString();
-                if (string.IsNullOrEmpty(authorizationHeader) || !authorizationHeader.StartsWith("Bearer "))
+                var token = await _tokenService.ExtractTokenAsync(Request);
+                if (token == null)
                 {
-                    _logger.LogWarning("Authorization header is missing or invalid.");
                     return Unauthorized("Authorization header is missing or invalid");
                 }
-                var token = authorizationHeader.Substring("Bearer ".Length).Trim();
 
                 if (await _tokenService.IsTokenDisabled(token))
                 {
-                    _logger.LogWarning("User token is not active.");
                     return Unauthorized("User token is not active.");
                 }
 
-                var userId = User.FindFirstValue(ClaimTypes.Name);
-                if (string.IsNullOrWhiteSpace(userId))
+                var userId = await _tokenService.GetUserIdFromTokenAsync(User);
+                if (userId == null)
                 {
-                    _logger.LogWarning("User ID is not available in the token.");
                     return Unauthorized("User ID is not available in the token.");
                 }
 
-                if (!await _securityService.HasAdminPermissions(Guid.Parse(userId)))
+                if (!await _tokenService.HasAdminPermissionsAsync(userId.Value))
                 {
-                    _logger.LogWarning("User does not have admin permissions.");
                     return Forbid("User does not have permissions.");
                 }
 
@@ -133,32 +125,25 @@ namespace MatHelper.API.Controllers
         {
             try
             {
-                var authorizationHeader = Request.Headers["Authorization"].ToString();
-                if (string.IsNullOrEmpty(authorizationHeader) || !authorizationHeader.StartsWith("Bearer "))
+                var token = await _tokenService.ExtractTokenAsync(Request);
+                if (token == null)
                 {
-                    _logger.LogWarning("Authorization header is missing or invalid.");
                     return Unauthorized("Authorization header is missing or invalid");
                 }
-                var token = authorizationHeader.Substring("Bearer ".Length).Trim();
 
                 if (await _tokenService.IsTokenDisabled(token))
                 {
-                    _logger.LogWarning("User token is not active.");
                     return Unauthorized("User token is not active.");
                 }
 
-                var userId = User.FindFirstValue(ClaimTypes.Name);
-                if (string.IsNullOrWhiteSpace(userId))
+                var userId = await _tokenService.GetUserIdFromTokenAsync(User);
+                if (userId == null)
                 {
-                    _logger.LogWarning("User ID is not available in the token.");
                     return Unauthorized("User ID is not available in the token.");
                 }
 
-                _logger.LogInformation($"User ID found in token: {userId}");
-
-                if (!await _securityService.HasAdminPermissions(Guid.Parse(userId)))
+                if (!await _tokenService.HasAdminPermissionsAsync(userId.Value))
                 {
-                    _logger.LogWarning("User does not have admin permissions.");
                     return Forbid("User does not have permissions.");
                 }
 
@@ -189,30 +174,25 @@ namespace MatHelper.API.Controllers
 
             try
             {
-                var authorizationHeader = Request.Headers["Authorization"].ToString();
-                if (string.IsNullOrEmpty(authorizationHeader) || !authorizationHeader.StartsWith("Bearer "))
+                var token = await _tokenService.ExtractTokenAsync(Request);
+                if (token == null)
                 {
-                    _logger.LogWarning("Authorization header is missing or invalid.");
                     return Unauthorized("Authorization header is missing or invalid");
                 }
-                var token = authorizationHeader.Substring("Bearer ".Length).Trim();
 
                 if (await _tokenService.IsTokenDisabled(token))
                 {
-                    _logger.LogWarning("User token is not active.");
                     return Unauthorized("User token is not active.");
                 }
 
-                var userId = User.FindFirstValue(ClaimTypes.Name);
-                if (string.IsNullOrWhiteSpace(userId))
+                var userId = await _tokenService.GetUserIdFromTokenAsync(User);
+                if (userId == null)
                 {
-                    _logger.LogWarning("User ID is not available in the token.");
                     return Unauthorized("User ID is not available in the token.");
                 }
 
-                if (!await _securityService.HasAdminPermissions(Guid.Parse(userId)))
+                if (!await _tokenService.HasAdminPermissionsAsync(userId.Value))
                 {
-                    _logger.LogWarning("User does not have admin permissions.");
                     return Forbid("User does not have permissions.");
                 }
 
@@ -232,32 +212,25 @@ namespace MatHelper.API.Controllers
         {
             try
             {
-                var authorizationHeader = Request.Headers["Authorization"].ToString();
-                if (string.IsNullOrEmpty(authorizationHeader) || !authorizationHeader.StartsWith("Bearer "))
+                var token = await _tokenService.ExtractTokenAsync(Request);
+                if (token == null)
                 {
-                    _logger.LogWarning("Authorization header is missing or invalid.");
                     return Unauthorized("Authorization header is missing or invalid");
                 }
-                var token = authorizationHeader.Substring("Bearer ".Length).Trim();
 
                 if (await _tokenService.IsTokenDisabled(token))
                 {
-                    _logger.LogWarning("User token is not active.");
                     return Unauthorized("User token is not active.");
                 }
 
-                var userId = User.FindFirstValue(ClaimTypes.Name);
-                if (string.IsNullOrWhiteSpace(userId))
+                var userId = await _tokenService.GetUserIdFromTokenAsync(User);
+                if (userId == null)
                 {
-                    _logger.LogWarning("User ID is not available in the token.");
                     return Unauthorized("User ID is not available in the token.");
                 }
 
-                _logger.LogInformation($"User ID found in token: {userId}");
-
-                if (!await _securityService.HasAdminPermissions(Guid.Parse(userId)))
+                if (!await _tokenService.HasAdminPermissionsAsync(userId.Value))
                 {
-                    _logger.LogWarning("User does not have admin permissions.");
                     return Forbid("User does not have permissions.");
                 }
 
@@ -283,32 +256,25 @@ namespace MatHelper.API.Controllers
         {
             try
             {
-                var authorizationHeader = Request.Headers["Authorization"].ToString();
-                if (string.IsNullOrEmpty(authorizationHeader) || !authorizationHeader.StartsWith("Bearer "))
+                var token = await _tokenService.ExtractTokenAsync(Request);
+                if(token == null)
                 {
-                    _logger.LogWarning("Authorization header is missing or invalid.");
                     return Unauthorized("Authorization header is missing or invalid");
                 }
-                var token = authorizationHeader.Substring("Bearer ".Length).Trim();
 
                 if (await _tokenService.IsTokenDisabled(token))
                 {
-                    _logger.LogWarning("User token is not active.");
                     return Unauthorized("User token is not active.");
                 }
 
-                var userId = User.FindFirstValue(ClaimTypes.Name);
-                if (string.IsNullOrWhiteSpace(userId))
+                var userId = await _tokenService.GetUserIdFromTokenAsync(User);
+                if (userId == null)
                 {
-                    _logger.LogWarning("User ID is not available in the token.");
                     return Unauthorized("User ID is not available in the token.");
                 }
 
-                _logger.LogInformation($"User ID found in token: {userId}");
-
-                if (!await _securityService.HasAdminPermissions(Guid.Parse(userId)))
+                if (!await _tokenService.HasAdminPermissionsAsync(userId.Value))
                 {
-                    _logger.LogWarning("User does not have admin permissions.");
                     return Forbid("User does not have permissions.");
                 }
 
@@ -321,6 +287,13 @@ namespace MatHelper.API.Controllers
                 _logger.LogError(ex, "An error occurred while processing the request.");
                 return StatusCode(500, "Internal server error.");
             }
+        }
+
+        [HttpGet("request-stats")]
+        public async Task<IActionResult> GetRequestStats()
+        {
+            var stats = await _logService.GetRequestStats();
+            return Ok(stats);
         }
     }
 }

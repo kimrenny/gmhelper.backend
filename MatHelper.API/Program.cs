@@ -10,10 +10,15 @@ using MatHelper.CORE.Options;
 using MatHelper.DAL.Database;
 using MatHelper.DAL.Repositories;
 using Microsoft.IdentityModel.Tokens;
+using MatHelper.BLL.Filters;
 
 var builder = WebApplication.CreateBuilder(args);
 
-builder.Services.AddControllers();
+builder.Services.AddScoped<RequestLogRepository>();
+builder.Services.AddControllers(options =>
+{
+    options.Filters.Add<RequestLoggingFilter>();
+});
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
@@ -44,6 +49,7 @@ builder.Services.AddScoped<ISecurityService, SecurityService>();
 builder.Services.AddScoped<ITokenService, TokenService>();
 builder.Services.AddScoped<IAdminService, AdminService>();
 builder.Services.AddScoped<IUserManagementService, UserManagementService>();
+builder.Services.AddScoped<IRequestLogService, RequestLogService>();
 builder.Services.AddScoped<UserRepository>();
 builder.Services.AddScoped<CaptchaValidationService>();
 
