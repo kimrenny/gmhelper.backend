@@ -51,6 +51,7 @@ builder.Services.AddScoped<IAdminService, AdminService>();
 builder.Services.AddScoped<IUserManagementService, UserManagementService>();
 builder.Services.AddScoped<IRequestLogService, RequestLogService>();
 builder.Services.AddScoped<UserRepository>();
+builder.Services.AddScoped<RequestLogRepository>();
 builder.Services.AddScoped<CaptchaValidationService>();
 
 builder.Services.AddAuthentication(options =>

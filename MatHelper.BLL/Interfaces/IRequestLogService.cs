@@ -6,6 +6,6 @@ namespace MatHelper.BLL.Interfaces
 {
     public interface IRequestLogService
     {
-        Task<List<RequestLog>> GetRequestStats();
+        Task<List<RequestLogDto>> GetRequestStats();
     }
 }
