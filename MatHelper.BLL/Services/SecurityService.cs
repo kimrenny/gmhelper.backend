@@ -60,9 +60,13 @@ namespace MatHelper.BLL.Services
         public async Task<bool> CheckSuspiciousActivityAsync(string ipAddress, string userAgent, string platform)
         {
             var tokens = await _userRepository.GetAllLoginTokensAsync();
-            var suspiciousAccounts = tokens.Where(t => t.IpAddress == ipAddress && t.DeviceInfo.UserAgent == userAgent && t.DeviceInfo.Platform == platform).Select(t => t.UserId).Distinct().ToList();
+            var suspiciousAccounts = tokens
+                .Where(t => t.IpAddress == ipAddress && t.DeviceInfo.UserAgent == userAgent && t.DeviceInfo.Platform == platform)
+                .Select(t => t.UserId)
+                .Distinct()
+                .ToList();
 
-            if (suspiciousAccounts.Count >= 3)
+            if (suspiciousAccounts.Count > 3)
             {
                 foreach (var userId in suspiciousAccounts)
                 {

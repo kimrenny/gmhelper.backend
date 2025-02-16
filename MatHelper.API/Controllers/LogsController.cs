@@ -8,6 +8,7 @@ using Microsoft.OpenApi.Validations;
 using Microsoft.AspNetCore.Authorization;
 using System.Collections.Concurrent;
 using MatHelper.DAL.Repositories;
+using TokenValidationResult = MatHelper.CORE.Enums.TokenValidationResult;
 
 namespace MatHelper.API.Controllers
 {
@@ -32,26 +33,18 @@ namespace MatHelper.API.Controllers
         {
             try
             {
-                var token = await _tokenService.ExtractTokenAsync(Request);
-                if (token == null)
+                var validationResult = await _tokenService.ValidateAdminAccessAsync(Request, User);
+                if (validationResult != TokenValidationResult.Valid)
                 {
-                    return Unauthorized("Authorization header is missing or invalid");
-                }
+                    return validationResult switch
+                    {
+                        TokenValidationResult.MissingToken => Unauthorized("Authorization header is missing or invalid"),
+                        TokenValidationResult.InactiveToken => Unauthorized("User token is not active."),
+                        TokenValidationResult.InvalidUserId => Unauthorized("User ID is not available in the token."),
+                        TokenValidationResult.NoAdminPermissions => Forbid("User does not have permissions."),
+                        _ => StatusCode(500, "Unexpected error occured.")
+                    };
 
-                if (await _tokenService.IsTokenDisabled(token))
-                {
-                    return Unauthorized("User token is not active.");
-                }
-
-                var userId = await _tokenService.GetUserIdFromTokenAsync(User);
-                if (userId == null)
-                {
-                    return Unauthorized("User ID is not available in the token.");
-                }
-
-                if (!await _tokenService.HasAdminPermissionsAsync(userId.Value))
-                {
-                    return Forbid("User does not have permissions.");
                 }
 
                 var stats = await _logService.GetRequestStats();

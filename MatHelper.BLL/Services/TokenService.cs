@@ -11,6 +11,7 @@ using System.Security.Cryptography;
 using Microsoft.AspNetCore.Http;
 using System.Text;
 using System.Threading.Tasks;
+using TokenValidationResult = MatHelper.CORE.Enums.TokenValidationResult;
 
 namespace MatHelper.BLL.Services
 {
@@ -73,8 +74,7 @@ namespace MatHelper.BLL.Services
                 if (token != null)
                 {
                     _logger.LogWarning("Refresh token expired: {RefreshToken}", refreshToken);
-                    _userRepository.RemoveToken(token);
-                    await _userRepository.SaveChangesAsync();
+                    //await _userRepository.RemoveLoginTokenAsync(token);
                     throw new Exception("Invalid or expired refresh token.");
                 }
                 _logger.LogWarning("Refresh token not found or expired: {RefreshToken}", refreshToken);
@@ -118,7 +118,38 @@ namespace MatHelper.BLL.Services
             return false;
         }
 
-        public async Task<string?> ExtractTokenAsync(HttpRequest request)
+        public async Task<TokenValidationResult> ValidateAdminAccessAsync(HttpRequest request, ClaimsPrincipal user)
+        {
+            var token = ExtractTokenAsync(request);
+            if (token == null)
+            {
+                _logger.LogWarning("Missing Token.");
+                return TokenValidationResult.MissingToken;
+            }
+
+            if (await IsTokenDisabled(token))
+            {
+                _logger.LogWarning("Inactive Token.");
+                return TokenValidationResult.InactiveToken;
+            }
+
+            var userId = GetUserIdFromTokenAsync(user);
+            if (userId == null)
+            {
+                _logger.LogWarning("Invalid UserId.");
+                return TokenValidationResult.InvalidUserId;
+            }
+
+            if (!await HasAdminPermissionsAsync(userId.Value))
+            {
+                _logger.LogWarning("No Admin Permissions.");
+                return TokenValidationResult.NoAdminPermissions;
+            }
+
+            return TokenValidationResult.Valid;
+        }
+
+        public string? ExtractTokenAsync(HttpRequest request)
         {
             var authorizationHeader = request.Headers["Authorization"].ToString();
             if (string.IsNullOrEmpty(authorizationHeader) || !authorizationHeader.StartsWith("Bearer "))
@@ -129,7 +160,7 @@ namespace MatHelper.BLL.Services
             return authorizationHeader.Substring("Bearer ".Length).Trim();
         }
 
-        public async Task<Guid?> GetUserIdFromTokenAsync(ClaimsPrincipal user)
+        public Guid? GetUserIdFromTokenAsync(ClaimsPrincipal user)
         {
             var userIdClaim = user.FindFirst(ClaimTypes.Name);
             if(userIdClaim == null || !Guid.TryParse(userIdClaim.Value, out var userId))

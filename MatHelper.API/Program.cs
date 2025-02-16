@@ -42,6 +42,12 @@ builder.Services.AddDbContext<AppDbContext>((provider, ctx) =>
 });
 
 var jwtOptions = builder.Configuration.GetSection("Jwt").Get<JwtOptions>();
+
+if(jwtOptions == null)
+{
+    throw new InvalidOperationException("JWT options are not configured properly.");
+}
+
 builder.Services.AddSingleton(jwtOptions);
 
 builder.Services.AddScoped<IAuthenticationService, AuthenticationService>();

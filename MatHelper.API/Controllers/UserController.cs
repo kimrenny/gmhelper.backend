@@ -367,8 +367,8 @@ namespace MatHelper.API.Controllers
 
             try
             {
-                var result = await _userManagementService.RemoveDeviceAsync(Guid.Parse(userId), request.UserAgent, request.Platform, request.IpAddress);
-                if(result.ToString() == "User not found." || result.ToString() == "Device not found or inactive." || result.ToString() == "An unexpected error occured.")
+                var result = await _userManagementService.RemoveDeviceAsync(Guid.Parse(userId), request.UserAgent, request.Platform, request.IpAddress, token);
+                if(result.ToString() == "User not found." || result.ToString() == "Device not found or inactive." || result.ToString() == "The current device cannot be deactivated." || result.ToString() == "An unexpected error occured.")
                 {
                     return BadRequest(new { message = result });
                 }

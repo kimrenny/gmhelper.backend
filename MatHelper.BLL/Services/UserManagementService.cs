@@ -129,7 +129,7 @@ namespace MatHelper.BLL.Services
             await _userRepository.UpdateUserAsync(user);
         }
 
-        public async Task<string> RemoveDeviceAsync(Guid userId, string userAgent, string platform, string ipAddress)
+        public async Task<string> RemoveDeviceAsync(Guid userId, string userAgent, string platform, string ipAddress, string requestToken)
         {
             try
             {
@@ -145,6 +145,12 @@ namespace MatHelper.BLL.Services
                 {
                     _logger.LogWarning("Device not found or inactive for user {UserId}.", userId);
                     return "Device not found or inactive.";
+                }
+
+                if(loginToken.Token == requestToken)
+                {
+                    _logger.LogWarning("Attempt to deactivate current device for user {UserId}.", userId);
+                    return "The current device cannot be deactivated.";
                 }
 
                 loginToken.IsActive = false;

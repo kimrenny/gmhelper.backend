@@ -8,6 +8,7 @@ using Microsoft.OpenApi.Validations;
 using Microsoft.AspNetCore.Authorization;
 using System.Collections.Concurrent;
 using MatHelper.DAL.Repositories;
+using TokenValidationResult = MatHelper.CORE.Enums.TokenValidationResult;
 
 namespace MatHelper.API.Controllers
 {
@@ -38,26 +39,18 @@ namespace MatHelper.API.Controllers
         {
             try
             {
-                var token = await _tokenService.ExtractTokenAsync(Request);
-                if (token == null)
+                var validationResult = await _tokenService.ValidateAdminAccessAsync(Request, User);
+                if (validationResult != TokenValidationResult.Valid)
                 {
-                    return Unauthorized("Authorization header is missing or invalid");
-                }
+                    return validationResult switch
+                    {
+                        TokenValidationResult.MissingToken => Unauthorized("Authorization header is missing or invalid"),
+                        TokenValidationResult.InactiveToken => Unauthorized("User token is not active."),
+                        TokenValidationResult.InvalidUserId => Unauthorized("User ID is not available in the token."),
+                        TokenValidationResult.NoAdminPermissions => Forbid("User does not have permissions."),
+                        _ => StatusCode(500, "Unexpected error occured.")
+                    };
 
-                if (await _tokenService.IsTokenDisabled(token))
-                {
-                    return Unauthorized("User token is not active.");
-                }
-
-                var userId = await _tokenService.GetUserIdFromTokenAsync(User);
-                if (userId == null)
-                {
-                    return Unauthorized("User ID is not available in the token.");
-                }
-
-                if (!await _tokenService.HasAdminPermissionsAsync(userId.Value))
-                {
-                    return Forbid("User does not have permissions.");
                 }
 
                 var users = await _adminService.GetUsersAsync();
@@ -87,26 +80,18 @@ namespace MatHelper.API.Controllers
 
             try
             {
-                var token = await _tokenService.ExtractTokenAsync(Request);
-                if (token == null)
+                var validationResult = await _tokenService.ValidateAdminAccessAsync(Request, User);
+                if (validationResult != TokenValidationResult.Valid)
                 {
-                    return Unauthorized("Authorization header is missing or invalid");
-                }
+                    return validationResult switch
+                    {
+                        TokenValidationResult.MissingToken => Unauthorized("Authorization header is missing or invalid"),
+                        TokenValidationResult.InactiveToken => Unauthorized("User token is not active."),
+                        TokenValidationResult.InvalidUserId => Unauthorized("User ID is not available in the token."),
+                        TokenValidationResult.NoAdminPermissions => Forbid("User does not have permissions."),
+                        _ => StatusCode(500, "Unexpected error occured.")
+                    };
 
-                if (await _tokenService.IsTokenDisabled(token))
-                {
-                    return Unauthorized("User token is not active.");
-                }
-
-                var userId = await _tokenService.GetUserIdFromTokenAsync(User);
-                if (userId == null)
-                {
-                    return Unauthorized("User ID is not available in the token.");
-                }
-
-                if (!await _tokenService.HasAdminPermissionsAsync(userId.Value))
-                {
-                    return Forbid("User does not have permissions.");
                 }
 
                 await _adminService.ActionUserAsync(Guid.Parse(adminActionDto.Id), adminActionDto.Action);
@@ -125,26 +110,18 @@ namespace MatHelper.API.Controllers
         {
             try
             {
-                var token = await _tokenService.ExtractTokenAsync(Request);
-                if (token == null)
+                var validationResult = await _tokenService.ValidateAdminAccessAsync(Request, User);
+                if (validationResult != TokenValidationResult.Valid)
                 {
-                    return Unauthorized("Authorization header is missing or invalid");
-                }
+                    return validationResult switch
+                    {
+                        TokenValidationResult.MissingToken => Unauthorized("Authorization header is missing or invalid"),
+                        TokenValidationResult.InactiveToken => Unauthorized("User token is not active."),
+                        TokenValidationResult.InvalidUserId => Unauthorized("User ID is not available in the token."),
+                        TokenValidationResult.NoAdminPermissions => Forbid("User does not have permissions."),
+                        _ => StatusCode(500, "Unexpected error occured.")
+                    };
 
-                if (await _tokenService.IsTokenDisabled(token))
-                {
-                    return Unauthorized("User token is not active.");
-                }
-
-                var userId = await _tokenService.GetUserIdFromTokenAsync(User);
-                if (userId == null)
-                {
-                    return Unauthorized("User ID is not available in the token.");
-                }
-
-                if (!await _tokenService.HasAdminPermissionsAsync(userId.Value))
-                {
-                    return Forbid("User does not have permissions.");
                 }
 
                 var tokens = await _adminService.GetTokensAsync();
@@ -174,26 +151,18 @@ namespace MatHelper.API.Controllers
 
             try
             {
-                var token = await _tokenService.ExtractTokenAsync(Request);
-                if (token == null)
+                var validationResult = await _tokenService.ValidateAdminAccessAsync(Request, User);
+                if (validationResult != TokenValidationResult.Valid)
                 {
-                    return Unauthorized("Authorization header is missing or invalid");
-                }
+                    return validationResult switch
+                    {
+                        TokenValidationResult.MissingToken => Unauthorized("Authorization header is missing or invalid"),
+                        TokenValidationResult.InactiveToken => Unauthorized("User token is not active."),
+                        TokenValidationResult.InvalidUserId => Unauthorized("User ID is not available in the token."),
+                        TokenValidationResult.NoAdminPermissions => Forbid("User does not have permissions."),
+                        _ => StatusCode(500, "Unexpected error occured.")
+                    };
 
-                if (await _tokenService.IsTokenDisabled(token))
-                {
-                    return Unauthorized("User token is not active.");
-                }
-
-                var userId = await _tokenService.GetUserIdFromTokenAsync(User);
-                if (userId == null)
-                {
-                    return Unauthorized("User ID is not available in the token.");
-                }
-
-                if (!await _tokenService.HasAdminPermissionsAsync(userId.Value))
-                {
-                    return Forbid("User does not have permissions.");
                 }
 
                 await _adminService.ActionTokenAsync(adminActionDto.Id, adminActionDto.Action);
@@ -212,26 +181,18 @@ namespace MatHelper.API.Controllers
         {
             try
             {
-                var token = await _tokenService.ExtractTokenAsync(Request);
-                if (token == null)
+                var validationResult = await _tokenService.ValidateAdminAccessAsync(Request, User);
+                if (validationResult != TokenValidationResult.Valid)
                 {
-                    return Unauthorized("Authorization header is missing or invalid");
-                }
+                    return validationResult switch
+                    {
+                        TokenValidationResult.MissingToken => Unauthorized("Authorization header is missing or invalid"),
+                        TokenValidationResult.InactiveToken => Unauthorized("User token is not active."),
+                        TokenValidationResult.InvalidUserId => Unauthorized("User ID is not available in the token."),
+                        TokenValidationResult.NoAdminPermissions => Forbid("User does not have permissions."),
+                        _ => StatusCode(500, "Unexpected error occured.")
+                    };
 
-                if (await _tokenService.IsTokenDisabled(token))
-                {
-                    return Unauthorized("User token is not active.");
-                }
-
-                var userId = await _tokenService.GetUserIdFromTokenAsync(User);
-                if (userId == null)
-                {
-                    return Unauthorized("User ID is not available in the token.");
-                }
-
-                if (!await _tokenService.HasAdminPermissionsAsync(userId.Value))
-                {
-                    return Forbid("User does not have permissions.");
                 }
 
                 var registrations = await _adminService.GetRegistrationsAsync();
@@ -256,26 +217,18 @@ namespace MatHelper.API.Controllers
         {
             try
             {
-                var token = await _tokenService.ExtractTokenAsync(Request);
-                if(token == null)
+                var validationResult = await _tokenService.ValidateAdminAccessAsync(Request, User);
+                if (validationResult != TokenValidationResult.Valid)
                 {
-                    return Unauthorized("Authorization header is missing or invalid");
-                }
+                    return validationResult switch
+                    {
+                        TokenValidationResult.MissingToken => Unauthorized("Authorization header is missing or invalid"),
+                        TokenValidationResult.InactiveToken => Unauthorized("User token is not active."),
+                        TokenValidationResult.InvalidUserId => Unauthorized("User ID is not available in the token."),
+                        TokenValidationResult.NoAdminPermissions => Forbid("User does not have permissions."),
+                        _ => StatusCode(500, "Unexpected error occured.")
+                    };
 
-                if (await _tokenService.IsTokenDisabled(token))
-                {
-                    return Unauthorized("User token is not active.");
-                }
-
-                var userId = await _tokenService.GetUserIdFromTokenAsync(User);
-                if (userId == null)
-                {
-                    return Unauthorized("User ID is not available in the token.");
-                }
-
-                if (!await _tokenService.HasAdminPermissionsAsync(userId.Value))
-                {
-                    return Forbid("User does not have permissions.");
                 }
 
                 var activeUsers = await _adminService.GetDashboardTokensAsync();
@@ -292,8 +245,30 @@ namespace MatHelper.API.Controllers
         [HttpGet("request-stats")]
         public async Task<IActionResult> GetRequestStats()
         {
-            var stats = await _logService.GetRequestStats();
-            return Ok(stats);
+            try
+            {
+                var validationResult = await _tokenService.ValidateAdminAccessAsync(Request, User);
+                if(validationResult != TokenValidationResult.Valid)
+                {
+                    return validationResult switch
+                    {
+                        TokenValidationResult.MissingToken => Unauthorized("Authorization header is missing or invalid"),
+                        TokenValidationResult.InactiveToken => Unauthorized("User token is not active."),
+                        TokenValidationResult.InvalidUserId => Unauthorized("User ID is not available in the token."),
+                        TokenValidationResult.NoAdminPermissions => Forbid("User does not have permissions."),
+                        _ => StatusCode(500, "Unexpected error occured.")
+                    };
+
+                }
+
+                var stats = await _logService.GetRequestStats();
+                return Ok(stats);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "An error occurred while processing the request.");
+                return StatusCode(500, "Internal server error.");
+            }
         }
     }
 }
