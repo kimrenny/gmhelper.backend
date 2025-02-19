@@ -10,5 +10,6 @@ namespace MatHelper.BLL.Interfaces
         string GenerateSalt();
         Task<bool> CheckSuspiciousActivityAsync(string ipAddress, string userAgent, string platform);
         Task<bool> HasAdminPermissionsAsync(Guid userId);
+        Task<string> GetCountryByIpAsync(string ipAddress);
     }
 }

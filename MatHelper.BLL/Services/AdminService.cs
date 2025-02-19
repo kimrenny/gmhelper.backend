@@ -8,12 +8,14 @@ namespace MatHelper.BLL.Services
 {
     public class AdminService : IAdminService
     {
+        private readonly ISecurityService _securityService;
         private readonly UserRepository _userRepository;
         private readonly JwtOptions _jwtOptions;
         private readonly ILogger _logger;
 
-        public AdminService(UserRepository userRepository, JwtOptions jwtOptions, ILogger<SecurityService> logger)
+        public AdminService(ISecurityService securityService, UserRepository userRepository, JwtOptions jwtOptions, ILogger<SecurityService> logger)
         {
+            _securityService = securityService;
             _userRepository = userRepository;
             _jwtOptions = jwtOptions;
             _logger = logger;
@@ -184,6 +186,59 @@ namespace MatHelper.BLL.Services
             {
                 _logger.LogError(ex, "An error occured during fetching all active users.");
                 throw new InvalidOperationException("Could not fetch tokens.", ex);
+            }
+        }
+
+
+        public async Task<Dictionary<string, int>> GetUsersByCountryAsync()
+        {
+            try
+            {
+                var users = await _userRepository.GetAllUsersAsync();
+                if(users == null || !users.Any())
+                {
+                    _logger.LogWarning("No users found in the database.");
+                    return new Dictionary<string, int>();
+                }
+
+                var userCountryStats = new Dictionary<string, int>();
+
+                _logger.LogInformation($"Total users: {users.Count}");
+
+                foreach (var user in users)
+                {
+                    _logger.LogInformation($"Processing user: {user.Username}");
+
+                    var lastActiveToken = user.LoginTokens?
+                        .OrderByDescending(t => t.Expiration)
+                        .FirstOrDefault();
+
+                    if (lastActiveToken == null)
+                    {
+                        _logger.LogWarning($"User {user.Username} has no active tokens.");
+                        continue;
+                    }
+
+                    _logger.LogInformation($"User {user.Username} has IP: {lastActiveToken.IpAddress}");
+
+                    var country = await _securityService.GetCountryByIpAsync(lastActiveToken.IpAddress);
+                    if (userCountryStats.ContainsKey(country))
+                    {
+                        userCountryStats[country]++;
+                    }
+                    else
+                    {
+                        userCountryStats[country] = 1;
+                    }
+                }
+
+
+                return userCountryStats;
+            }
+            catch(Exception ex)
+            {
+                _logger.LogError(ex, "An error occured during fetching users by country.");
+                throw new InvalidOperationException("Could not fetch users by country.", ex);
             }
         }
     }

@@ -34,7 +34,7 @@ namespace MatHelper.API.Controllers
         }
 
         [HttpGet("users")]
-        [Authorize]
+        [Authorize(Roles = "Admin, Owner")]
         public async Task<IActionResult> GetUsers()
         {
             try
@@ -70,7 +70,7 @@ namespace MatHelper.API.Controllers
         }
 
         [HttpPut("users/action")]
-        [Authorize]
+        [Authorize(Roles = "Admin, Owner")]
         public async Task<IActionResult> ActionUser([FromBody] AdminActionDto adminActionDto)
         {
             if(adminActionDto == null)
@@ -105,7 +105,7 @@ namespace MatHelper.API.Controllers
         }
 
         [HttpGet("tokens")]
-        [Authorize]
+        [Authorize(Roles = "Admin, Owner")]
         public async Task<IActionResult> GetTokens()
         {
             try
@@ -141,7 +141,7 @@ namespace MatHelper.API.Controllers
         }
 
         [HttpPut("tokens/action")]
-        [Authorize]
+        [Authorize(Roles = "Admin, Owner")]
         public async Task<IActionResult> ActionToken([FromBody] AdminActionDto adminActionDto)
         {
             if (adminActionDto == null)
@@ -176,7 +176,7 @@ namespace MatHelper.API.Controllers
         }
 
         [HttpGet("dashboard/registrations")]
-        [Authorize]
+        [Authorize(Roles = "Admin, Owner")]
         public async Task<IActionResult> GetRegistrations()
         {
             try
@@ -212,7 +212,7 @@ namespace MatHelper.API.Controllers
         }
 
         [HttpGet("dashboard/tokens")]
-        [Authorize]
+        [Authorize(Roles = "Admin, Owner")]
         public async Task<IActionResult> GetDashboardTokens()
         {
             try
@@ -243,6 +243,7 @@ namespace MatHelper.API.Controllers
         }
 
         [HttpGet("request-stats")]
+        [Authorize(Roles = "Admin, Owner")]
         public async Task<IActionResult> GetRequestStats()
         {
             try
@@ -270,5 +271,42 @@ namespace MatHelper.API.Controllers
                 return StatusCode(500, "Internal server error.");
             }
         }
+
+        [HttpGet("country-rating")]
+        [Authorize(Roles = "Admin, Owner")]
+        public async Task<IActionResult> GetUsersByCountry()
+        {
+            try
+            {
+                var validationResult = await _tokenService.ValidateAdminAccessAsync(Request, User);
+                if (validationResult != TokenValidationResult.Valid)
+                {
+                    return validationResult switch
+                    {
+                        TokenValidationResult.MissingToken => Unauthorized("Authorization header is missing or invalid"),
+                        TokenValidationResult.InactiveToken => Unauthorized("User token is not active."),
+                        TokenValidationResult.InvalidUserId => Unauthorized("User ID is not available in the token."),
+                        TokenValidationResult.NoAdminPermissions => Forbid("User does not have permissions."),
+                        _ => StatusCode(500, "Unexpected error occured.")
+                    };
+
+                }
+
+                var userCountryStats = await _adminService.GetUsersByCountryAsync();
+                
+                if(userCountryStats == null || !userCountryStats.Any())
+                {
+                    return NotFound("No users found.");
+                }
+
+                return Ok(userCountryStats);
+            }
+            catch(Exception ex)
+            {
+                _logger.LogError(ex, "An error occured while processing the request.");
+                return StatusCode(500, "Internal server error.");
+            }
+        }
+
     }
 }

@@ -4,6 +4,7 @@ using MatHelper.CORE.Options;
 using MatHelper.DAL.Repositories;
 using Microsoft.Extensions.Logging;
 using Microsoft.IdentityModel.Tokens;
+using Newtonsoft.Json.Linq;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Security.Cryptography;
@@ -101,6 +102,29 @@ namespace MatHelper.BLL.Services
             }
 
             return user.Role == "Admin" || user.Role == "Owner";
+        }
+
+        public async Task<string> GetCountryByIpAsync(string ipAddress)
+        {
+            using (var client = new HttpClient())
+            {
+                var url = $"https://get.geojs.io/v1/ip/country.json?ip={ipAddress}";
+                var response = await client.GetStringAsync(url);
+
+                try
+                {
+                    var jsonArray = JArray.Parse(response);
+                    var country = jsonArray.FirstOrDefault()?["name"]?.ToString();
+
+                    return country ?? "Unknown";
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, $"Error parsing response for IP: {ipAddress}");
+                    return "Unknown";
+                }
+                
+            }
         }
     }
 }
