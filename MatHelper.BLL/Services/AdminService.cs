@@ -3,6 +3,7 @@ using MatHelper.CORE.Models;
 using MatHelper.CORE.Options;
 using MatHelper.DAL.Repositories;
 using Microsoft.Extensions.Logging;
+using System.Collections.Generic;
 
 namespace MatHelper.BLL.Services
 {
@@ -190,7 +191,7 @@ namespace MatHelper.BLL.Services
         }
 
 
-        public async Task<Dictionary<string, int>> GetUsersByCountryAsync()
+        public async Task<List<CountryStatsDto>> GetUsersByCountryAsync()
         {
             try
             {
@@ -198,10 +199,10 @@ namespace MatHelper.BLL.Services
                 if(users == null || !users.Any())
                 {
                     _logger.LogWarning("No users found in the database.");
-                    return new Dictionary<string, int>();
+                    return new List<CountryStatsDto>();
                 }
 
-                var userCountryStats = new Dictionary<string, int>();
+                var userCountryStats = new Dictionary<string, ushort>();
 
                 _logger.LogInformation($"Total users: {users.Count}");
 
@@ -222,6 +223,7 @@ namespace MatHelper.BLL.Services
                     _logger.LogInformation($"User {user.Username} has IP: {lastActiveToken.IpAddress}");
 
                     var country = await _securityService.GetCountryByIpAsync(lastActiveToken.IpAddress);
+
                     if (userCountryStats.ContainsKey(country))
                     {
                         userCountryStats[country]++;
@@ -233,9 +235,11 @@ namespace MatHelper.BLL.Services
                 }
 
 
-                return userCountryStats;
+                return userCountryStats
+                    .Select(x => new CountryStatsDto { Country = x.Key, Count = x.Value })
+                    .ToList();
             }
-            catch(Exception ex)
+            catch (Exception ex)
             {
                 _logger.LogError(ex, "An error occured during fetching users by country.");
                 throw new InvalidOperationException("Could not fetch users by country.", ex);
