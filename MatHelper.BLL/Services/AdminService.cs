@@ -176,11 +176,15 @@ namespace MatHelper.BLL.Services
             {
                 var activeTokens = await _userRepository.GetActiveTokensAsync();
                 var totalTokens = await _userRepository.GetTotalTokensAsync();
+                var activeAdminTokens = await _userRepository.GetActiveAdminTokensAsync();
+                var totalAdminTokens = await _userRepository.GetTotalAdminTokensAsync();
 
                 return new DashboardTokensDto
                 {
                     ActiveTokens = activeTokens,
-                    TotalTokens = totalTokens
+                    TotalTokens = totalTokens,
+                    ActiveAdminTokens = activeAdminTokens,
+                    TotalAdminTokens = totalAdminTokens
                 };
             }
             catch (Exception ex)

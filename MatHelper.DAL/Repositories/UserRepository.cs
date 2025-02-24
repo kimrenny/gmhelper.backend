@@ -208,6 +208,17 @@ namespace MatHelper.DAL.Repositories
             return activeUserTokens.Count;
         }
 
+        public async Task<int> GetActiveAdminTokensAsync()
+        {
+            var activeAdminTokens = await _context.Users
+                .Where(u => (u.Role.ToLower() == "admin" || u.Role.ToLower() == "owner") && u.LoginTokens!.Any())
+                .SelectMany(u => u.LoginTokens!)
+                .Where(t => t.Expiration >= DateTime.UtcNow && t.IsActive)
+                .CountAsync();
+
+            return activeAdminTokens;
+        }
+
         public async Task<int> GetTotalTokensAsync()
         {
             var totalLoginTokens = await _context.Users
@@ -215,6 +226,15 @@ namespace MatHelper.DAL.Repositories
                 .SumAsync(u => u.LoginTokens!.Count);
 
             return totalLoginTokens;
+        }
+
+        public async Task<int> GetTotalAdminTokensAsync()
+        {
+            var totalAdminTokens = await _context.Users
+                .Where(u => (u.Role.ToLower() == "admin" || u.Role.ToLower() == "owner") && u.LoginTokens!.Any())
+                .SumAsync(u => u.LoginTokens!.Count);
+
+            return totalAdminTokens;
         }
 
         public async Task SaveChangesAsync()
