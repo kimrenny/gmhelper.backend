@@ -249,5 +249,48 @@ namespace MatHelper.BLL.Services
                 throw new InvalidOperationException("Could not fetch users by country.", ex);
             }
         }
+
+        public async Task<List<RoleStatsDto>> GetRoleStatsAsync()
+        {
+            try
+            {
+                var users = await _userRepository.GetAllUsersAsync();
+                if (users == null || !users.Any())
+                {
+                    _logger.LogWarning("No users found in the database.");
+                    return new List<RoleStatsDto>();
+                }
+
+                var userCountryStats = new Dictionary<string, ushort>();
+
+                _logger.LogInformation($"Total users: {users.Count}");
+
+                foreach (var user in users)
+                {
+                    _logger.LogInformation($"Processing user: {user.Username}");
+
+                    var role = user.Role;
+
+                    if (userCountryStats.ContainsKey(role))
+                    {
+                        userCountryStats[role]++;
+                    }
+                    else
+                    {
+                        userCountryStats[role] = 1;
+                    }
+                }
+
+
+                return userCountryStats
+                    .Select(x => new RoleStatsDto { Role = x.Key, Count = x.Value })
+                    .ToList();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "An error occured during fetching users by role.");
+                throw new InvalidOperationException("Could not fetch users by role.", ex);
+            }
+        }
     }
 }

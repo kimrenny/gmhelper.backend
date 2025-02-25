@@ -308,5 +308,41 @@ namespace MatHelper.API.Controllers
             }
         }
 
+
+        [HttpGet("role-stats")]
+        [Authorize(Roles = "Admin, Owner")]
+        public async Task<IActionResult> GetRoleStats()
+        {
+            try
+            {
+                var validationResult = await _tokenService.ValidateAdminAccessAsync(Request, User);
+                if (validationResult != TokenValidationResult.Valid)
+                {
+                    return validationResult switch
+                    {
+                        TokenValidationResult.MissingToken => Unauthorized("Authorization header is missing or invalid"),
+                        TokenValidationResult.InactiveToken => Unauthorized("User token is not active."),
+                        TokenValidationResult.InvalidUserId => Unauthorized("User ID is not available in the token."),
+                        TokenValidationResult.NoAdminPermissions => Forbid("User does not have permissions."),
+                        _ => StatusCode(500, "Unexpected error occured.")
+                    };
+
+                }
+
+                var roleStats = await _adminService.GetRoleStatsAsync();
+
+                if (roleStats == null || !roleStats.Any())
+                {
+                    return NotFound("No stats found.");
+                }
+
+                return Ok(roleStats);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "An error occured while processing the request.");
+                return StatusCode(500, "Internal server error.");
+            }
+        }
     }
 }

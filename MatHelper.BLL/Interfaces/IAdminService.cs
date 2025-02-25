@@ -12,5 +12,6 @@ namespace MatHelper.BLL.Interfaces
         Task<List<RegistrationsDto>> GetRegistrationsAsync();
         Task<DashboardTokensDto> GetDashboardTokensAsync();
         Task<List<CountryStatsDto>> GetUsersByCountryAsync();
+        Task<List<RoleStatsDto>> GetRoleStatsAsync();
     }
 }
