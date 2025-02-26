@@ -261,7 +261,7 @@ namespace MatHelper.BLL.Services
                     return new List<RoleStatsDto>();
                 }
 
-                var userCountryStats = new Dictionary<string, ushort>();
+                var userRoleStats = new Dictionary<string, int>();
 
                 _logger.LogInformation($"Total users: {users.Count}");
 
@@ -271,19 +271,58 @@ namespace MatHelper.BLL.Services
 
                     var role = user.Role;
 
-                    if (userCountryStats.ContainsKey(role))
+                    if (userRoleStats.ContainsKey(role))
                     {
-                        userCountryStats[role]++;
+                        userRoleStats[role]++;
                     }
                     else
                     {
-                        userCountryStats[role] = 1;
+                        userRoleStats[role] = 1;
                     }
                 }
 
 
-                return userCountryStats
+                return userRoleStats
                     .Select(x => new RoleStatsDto { Role = x.Key, Count = x.Value })
+                    .ToList();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "An error occured during fetching users by role.");
+                throw new InvalidOperationException("Could not fetch users by role.", ex);
+            }
+        }
+
+        public async Task<List<BlockStatsDto>> GetBlockStatsAsync()
+        {
+            try
+            {
+                var users = await _userRepository.GetAllUsersAsync();
+                if (users == null || !users.Any())
+                {
+                    _logger.LogWarning("No users found in the database.");
+                    return new List<BlockStatsDto>();
+                }
+
+                var userBlockStats = new Dictionary<string, int>();
+
+                foreach (var user in users)
+                {
+                    var status = user.IsBlocked ? "Banned" : "Active";
+
+                    if (userBlockStats.ContainsKey(status))
+                    {
+                        userBlockStats[status]++;
+                    }
+                    else
+                    {
+                        userBlockStats[status] = 1;
+                    }
+                }
+
+
+                return userBlockStats
+                    .Select(x => new BlockStatsDto { Status = x.Key, Count = x.Value })
                     .ToList();
             }
             catch (Exception ex)

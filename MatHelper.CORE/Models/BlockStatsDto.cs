@@ -1,8 +1,8 @@
 namespace MatHelper.CORE.Models
 {
-    public class RoleStatsDto
+    public class BlockStatsDto
     {
-        public required string Role { get; set; }
+        public required string Status { get; set; }
         public required int Count { get; set; }
     }
 }

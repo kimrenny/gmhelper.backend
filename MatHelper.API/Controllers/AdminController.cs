@@ -344,5 +344,41 @@ namespace MatHelper.API.Controllers
                 return StatusCode(500, "Internal server error.");
             }
         }
+
+        [HttpGet("block-stats")]
+        [Authorize(Roles = "Admin, Owner")]
+        public async Task<IActionResult> GetBlockStats()
+        {
+            try
+            {
+                var validationResult = await _tokenService.ValidateAdminAccessAsync(Request, User);
+                if (validationResult != TokenValidationResult.Valid)
+                {
+                    return validationResult switch
+                    {
+                        TokenValidationResult.MissingToken => Unauthorized("Authorization header is missing or invalid"),
+                        TokenValidationResult.InactiveToken => Unauthorized("User token is not active."),
+                        TokenValidationResult.InvalidUserId => Unauthorized("User ID is not available in the token."),
+                        TokenValidationResult.NoAdminPermissions => Forbid("User does not have permissions."),
+                        _ => StatusCode(500, "Unexpected error occured.")
+                    };
+
+                }
+
+                var blockStats = await _adminService.GetBlockStatsAsync();
+
+                if (blockStats == null || !blockStats.Any())
+                {
+                    return NotFound("No stats found.");
+                }
+
+                return Ok(blockStats);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "An error occured while processing the request.");
+                return StatusCode(500, "Internal server error.");
+            }
+        }
     }
 }
