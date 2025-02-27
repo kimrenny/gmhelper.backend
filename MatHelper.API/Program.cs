@@ -14,6 +14,7 @@ using MatHelper.BLL.Filters;
 
 var builder = WebApplication.CreateBuilder(args);
 
+builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<RequestLogRepository>();
 builder.Services.AddControllers(options =>
 {
@@ -43,7 +44,7 @@ builder.Services.AddDbContext<AppDbContext>((provider, ctx) =>
 
 var jwtOptions = builder.Configuration.GetSection("Jwt").Get<JwtOptions>();
 
-if(jwtOptions == null)
+if (jwtOptions == null)
 {
     throw new InvalidOperationException("JWT options are not configured properly.");
 }

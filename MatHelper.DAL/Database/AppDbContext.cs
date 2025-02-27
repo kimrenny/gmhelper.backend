@@ -9,6 +9,7 @@ namespace MatHelper.DAL.Database
         public DbSet<User> Users { get; set; }
         public DbSet<LoginToken> LoginTokens { get; set; }
         public DbSet<RequestLog> RequestLogs { get; set; }
+        public DbSet<RequestLogDetail> RequestLogDetails { get; set; }
 
         public AppDbContext(DbContextOptions<AppDbContext> options) : base(options) { }
 

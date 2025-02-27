@@ -7,6 +7,7 @@ using System.Text;
 using System.Threading.Tasks;
 using MatHelper.DAL.Models;
 using MatHelper.CORE.Models;
+using System.Security.Claims;
 
 namespace MatHelper.DAL.Repositories
 {
@@ -19,17 +20,12 @@ namespace MatHelper.DAL.Repositories
             _context = context;
         }
 
-        public async Task LogRequestAsync()
-        {
-            await IncrementRequestCount();
-        }
-
-        public async Task IncrementRequestCount()
+        public async Task LogRequestAsync(string method, string path, string userId, string requestBody)
         {
             var today = DateOnly.FromDateTime(DateTime.UtcNow);
             var log = await _context.RequestLogs.FirstOrDefaultAsync(x => x.Date == today);
 
-            if(log == null)
+            if (log == null)
             {
                 log = new RequestLog { Date = today, Count = 1 };
                 await _context.RequestLogs.AddAsync(log);
@@ -39,6 +35,16 @@ namespace MatHelper.DAL.Repositories
                 log.Count++;
             }
 
+            var requestLogDetail = new RequestLogDetail
+            {
+                Timestamp = DateTime.UtcNow,
+                Method = method,
+                Path = path,
+                UserId = userId,
+                RequestBody = requestBody
+            };
+
+            await _context.RequestLogDetails.AddAsync(requestLogDetail);
             await _context.SaveChangesAsync();
         }
 
