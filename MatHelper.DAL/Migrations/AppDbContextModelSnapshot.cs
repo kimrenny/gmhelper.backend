@@ -145,6 +145,9 @@ namespace MatHelper.DAL.Migrations
                     b.Property<string>("RequestBody")
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<string>("StatusCode")
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<DateTime>("Timestamp")
                         .HasColumnType("datetime2");
 

@@ -20,7 +20,7 @@ namespace MatHelper.DAL.Repositories
             _context = context;
         }
 
-        public async Task LogRequestAsync(string method, string path, string userId, string requestBody)
+        public async Task LogRequestAsync(string method, string path, string userId, string requestBody, string statusCode)
         {
             var today = DateOnly.FromDateTime(DateTime.UtcNow);
             var log = await _context.RequestLogs.FirstOrDefaultAsync(x => x.Date == today);
@@ -41,7 +41,8 @@ namespace MatHelper.DAL.Repositories
                 Method = method,
                 Path = path,
                 UserId = userId,
-                RequestBody = requestBody
+                RequestBody = requestBody,
+                StatusCode = statusCode
             };
 
             await _context.RequestLogDetails.AddAsync(requestLogDetail);

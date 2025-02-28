@@ -8,5 +8,6 @@
         public required string Path { get; set; }
         public string? UserId { get; set; }
         public string? RequestBody { get; set; }
+        public string? StatusCode { get; set; }
     }
 }

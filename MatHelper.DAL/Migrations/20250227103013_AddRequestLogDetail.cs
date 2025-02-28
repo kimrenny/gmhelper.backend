@@ -20,7 +20,9 @@ namespace MatHelper.DAL.Migrations
                     Timestamp = table.Column<DateTime>(type: "datetime2", nullable: false),
                     Method = table.Column<string>(type: "nvarchar(max)", nullable: false),
                     Path = table.Column<string>(type: "nvarchar(max)", nullable: false),
-                    UserId = table.Column<string>(type: "nvarchar(max)", nullable: true)
+                    UserId = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    RequestBody = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    StatusCode = table.Column<string>(type: "nvarchar(max)", nullable: true)
                 },
                 constraints: table =>
                 {

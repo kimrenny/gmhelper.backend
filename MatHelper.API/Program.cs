@@ -94,6 +94,7 @@ app.UseHttpsRedirection();
 
 app.Use(async (context, next) =>
 {
+    context.Request.EnableBuffering();
     var logger = context.RequestServices.GetRequiredService<ILogger<Program>>();
     logger.LogInformation("Handling request: {Method} {Path}", context.Request.Method, context.Request.Path);
     await next();

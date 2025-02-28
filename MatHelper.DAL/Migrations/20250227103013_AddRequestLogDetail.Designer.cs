@@ -12,8 +12,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace MatHelper.DAL.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20250226103604_AddRequestBodyToRequestLogDetail")]
-    partial class AddRequestBodyToRequestLogDetail
+    [Migration("20250227103013_AddRequestLogDetail")]
+    partial class AddRequestLogDetail
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -146,6 +146,9 @@ namespace MatHelper.DAL.Migrations
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("RequestBody")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("StatusCode")
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<DateTime>("Timestamp")
