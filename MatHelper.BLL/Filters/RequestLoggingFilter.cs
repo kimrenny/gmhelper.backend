@@ -31,8 +31,10 @@ namespace MatHelper.BLL.Filters
                 var userId = httpContext.User.FindFirst(ClaimTypes.Name)?.Value ?? "Anonymous";
                 var method = httpContext.Request.Method;
                 var path = httpContext.Request.Path;
+                var ipAddress = httpContext.Connection.RemoteIpAddress?.ToString();
+                var userAgent = httpContext.Request.Headers["User-Agent"].ToString();
 
-                var startTime = DateTime.UtcNow;    
+                var startTime = DateTime.UtcNow;
 
                 string? requestBody = null;
 
@@ -59,6 +61,15 @@ namespace MatHelper.BLL.Filters
                     }
                 }
 
+                if (httpContext.Request.Headers.TryGetValue("X-Forwarded-For", out var forwardedFor))
+                {
+                    ipAddress = forwardedFor.ToString().Split(',')[0].Trim();
+                }
+                else if(httpContext.Request.Headers.TryGetValue("X-Real-IP", out var realIp))
+                {
+                    ipAddress = realIp.ToString();
+                }
+
                 var executedContext = await next();
 
                 var endTime = DateTime.UtcNow;
@@ -74,7 +85,9 @@ namespace MatHelper.BLL.Filters
                     responseStatusCode,
                     startTime.ToString("HH:mm:ss.fff"),
                     endTime.ToString("HH:mm:ss.fff"),
-                    elapsedTime.TotalMilliseconds
+                    elapsedTime.TotalMilliseconds,
+                    ipAddress ?? "Unknown",
+                    userAgent
                 );
             };
             
