@@ -8,6 +8,10 @@
         public required string Path { get; set; }
         public string? UserId { get; set; }
         public string? RequestBody { get; set; }
-        public string? StatusCode { get; set; }
+        public int StatusCode { get; set; }
+        public string? StartTime { get; set; }
+        public string? EndTime { get; set; }
+        public double ElapsedTime { get; set; }
+
     }
 }

@@ -32,6 +32,8 @@ namespace MatHelper.BLL.Filters
                 var method = httpContext.Request.Method;
                 var path = httpContext.Request.Path;
 
+                var startTime = DateTime.UtcNow;    
+
                 string? requestBody = null;
 
                 if (method == "PUT" || method == "DELETE")
@@ -50,15 +52,48 @@ namespace MatHelper.BLL.Filters
 
                         httpContext.Request.Body.Seek(originalPosition, SeekOrigin.Begin);
                     }
+
+                    if (!string.IsNullOrEmpty(requestBody))
+                    {
+                        requestBody = ProcessRequestBody(requestBody);
+                    }
                 }
 
                 var executedContext = await next();
 
+                var endTime = DateTime.UtcNow;
+                var elapsedTime = endTime - startTime;
+
                 var responseStatusCode = executedContext.HttpContext.Response.StatusCode;
 
-                await _logRepository.LogRequestAsync(method, path, userId, requestBody ?? string.Empty, responseStatusCode.ToString());
-            }
+                await _logRepository.LogRequestAsync(
+                    method,
+                    path,
+                    userId,
+                    requestBody ?? string.Empty,
+                    responseStatusCode,
+                    startTime.ToString("HH:mm:ss.fff"),
+                    endTime.ToString("HH:mm:ss.fff"),
+                    elapsedTime.TotalMilliseconds
+                );
+            };
             
+        }
+
+        private string ProcessRequestBody(string requestBody)
+        {
+            var lines = requestBody.Split(new[] { "\r\n", "\n"}, StringSplitOptions.RemoveEmptyEntries);
+            for (int i = 0; i < lines.Length; i++)
+            {
+                if (lines[i].Contains("name=\"currentPassword\"") || lines[i].Contains("name=\"newPassword\""))
+                {
+                    if (i + 1 < lines.Length)
+                    {
+                        lines[i + 1] = "******";
+                    }
+                }
+            }
+            return string.Join("\n", lines);
         }
 
         public void OnActionExecuting(ActionExecutingContext context)
