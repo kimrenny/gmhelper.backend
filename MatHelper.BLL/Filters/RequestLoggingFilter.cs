@@ -1,6 +1,7 @@
 ﻿using MatHelper.DAL.Repositories;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc.Filters;
+using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
 using System;
 using System.Collections.Generic;
@@ -9,6 +10,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Primitives;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace MatHelper.BLL.Filters
 {
@@ -38,7 +40,7 @@ namespace MatHelper.BLL.Filters
 
                 string? requestBody = null;
 
-                if (method == "PUT" || method == "DELETE")
+                if (method == "PUT" || method == "DELETE" || method == "PATCH")
                 {
                     if (httpContext.Request.Body.CanSeek)
                     {
@@ -70,25 +72,73 @@ namespace MatHelper.BLL.Filters
                     ipAddress = realIp.ToString();
                 }
 
-                var executedContext = await next();
+                try
+                {
+                    var executedContext = await next();
+                    var endTime = DateTime.UtcNow;
+                    var elapsedTime = endTime - startTime;
 
-                var endTime = DateTime.UtcNow;
-                var elapsedTime = endTime - startTime;
+                    var responseStatusCode = executedContext.HttpContext.Response.StatusCode;
 
-                var responseStatusCode = executedContext.HttpContext.Response.StatusCode;
+                    if(executedContext.Result is ObjectResult result)
+                    {
+                        responseStatusCode = result.StatusCode ?? responseStatusCode;
+                    }
 
-                await _logRepository.LogRequestAsync(
-                    method,
-                    path,
-                    userId,
-                    requestBody ?? string.Empty,
-                    responseStatusCode,
-                    startTime.ToString("HH:mm:ss.fff"),
-                    endTime.ToString("HH:mm:ss.fff"),
-                    elapsedTime.TotalMilliseconds,
-                    ipAddress ?? "Unknown",
-                    userAgent
-                );
+                    Console.WriteLine(responseStatusCode);
+                    string responseStatus = "Info";
+
+                    if (responseStatusCode >= 400 && responseStatusCode < 500)
+                    {
+                        responseStatus = "Warn";
+                    }
+                    else if (responseStatusCode >= 500)
+                    {
+                        responseStatus = "Error";
+                    }
+
+                    await _logRepository.LogRequestAsync(
+                        method,
+                        path,
+                        userId,
+                        requestBody ?? string.Empty,
+                        responseStatusCode,
+                        startTime.ToString("HH:mm:ss.fff"),
+                        endTime.ToString("HH:mm:ss.fff"),
+                        elapsedTime.TotalMilliseconds,
+                        ipAddress ?? "Unknown",
+                        userAgent,
+                        responseStatus
+                    );
+                }
+                catch (Exception)
+                {
+                    var endTime = DateTime.UtcNow;
+                    var elapsedTime = endTime - startTime;
+                    var responseStatusCode = context.HttpContext.Response.StatusCode;
+                    if(responseStatusCode < 400)
+                    {
+                        responseStatusCode = 500;
+                    }
+
+                    var responseStatus = "Error";
+
+                    await _logRepository.LogRequestAsync(
+                        method,
+                        path,
+                        userId,
+                        requestBody ?? string.Empty,
+                        responseStatusCode,
+                        startTime.ToString("HH:mm:ss.fff"),
+                        endTime.ToString("HH:mm:ss.fff"),
+                        elapsedTime.TotalMilliseconds,
+                        ipAddress ?? "Unknown",
+                        userAgent,
+                        responseStatus
+                    );
+
+                    throw;
+                }
             };
             
         }
