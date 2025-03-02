@@ -85,7 +85,6 @@ namespace MatHelper.BLL.Filters
                         responseStatusCode = result.StatusCode ?? responseStatusCode;
                     }
 
-                    Console.WriteLine(responseStatusCode);
                     string responseStatus = "Info";
 
                     if (responseStatusCode >= 400 && responseStatusCode < 500)

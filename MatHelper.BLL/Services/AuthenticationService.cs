@@ -29,13 +29,13 @@ namespace MatHelper.BLL.Services
             _logger = logger;
         }
 
-        public async Task<bool> RegisterUserAsync(UserDto userDto)
+        public async Task<bool> RegisterUserAsync(UserDto userDto, DeviceInfo deviceInfo, string ipAddress)
         {
             if (string.IsNullOrWhiteSpace(userDto.Email))
                 throw new ArgumentException("Email cannot be null or empty.");
             if (string.IsNullOrWhiteSpace(userDto.UserName))
                 throw new ArgumentException("Username cannot be null or empty.");
-            if (string.IsNullOrWhiteSpace(userDto.IpAddress))
+            if (string.IsNullOrWhiteSpace(ipAddress))
                 throw new ArgumentException("IP Address cannot be null or empty.");
 
             var existingUserByEmail = await _userRepository.GetUserByEmailAsync(userDto.Email);
@@ -44,11 +44,11 @@ namespace MatHelper.BLL.Services
             var existingUserByUsername = await _userRepository.GetUserByUsernameAsync(userDto.UserName);
             if (existingUserByUsername != null) throw new InvalidOperationException("Username is already used by another user.");
 
-            var userCountByIp = await _userRepository.GetUserCountByIpAsync(userDto.IpAddress);
+            var userCountByIp = await _userRepository.GetUserCountByIpAsync(ipAddress);
 
             if (userCountByIp >= 3)
             {
-                var usersToBlock = await _userRepository.GetUsersByIpAsync(userDto.IpAddress);
+                var usersToBlock = await _userRepository.GetUsersByIpAsync(ipAddress);
 
                 if (usersToBlock == null || !usersToBlock.Any())
                     throw new InvalidOperationException("No users found with the specified IP address.");
@@ -99,13 +99,13 @@ namespace MatHelper.BLL.Services
 
             var loginToken = new LoginToken
             {
-                Token = _tokenService.GenerateJwtToken(user, userDto.DeviceInfo),
+                Token = _tokenService.GenerateJwtToken(user, deviceInfo),
                 RefreshToken = _tokenService.GenerateRefreshToken(),
                 Expiration = DateTime.UtcNow.AddMinutes(30),
                 RefreshTokenExpiration = DateTime.UtcNow.AddDays(7),
                 UserId = user.Id,
-                DeviceInfo = userDto.DeviceInfo,
-                IpAddress = userDto.IpAddress,
+                DeviceInfo = deviceInfo,
+                IpAddress = ipAddress,
                 IsActive = true
             };
 
@@ -122,13 +122,13 @@ namespace MatHelper.BLL.Services
                 throw new InvalidOperationException("Error due add token to the user.");
             }
 
-            if (userDto.DeviceInfo.UserAgent == null || userDto.DeviceInfo.Platform == null)
+            if (deviceInfo.UserAgent == null || deviceInfo.Platform == null)
             {
                 _logger.LogError("deviceInfo does not meet the requirements");
                 throw new InvalidDataException("deviceInfo does not meet the requirements");
             }
 
-            if (await _securityService.CheckSuspiciousActivityAsync(userDto.IpAddress, userDto.DeviceInfo.UserAgent, userDto.DeviceInfo.Platform))
+            if (await _securityService.CheckSuspiciousActivityAsync(ipAddress, deviceInfo.UserAgent, deviceInfo.Platform))
             {
                 throw new UnauthorizedAccessException("Suspicious activity detected. Accounts blocked.");
             }
@@ -136,7 +136,7 @@ namespace MatHelper.BLL.Services
             return true;
         }
 
-        public async Task<(string AccessToken, string RefreshToken)> LoginUserAsync(LoginDto loginDto)
+        public async Task<(string AccessToken, string RefreshToken)> LoginUserAsync(LoginDto loginDto, DeviceInfo deviceInfo, string ipAddress)
         {
             var user = await _userRepository.GetUserByEmailAsync(loginDto.Email);
             if (user == null)
@@ -161,7 +161,7 @@ namespace MatHelper.BLL.Services
                 //user.LoginTokens!.Remove(expiredToken);
             }
 
-            var activeTokens = user.LoginTokens!.Where(t => t.DeviceInfo.UserAgent == loginDto.DeviceInfo.UserAgent && t.DeviceInfo.Platform == loginDto.DeviceInfo.Platform && t.IpAddress == loginDto.IpAddress && t.IsActive).ToList();
+            var activeTokens = user.LoginTokens!.Where(t => t.DeviceInfo.UserAgent == deviceInfo.UserAgent && t.DeviceInfo.Platform == deviceInfo.Platform && t.IpAddress == ipAddress && t.IsActive).ToList();
 
             if(activeTokens.Count >= 3)
             {
@@ -184,7 +184,7 @@ namespace MatHelper.BLL.Services
 
             var refreshTokenExpiration = loginDto.Remember == true ? DateTime.UtcNow.AddDays(28) : DateTime.UtcNow.AddHours(6);
 
-            var accessToken = _tokenService.GenerateJwtToken(user, loginDto.DeviceInfo);
+            var accessToken = _tokenService.GenerateJwtToken(user, deviceInfo);
             var refreshToken = _tokenService.GenerateRefreshToken();
                 
             var loginToken = new LoginToken
@@ -194,21 +194,21 @@ namespace MatHelper.BLL.Services
                 Expiration = DateTime.UtcNow.AddMinutes(30),
                 RefreshTokenExpiration = refreshTokenExpiration,
                 UserId = user.Id,
-                DeviceInfo = loginDto.DeviceInfo,
-                IpAddress = loginDto.IpAddress,
+                DeviceInfo = deviceInfo,
+                IpAddress = ipAddress,
                 IsActive = true
             };
 
             user.LoginTokens!.Add(loginToken);
             await _userRepository.SaveChangesAsync();
 
-            if (loginDto.DeviceInfo.UserAgent == null || loginDto.DeviceInfo.Platform == null)
+            if (deviceInfo.UserAgent == null || deviceInfo.Platform == null)
             {
                 _logger.LogError("deviceInfo does not meet the requirements");
                 throw new InvalidDataException("deviceInfo does not meet the requirements");
             }
 
-            if (await _securityService.CheckSuspiciousActivityAsync(loginDto.IpAddress, loginDto.DeviceInfo.UserAgent, loginDto.DeviceInfo.Platform))
+            if (await _securityService.CheckSuspiciousActivityAsync(ipAddress, deviceInfo.UserAgent, deviceInfo.Platform))
             {
                 throw new UnauthorizedAccessException("Suspicious activity detected. Accounts blocked.");
             }

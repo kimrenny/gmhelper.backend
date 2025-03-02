@@ -50,6 +50,7 @@ if (jwtOptions == null)
 }
 
 builder.Services.AddSingleton(jwtOptions);
+builder.Services.AddSingleton<IHttpContextAccessor, HttpContextAccessor>();
 
 builder.Services.AddScoped<IAuthenticationService, AuthenticationService>();
 builder.Services.AddScoped<ISecurityService, SecurityService>();
@@ -57,6 +58,7 @@ builder.Services.AddScoped<ITokenService, TokenService>();
 builder.Services.AddScoped<IAdminService, AdminService>();
 builder.Services.AddScoped<IUserManagementService, UserManagementService>();
 builder.Services.AddScoped<IRequestLogService, RequestLogService>();
+builder.Services.AddScoped<IProcessRequestService, ProcessRequestService>();
 builder.Services.AddScoped<UserRepository>();
 builder.Services.AddScoped<RequestLogRepository>();
 builder.Services.AddScoped<CaptchaValidationService>();

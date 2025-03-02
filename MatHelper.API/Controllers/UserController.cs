@@ -7,6 +7,7 @@ using System.Security.Claims;
 using Microsoft.OpenApi.Validations;
 using Microsoft.AspNetCore.Authorization;
 using System.Collections.Concurrent;
+using Microsoft.AspNetCore.Http;
 
 namespace MatHelper.API.Controllers
 {
@@ -18,15 +19,17 @@ namespace MatHelper.API.Controllers
         private readonly ITokenService _tokenService;
         private readonly IUserManagementService _userManagementService;
         private readonly ILogger<UserController> _logger;
+        private readonly IProcessRequestService _processRequestService;
         private readonly CaptchaValidationService _captchaValidationService;
         private static readonly ConcurrentDictionary<string, bool> ProcessingTokens = new();
 
-        public UserController(IAuthenticationService authenticationService, ITokenService tokenService, IUserManagementService userManagementService, ILogger<UserController> logger, CaptchaValidationService captchaValidationService)
+        public UserController(IAuthenticationService authenticationService, ITokenService tokenService, IUserManagementService userManagementService, ILogger<UserController> logger, IProcessRequestService processRequestService, CaptchaValidationService captchaValidationService)
         {
             _authenticationService = authenticationService;
             _tokenService = tokenService;
             _userManagementService = userManagementService;
             _logger = logger;
+            _processRequestService = processRequestService;
             _captchaValidationService = captchaValidationService;
         }
 
@@ -49,7 +52,15 @@ namespace MatHelper.API.Controllers
 
             try
             {
-                var result = await _authenticationService.RegisterUserAsync(userDto);
+                var (deviceInfo, ipAddress) = _processRequestService.GetRequestInfo();
+
+                if(ipAddress == null)
+                {
+                    _logger.LogWarning("Failed to retrieve IP address for user: {Email}", userDto.Email);
+                    return BadRequest("Unable to determine IP address.");
+                }
+
+                var result = await _authenticationService.RegisterUserAsync(userDto, deviceInfo, ipAddress);
                 if (result)
                 {
                     _logger.LogInformation("Register successful for user: {Email}", userDto.Email);
@@ -89,10 +100,18 @@ namespace MatHelper.API.Controllers
 
             try
             {
-                var (accessToken, refreshToken) = await _authenticationService.LoginUserAsync(loginDto);
+                var (deviceInfo, ipAddress) = _processRequestService.GetRequestInfo();
+                if (ipAddress == null)
+                {
+                    _logger.LogWarning("Failed to retrieve IP address for user: {Email}", loginDto.Email);
+                    return BadRequest("Unable to determine IP address.");
+                }
+
+                var (accessToken, refreshToken) = await _authenticationService.LoginUserAsync(loginDto, deviceInfo, ipAddress);
+
                 if (accessToken == null || refreshToken == null)
                 {
-                    _logger.LogWarning($"Login failed for user: {loginDto.Email}.");
+                    _logger.LogWarning("Login failed for user: {Email}.", loginDto.Email);
                     return Unauthorized("Invalid credentials.");
                 }
 
