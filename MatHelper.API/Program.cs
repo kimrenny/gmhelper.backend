@@ -15,7 +15,6 @@ using MatHelper.BLL.Filters;
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddHttpContextAccessor();
-builder.Services.AddScoped<RequestLogRepository>();
 builder.Services.AddControllers(options =>
 {
     options.Filters.Add<RequestLoggingFilter>();
@@ -61,6 +60,7 @@ builder.Services.AddScoped<IRequestLogService, RequestLogService>();
 builder.Services.AddScoped<IProcessRequestService, ProcessRequestService>();
 builder.Services.AddScoped<UserRepository>();
 builder.Services.AddScoped<RequestLogRepository>();
+builder.Services.AddScoped<AuthLogRepository>();
 builder.Services.AddScoped<CaptchaValidationService>();
 
 builder.Services.AddAuthentication(options =>

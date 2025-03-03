@@ -89,9 +89,7 @@ namespace MatHelper.API.Controllers
 
         [HttpPost("login")]
         public async Task<IActionResult> Login([FromBody] LoginDto loginDto)
-        {
-            _logger.LogInformation("Login attempt for user: {Email}", loginDto.Email);
-            
+        {            
             if(!await _captchaValidationService.ValidateCaptchaAsync(loginDto.CaptchaToken))
             {
                 _logger.LogWarning("Invalid CAPTCHA token for user: {Email}", loginDto.Email);
@@ -125,6 +123,10 @@ namespace MatHelper.API.Controllers
             catch (UnauthorizedAccessException ex)
             {
                 _logger.LogError($"Login failed for user: {loginDto.Email}. Reason: {ex.Message}");
+                if(ex.Message == "Invalid password.")
+                {
+                    return Unauthorized("Invalid credentials.");
+                }
                 return Unauthorized("User is banned.");
             }
             catch (Exception ex)

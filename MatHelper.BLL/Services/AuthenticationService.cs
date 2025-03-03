@@ -15,14 +15,16 @@ namespace MatHelper.BLL.Services
     public class AuthenticationService: IAuthenticationService
     {
         private readonly UserRepository _userRepository;
+        private readonly AuthLogRepository _authLogRepository;
         private readonly JwtOptions _jwtOptions;
         private readonly ISecurityService _securityService;
         private readonly ITokenService _tokenService;
         private readonly ILogger _logger;
 
-        public AuthenticationService(UserRepository userRepository, JwtOptions jwtOptions, ISecurityService securityService, ITokenService tokenService, ILogger<AuthenticationService> logger)
+        public AuthenticationService(UserRepository userRepository, AuthLogRepository authLogRepository, JwtOptions jwtOptions, ISecurityService securityService, ITokenService tokenService, ILogger<AuthenticationService> logger)
         {
             _userRepository = userRepository;
+            _authLogRepository = authLogRepository;
             _jwtOptions = jwtOptions;
             _securityService = securityService;
             _tokenService = tokenService;
@@ -144,76 +146,106 @@ namespace MatHelper.BLL.Services
                 throw new InvalidOperationException("User not found.");
             }
 
-            if (user.IsBlocked)
+            try
             {
-                throw new UnauthorizedAccessException("User is blocked");
-            }
-
-            if (!_securityService.VerifyPassword(loginDto.Password, user.PasswordHash, user.PasswordSalt))
-            {
-                throw new UnauthorizedAccessException("Invalid password.");
-            }
-
-           var expiredTokens = user.LoginTokens!.Where(t => t.Expiration <= DateTime.UtcNow).ToList();
-            foreach(var expiredToken in expiredTokens)
-            {
-                expiredToken.IsActive = false;
-                //user.LoginTokens!.Remove(expiredToken);
-            }
-
-            var activeTokens = user.LoginTokens!.Where(t => t.DeviceInfo.UserAgent == deviceInfo.UserAgent && t.DeviceInfo.Platform == deviceInfo.Platform && t.IpAddress == ipAddress && t.IsActive).ToList();
-
-            if(activeTokens.Count >= 3)
-            {
-                foreach (var activeToken in activeTokens)
+                if (user.IsBlocked)
                 {
-                    activeToken.IsActive = false;
+                    throw new UnauthorizedAccessException("User is blocked");
                 }
-            }
 
-            var activeTokenCount = user.LoginTokens!.Count(t => t.IsActive);
-            if(activeTokenCount >= 5)
-            {
-                var oldestToken = user.LoginTokens!.Where(t => t.IsActive).OrderBy(t => t.Expiration).FirstOrDefault();
-
-                if(oldestToken != null)
+                if (!_securityService.VerifyPassword(loginDto.Password, user.PasswordHash, user.PasswordSalt))
                 {
-                    oldestToken.IsActive = false;
+                    throw new UnauthorizedAccessException("Invalid password.");
                 }
+
+                if (deviceInfo.UserAgent == null || deviceInfo.Platform == null)
+                {
+                    _logger.LogError("deviceInfo does not meet the requirements");
+                    throw new InvalidDataException("deviceInfo does not meet the requirements");
+                }
+
+                var expiredTokens = user.LoginTokens!.Where(t => t.Expiration <= DateTime.UtcNow).ToList();
+                foreach (var expiredToken in expiredTokens)
+                {
+                    expiredToken.IsActive = false;
+                    //user.LoginTokens!.Remove(expiredToken);
+                }
+                await _userRepository.SaveChangesAsync();
+
+                var activeTokens = user.LoginTokens!.Where(t => t.DeviceInfo.UserAgent == deviceInfo.UserAgent && t.DeviceInfo.Platform == deviceInfo.Platform && t.IpAddress == ipAddress && t.IsActive).ToList();
+
+                if (activeTokens.Count >= 3)
+                {
+                    foreach (var activeToken in activeTokens)
+                    {
+                        activeToken.IsActive = false;
+                    }
+                }
+
+                var activeTokenCount = user.LoginTokens!.Count(t => t.IsActive);
+                if (activeTokenCount >= 5)
+                {
+                    var oldestToken = user.LoginTokens!.Where(t => t.IsActive).MinBy(t => t.Expiration);
+
+                    if (oldestToken != null)
+                    {
+                        oldestToken.IsActive = false;
+                    }
+                }
+
+                var refreshTokenExpiration = loginDto.Remember == true ? DateTime.UtcNow.AddDays(28) : DateTime.UtcNow.AddHours(6);
+
+                var accessToken = _tokenService.GenerateJwtToken(user, deviceInfo);
+                var refreshToken = _tokenService.GenerateRefreshToken();
+
+                var loginToken = new LoginToken
+                {
+                    Token = accessToken,
+                    RefreshToken = refreshToken,
+                    Expiration = DateTime.UtcNow.AddMinutes(30),
+                    RefreshTokenExpiration = refreshTokenExpiration,
+                    UserId = user.Id,
+                    DeviceInfo = deviceInfo,
+                    IpAddress = ipAddress,
+                    IsActive = true
+                };
+
+                user.LoginTokens!.Add(loginToken);
+                await _userRepository.SaveChangesAsync();
+
+                await _authLogRepository.LogAuthAsync(user.Id.ToString(), ipAddress, deviceInfo.UserAgent, "Success");
+
+                if (await _securityService.CheckSuspiciousActivityAsync(ipAddress, deviceInfo.UserAgent, deviceInfo.Platform))
+                {
+                    throw new UnauthorizedAccessException("Suspicious activity detected. Accounts blocked.");
+                }
+
+                return (AccessToken: accessToken, RefreshToken: refreshToken);
             }
-
-            var refreshTokenExpiration = loginDto.Remember == true ? DateTime.UtcNow.AddDays(28) : DateTime.UtcNow.AddHours(6);
-
-            var accessToken = _tokenService.GenerateJwtToken(user, deviceInfo);
-            var refreshToken = _tokenService.GenerateRefreshToken();
-                
-            var loginToken = new LoginToken
+            catch (Exception ex) when (ex is UnauthorizedAccessException
+                        || ex is InvalidOperationException
+                        || ex is InvalidDataException)
             {
-                Token = accessToken,
-                RefreshToken = refreshToken,
-                Expiration = DateTime.UtcNow.AddMinutes(30),
-                RefreshTokenExpiration = refreshTokenExpiration,
-                UserId = user.Id,
-                DeviceInfo = deviceInfo,
-                IpAddress = ipAddress,
-                IsActive = true
-            };
-
-            user.LoginTokens!.Add(loginToken);
-            await _userRepository.SaveChangesAsync();
-
-            if (deviceInfo.UserAgent == null || deviceInfo.Platform == null)
-            {
-                _logger.LogError("deviceInfo does not meet the requirements");
-                throw new InvalidDataException("deviceInfo does not meet the requirements");
+                await _authLogRepository.LogAuthAsync(
+                    user?.Id.ToString() ?? "Unknown",
+                    ipAddress,
+                    deviceInfo.UserAgent ?? "Unknown",
+                    "Failed",
+                    ex.Message
+                );
+                throw;
             }
-
-            if (await _securityService.CheckSuspiciousActivityAsync(ipAddress, deviceInfo.UserAgent, deviceInfo.Platform))
+            catch (Exception ex)
             {
-                throw new UnauthorizedAccessException("Suspicious activity detected. Accounts blocked.");
+                await _authLogRepository.LogAuthAsync(
+                    user?.Id.ToString() ?? "Unknown",
+                    ipAddress,
+                    deviceInfo.UserAgent ?? "Unknown",
+                    "Failed",
+                    "Unknown error occurred."
+                );
+                throw new Exception("Unknown error occurred during request", ex);
             }
-
-            return (AccessToken: accessToken, RefreshToken: refreshToken);
         }
 
 

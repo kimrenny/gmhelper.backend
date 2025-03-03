@@ -11,6 +11,7 @@ using System.Text;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Primitives;
 using Microsoft.Extensions.DependencyInjection;
+using System.Net;
 
 namespace MatHelper.BLL.Filters
 {
@@ -70,6 +71,15 @@ namespace MatHelper.BLL.Filters
                 else if(httpContext.Request.Headers.TryGetValue("X-Real-IP", out var realIp))
                 {
                     ipAddress = realIp.ToString();
+                }
+
+                if (ipAddress == "::1")
+                {
+                    ipAddress = "127.0.0.1";
+                }
+                else if (IPAddress.TryParse(ipAddress, out var ip) && ip.IsIPv4MappedToIPv6)
+                {
+                    ipAddress = ip.MapToIPv4().ToString();
                 }
 
                 try
