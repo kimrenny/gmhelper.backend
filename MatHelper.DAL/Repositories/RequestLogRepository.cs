@@ -31,19 +31,43 @@ namespace MatHelper.DAL.Repositories
             double elapsedTime,
             string ipAddress,
             string userAgent,
-            string status)
+            string status,
+            string requestType)
         {
             var today = DateOnly.FromDateTime(DateTime.UtcNow);
-            var log = await _context.RequestLogs.FirstOrDefaultAsync(x => x.Date == today);
-
-            if (log == null)
+            if(requestType == "Admin")
             {
-                log = new RequestLog { Date = today, Count = 1 };
-                await _context.RequestLogs.AddAsync(log);
+                var log = await _context.AdminRequests.FirstOrDefaultAsync(x => x.Date == today);
+
+                if(log == null)
+                {
+                    log = new AdminRequestLog { Date = today, Count = 1 };
+                    await _context.AdminRequests.AddAsync(log);
+                }
+                else
+                {
+                    log.Count++;
+                    _context.AdminRequests.Update(log);
+                }
+
+                await _context.SaveChangesAsync();
             }
             else
             {
-                log.Count++;
+                var log = await _context.RequestLogs.FirstOrDefaultAsync(x => x.Date == today);
+
+                if (log == null)
+                {
+                    log = new RequestLog { Date = today, Count = 1 };
+                    await _context.RequestLogs.AddAsync(log);
+                }
+                else
+                {
+                    log.Count++;
+                    _context.RequestLogs.Update(log);
+                }
+
+                await _context.SaveChangesAsync();
             }
 
             var requestLogDetail = new RequestLogDetail
@@ -59,7 +83,8 @@ namespace MatHelper.DAL.Repositories
                 ElapsedTime = elapsedTime,
                 IpAddress = ipAddress,
                 UserAgent = userAgent,
-                Status = status
+                Status = status,
+                RequestType = requestType
             };
 
             await _context.RequestLogDetails.AddAsync(requestLogDetail);

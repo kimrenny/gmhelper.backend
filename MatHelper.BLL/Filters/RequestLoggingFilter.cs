@@ -36,6 +36,20 @@ namespace MatHelper.BLL.Filters
                 var path = httpContext.Request.Path;
                 var ipAddress = httpContext.Connection.RemoteIpAddress?.ToString();
                 var userAgent = httpContext.Request.Headers["User-Agent"].ToString();
+                string requestType;
+
+                if (path.ToString().Contains("admin"))
+                {
+                    requestType = "Admin";
+                }
+                else if (path.ToString().Contains("user"))
+                {
+                    requestType = "User";
+                }
+                else
+                {
+                    requestType = "Other";
+                }
 
                 var startTime = DateTime.UtcNow;
 
@@ -117,7 +131,8 @@ namespace MatHelper.BLL.Filters
                         elapsedTime.TotalMilliseconds,
                         ipAddress ?? "Unknown",
                         userAgent,
-                        responseStatus
+                        responseStatus,
+                        requestType
                     );
                 }
                 catch (Exception)
@@ -143,7 +158,8 @@ namespace MatHelper.BLL.Filters
                         elapsedTime.TotalMilliseconds,
                         ipAddress ?? "Unknown",
                         userAgent,
-                        responseStatus
+                        responseStatus,
+                        requestType
                     );
 
                     throw;

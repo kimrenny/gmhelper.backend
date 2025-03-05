@@ -9,6 +9,7 @@ namespace MatHelper.DAL.Database
         public DbSet<User> Users { get; set; }
         public DbSet<LoginToken> LoginTokens { get; set; }
         public DbSet<RequestLog> RequestLogs { get; set; }
+        public DbSet<AdminRequestLog> AdminRequests { get; set; }
         public DbSet<RequestLogDetail> RequestLogDetails { get; set; }
         public DbSet<AuthLog> AuthLogs { get; set; }
 
@@ -23,6 +24,8 @@ namespace MatHelper.DAL.Database
             modelBuilder.Entity<LoginToken>().OwnsOne(t => t.DeviceInfo);
 
             modelBuilder.Entity<RequestLog>().HasIndex(r => r.Date).IsUnique();
+
+            modelBuilder.Entity<AdminRequestLog>().HasIndex(r => r.Date).IsUnique();
         }
     }
 }

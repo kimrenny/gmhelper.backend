@@ -15,5 +15,6 @@
         public string? IpAddress { get; set; }
         public string? UserAgent { get; set; }
         public string? Status { get; set; }
+        public string? RequestType { get; set; }
     }
 }
