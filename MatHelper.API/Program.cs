@@ -11,6 +11,7 @@ using MatHelper.DAL.Database;
 using MatHelper.DAL.Repositories;
 using Microsoft.IdentityModel.Tokens;
 using MatHelper.BLL.Filters;
+using MatHelper.BLL.Middlewares;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -58,6 +59,7 @@ builder.Services.AddScoped<IAdminService, AdminService>();
 builder.Services.AddScoped<IUserManagementService, UserManagementService>();
 builder.Services.AddScoped<IRequestLogService, RequestLogService>();
 builder.Services.AddScoped<IProcessRequestService, ProcessRequestService>();
+builder.Services.AddScoped<ErrorLogRepository>();
 builder.Services.AddScoped<UserRepository>();
 builder.Services.AddScoped<RequestLogRepository>();
 builder.Services.AddScoped<AuthLogRepository>();
@@ -93,6 +95,8 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
+
+app.UseMiddleware<ErrorLoggingMiddleware>();
 
 app.Use(async (context, next) =>
 {

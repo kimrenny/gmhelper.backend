@@ -12,6 +12,7 @@ namespace MatHelper.DAL.Database
         public DbSet<AdminRequestLog> AdminRequests { get; set; }
         public DbSet<RequestLogDetail> RequestLogDetails { get; set; }
         public DbSet<AuthLog> AuthLogs { get; set; }
+        public DbSet<ErrorLog> ErrorLogs { get; set; }
 
         public AppDbContext(DbContextOptions<AppDbContext> options) : base(options) { }
 
