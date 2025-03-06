@@ -41,5 +41,12 @@ namespace MatHelper.DAL.Repositories
             await _context.AuthLogs.AddAsync(authLog);
             await _context.SaveChangesAsync();
         }
+
+        public async Task<List<AuthLog>> GetAllAuthLogsAsync()
+        {
+            return await _context.AuthLogs
+                .OrderByDescending(log => log.Timestamp)
+                .ToListAsync();
+        }
     }
 }

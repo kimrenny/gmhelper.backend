@@ -25,5 +25,12 @@ namespace MatHelper.DAL.Repositories
             _context.ErrorLogs.Add(errorLog);
             await _context.SaveChangesAsync();
         }
+
+        public async Task<List<ErrorLog>> GetAllErrorLogsAsync()
+        {
+            return await _context.ErrorLogs
+                .OrderByDescending(log => log.Timestamp)
+                .ToListAsync();
+        }
     }
 }

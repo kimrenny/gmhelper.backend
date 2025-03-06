@@ -91,7 +91,7 @@ namespace MatHelper.DAL.Repositories
             await _context.SaveChangesAsync();
         }
 
-        public async Task<List<RequestLogDto>> GetRequestStats()
+        public async Task<List<RequestLogDto>> GetRequestStatsAsync()
         {
             return await _context.RequestLogs.OrderByDescending(x => x.Date)
                 .Select(group => new RequestLogDto
@@ -99,6 +99,13 @@ namespace MatHelper.DAL.Repositories
                     Date = group.Date,
                     Count = (ushort)group.Count
                 }).ToListAsync();
+        }
+
+        public async Task<List<RequestLogDetail>> GetAllRequestLogsAsync()
+        {
+            return await _context.RequestLogDetails
+                .OrderByDescending(log => log.Timestamp)
+                .ToListAsync();
         }
     }
 }

@@ -61,6 +61,109 @@ namespace MatHelper.API.Controllers
             }
         }
 
-        
+        [HttpGet("all")]
+        public async Task<IActionResult> GetAllRequests()
+        {
+            try
+            {
+                var validationResult = await _tokenService.ValidateAdminAccessAsync(Request, User);
+                if (validationResult != TokenValidationResult.Valid)
+                {
+                    return validationResult switch
+                    {
+                        TokenValidationResult.MissingToken => Unauthorized("Authorization header is missing or invalid"),
+                        TokenValidationResult.InactiveToken => Unauthorized("User token is not active."),
+                        TokenValidationResult.InvalidUserId => Unauthorized("User ID is not available in the token."),
+                        TokenValidationResult.NoAdminPermissions => Forbid("User does not have permissions."),
+                        _ => StatusCode(500, "Unexpected error occured.")
+                    };
+
+                }
+
+                var requests = await _logService.GetRequestLogs();
+                if (requests == null || !requests.Any())
+                {
+                    _logger.LogError("Requests data not found.");
+                    return NotFound("Requests data not found.");
+                }
+
+                return Ok(requests);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "An error occurred while processing the request.");
+                return StatusCode(500, "Internal server error.");
+            }
+        }
+
+        [HttpGet("auth/all")]
+        public async Task<IActionResult> GetAllAuthLogs()
+        {
+            try
+            {
+                var validationResult = await _tokenService.ValidateAdminAccessAsync(Request, User);
+                if (validationResult != TokenValidationResult.Valid)
+                {
+                    return validationResult switch
+                    {
+                        TokenValidationResult.MissingToken => Unauthorized("Authorization header is missing or invalid"),
+                        TokenValidationResult.InactiveToken => Unauthorized("User token is not active."),
+                        TokenValidationResult.InvalidUserId => Unauthorized("User ID is not available in the token."),
+                        TokenValidationResult.NoAdminPermissions => Forbid("User does not have permissions."),
+                        _ => StatusCode(500, "Unexpected error occured.")
+                    };
+
+                }
+
+                var logs = await _logService.GetAuthLogs();
+                if (logs == null || !logs.Any())
+                {
+                    _logger.LogError("Auth logs not found.");
+                    return NotFound("Auth logs not found.");
+                }
+
+                return Ok(logs);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "An error occurred while processing the request.");
+                return StatusCode(500, "Internal server error.");
+            }
+        }
+
+        [HttpGet("errors/all")]
+        public async Task<IActionResult> GetAllErrorLogs()
+        {
+            try
+            {
+                var validationResult = await _tokenService.ValidateAdminAccessAsync(Request, User);
+                if (validationResult != TokenValidationResult.Valid)
+                {
+                    return validationResult switch
+                    {
+                        TokenValidationResult.MissingToken => Unauthorized("Authorization header is missing or invalid"),
+                        TokenValidationResult.InactiveToken => Unauthorized("User token is not active."),
+                        TokenValidationResult.InvalidUserId => Unauthorized("User ID is not available in the token."),
+                        TokenValidationResult.NoAdminPermissions => Forbid("User does not have permissions."),
+                        _ => StatusCode(500, "Unexpected error occured.")
+                    };
+
+                }
+
+                var logs = await _logService.GetErrorLogs();
+                if (logs == null || !logs.Any())
+                {
+                    _logger.LogError("Error logs not found.");
+                    return NotFound("Error logs not found.");
+                }
+
+                return Ok(logs);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "An error occurred while processing the request.");
+                return StatusCode(500, "Internal server error.");
+            }
+        }
     }
 }
