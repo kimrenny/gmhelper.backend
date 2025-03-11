@@ -86,8 +86,9 @@ namespace MatHelper.DAL.Repositories
 
         public async Task<LoginToken?> GetLoginTokenByRefreshTokenAsync(string refreshToken)
         {
-            var query = _context.LoginTokens.Where(t => t.RefreshToken == refreshToken);
-            return await query.FirstOrDefaultAsync();
+            return await _context.LoginTokens
+                .Include(t => t.User)
+                .FirstOrDefaultAsync(t => t.RefreshToken == refreshToken);
         }
 
         public async Task<LoginToken?> GetLoginTokenAsync(string token)

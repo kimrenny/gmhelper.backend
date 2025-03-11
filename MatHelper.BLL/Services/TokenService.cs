@@ -66,45 +66,33 @@ namespace MatHelper.BLL.Services
 
         public async Task<(string AccessToken, string RefreshToken)> RefreshAccessTokenAsync(string refreshToken)
         {
-            _logger.LogInformation("Searching for refresh token: {RefreshToken}", refreshToken);
+            _logger.LogInformation("Attempting to refresh token: {RefreshToken}", refreshToken);
 
             var token = await _userRepository.GetLoginTokenByRefreshTokenAsync(refreshToken);
             if (token == null || token.RefreshTokenExpiration < DateTime.UtcNow)
             {
-                if (token != null)
-                {
-                    _logger.LogWarning("Refresh token expired: {RefreshToken}", refreshToken);
-                    //await _userRepository.RemoveLoginTokenAsync(token);
-                    throw new Exception("Invalid or expired refresh token.");
-                }
-                _logger.LogWarning("Refresh token not found or expired: {RefreshToken}", refreshToken);
+                _logger.LogWarning("Invalid or expired refresh token: {RefreshToken}", refreshToken);
                 throw new Exception("Invalid or expired refresh token.");
             }
 
-            _logger.LogInformation("Refresh token valid. Fetching user: {UserId}", token.UserId);
-            var user = await _userRepository.GetUserByIdAsync(token.UserId);
-
-            if (user != null)
+            var user = token.User;
+            if(user == null)
             {
-                _logger.LogInformation("User found. Generating new tokens for UserId: {UserId}", token.UserId);
-
-                var accessToken = GenerateJwtToken(user, token.DeviceInfo);
-                var newRefreshToken = GenerateRefreshToken();
-                token.Token = accessToken;
-                token.Expiration = DateTime.UtcNow.AddMinutes(30);
-                token.RefreshToken = newRefreshToken;
-
-                await _userRepository.SaveChangesAsync();
-
-                _logger.LogInformation("New tokens generated for UserId: {UserId}", token.UserId);
-
-                return (accessToken, newRefreshToken);
-            }
-            else
-            {
-                _logger.LogError("User not found for token refresh. UserId: {UserId}", token.UserId);
+                _logger.LogError("User not found for refresh token.");
                 throw new Exception("User not found.");
             }
+
+            var accessToken = GenerateJwtToken(user, token.DeviceInfo);
+            var newRefreshToken = GenerateRefreshToken();
+
+            token.Token = accessToken;
+            token.Expiration = DateTime.UtcNow.AddMinutes(30);
+            token.RefreshToken = newRefreshToken;
+
+            await _userRepository.SaveChangesAsync();
+
+            _logger.LogInformation("New tokens generated for UserId: {UserId}", user.Id);
+            return (accessToken, newRefreshToken);
         }
 
         public async Task<bool> IsTokenDisabled(string token)
