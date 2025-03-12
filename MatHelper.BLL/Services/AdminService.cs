@@ -3,6 +3,7 @@ using MatHelper.CORE.Models;
 using MatHelper.CORE.Options;
 using MatHelper.DAL.Repositories;
 using Microsoft.Extensions.Logging;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 
 namespace MatHelper.BLL.Services
@@ -199,47 +200,36 @@ namespace MatHelper.BLL.Services
         {
             try
             {
-                var users = await _userRepository.GetAllUsersAsync();
-                if(users == null || !users.Any())
+                var userIpList = await _userRepository.GetUsersWithLastIpAsync();
+
+                if (userIpList == null || !userIpList.Any())
                 {
                     _logger.LogWarning("No users found in the database.");
                     return new List<CountryStatsDto>();
                 }
 
-                var userCountryStats = new Dictionary<string, ushort>();
+                _logger.LogInformation($"Total users: {userIpList.Count}");
 
-                _logger.LogInformation($"Total users: {users.Count}");
+                var countryCounts = new ConcurrentDictionary<string, ushort>();
+                var ipCache = new ConcurrentDictionary<string, string>();
 
-                foreach (var user in users)
+                await Parallel.ForEachAsync(userIpList, async (user, token) =>
                 {
-                    _logger.LogInformation($"Processing user: {user.Username}");
-
-                    var lastActiveToken = user.LoginTokens?
-                        .OrderByDescending(t => t.Expiration)
-                        .FirstOrDefault();
-
-                    if (lastActiveToken == null)
+                    if (string.IsNullOrWhiteSpace(user.IpAddress))
                     {
-                        _logger.LogWarning($"User {user.Username} has no active tokens.");
-                        continue;
+                        return;
                     }
 
-                    _logger.LogInformation($"User {user.Username} has IP: {lastActiveToken.IpAddress}");
-
-                    var country = await _securityService.GetCountryByIpAsync(lastActiveToken.IpAddress);
-
-                    if (userCountryStats.ContainsKey(country))
+                    if (!ipCache.TryGetValue(user.IpAddress, out var country))
                     {
-                        userCountryStats[country]++;
+                        country = await _securityService.GetCountryByIpAsync(user.IpAddress);
+                        ipCache.TryAdd(user.IpAddress, country);
                     }
-                    else
-                    {
-                        userCountryStats[country] = 1;
-                    }
-                }
 
+                    countryCounts.AddOrUpdate(country, 1, (_, count) => (ushort)(count + 1));
+                });
 
-                return userCountryStats
+                return countryCounts
                     .Select(x => new CountryStatsDto { Country = x.Key, Count = x.Value })
                     .ToList();
             }

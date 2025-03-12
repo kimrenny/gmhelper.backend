@@ -238,6 +238,22 @@ namespace MatHelper.DAL.Repositories
             return totalAdminTokens;
         }
 
+        public async Task<List<UserIp>> GetUsersWithLastIpAsync()
+        {
+            return await _context.Users
+                .Where(u => u.LoginTokens != null && u.LoginTokens.Any())
+                .Select(u => new UserIp 
+                { 
+                    Id = u.Id, 
+                    IpAddress = u.LoginTokens!
+                        .OrderByDescending(t => t.Expiration)
+                        .Select(t => t.IpAddress)
+                        .FirstOrDefault() ?? "Unknown" 
+                })
+                .AsNoTracking()
+                .ToListAsync();
+        }
+
         public async Task SaveChangesAsync()
         {
             try

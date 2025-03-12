@@ -106,24 +106,26 @@ namespace MatHelper.BLL.Services
 
         public async Task<string> GetCountryByIpAsync(string ipAddress)
         {
-            using (var client = new HttpClient())
+            try
             {
+                if(ipAddress == "127.0.0.1")
+                {
+                    return "localhost";
+                }
+
+                using var client = new HttpClient();
                 var url = $"https://get.geojs.io/v1/ip/country.json?ip={ipAddress}";
                 var response = await client.GetStringAsync(url);
 
-                try
-                {
-                    var jsonArray = JArray.Parse(response);
-                    var country = jsonArray.FirstOrDefault()?["name"]?.ToString();
+                var jsonArray = JArray.Parse(response);
+                var country = jsonArray.FirstOrDefault()?["name"]?.ToString();
 
-                    return country ?? "Unknown";
-                }
-                catch (Exception ex)
-                {
-                    _logger.LogError(ex, $"Error parsing response for IP: {ipAddress}");
-                    return "Unknown";
-                }
-                
+                return country ?? "Unknown";
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"Error parsing response for IP: {ipAddress}");
+                return "Unknown";
             }
         }
     }
