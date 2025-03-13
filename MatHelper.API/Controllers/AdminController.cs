@@ -9,6 +9,7 @@ using Microsoft.AspNetCore.Authorization;
 using System.Collections.Concurrent;
 using MatHelper.DAL.Repositories;
 using TokenValidationResult = MatHelper.CORE.Enums.TokenValidationResult;
+using MatHelper.API.Common;
 
 namespace MatHelper.API.Controllers
 {
@@ -44,11 +45,11 @@ namespace MatHelper.API.Controllers
                 {
                     return validationResult switch
                     {
-                        TokenValidationResult.MissingToken => Unauthorized("Authorization header is missing or invalid"),
-                        TokenValidationResult.InactiveToken => Unauthorized("User token is not active."),
-                        TokenValidationResult.InvalidUserId => Unauthorized("User ID is not available in the token."),
-                        TokenValidationResult.NoAdminPermissions => Forbid("User does not have permissions."),
-                        _ => StatusCode(500, "Unexpected error occured.")
+                        TokenValidationResult.MissingToken => Unauthorized(ApiResponse<string>.Fail("Authorization header is missing or invalid")),
+                        TokenValidationResult.InactiveToken => Unauthorized(ApiResponse<string>.Fail("User token is not active.")),
+                        TokenValidationResult.InvalidUserId => Unauthorized(ApiResponse<string>.Fail("User ID is not available in the token.")),
+                        TokenValidationResult.NoAdminPermissions => Forbid(ApiResponse<string>.Fail("User does not have permissions.").Message ?? "No admin permissions."),
+                        _ => new ObjectResult(ApiResponse<string>.Fail("Unexpected error occured.")) { StatusCode = 500 }
                     };
 
                 }
@@ -57,15 +58,15 @@ namespace MatHelper.API.Controllers
                 if (users == null || !users.Any())
                 {
                     _logger.LogError("Users data not found.");
-                    return NotFound("Users data not found.");
+                    return new ObjectResult(ApiResponse<string>.Fail("Users data not found.")) { StatusCode = 404 };
                 }
 
-                return Ok(users);
+                return Ok(ApiResponse<List<AdminUserDto>>.Ok(users));
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "An error occurred while processing the request.");
-                return StatusCode(500, "Internal server error.");
+                return new ObjectResult(ApiResponse<string>.Fail("Internal server error.")) { StatusCode = 500 };
             }
         }
 
@@ -75,7 +76,7 @@ namespace MatHelper.API.Controllers
         {
             if(adminActionDto == null)
             {
-                return BadRequest("Invalid data.");
+                return BadRequest(ApiResponse<string>.Fail("Invalid data."));
             }
 
             try
@@ -85,22 +86,22 @@ namespace MatHelper.API.Controllers
                 {
                     return validationResult switch
                     {
-                        TokenValidationResult.MissingToken => Unauthorized("Authorization header is missing or invalid"),
-                        TokenValidationResult.InactiveToken => Unauthorized("User token is not active."),
-                        TokenValidationResult.InvalidUserId => Unauthorized("User ID is not available in the token."),
-                        TokenValidationResult.NoAdminPermissions => Forbid("User does not have permissions."),
-                        _ => StatusCode(500, "Unexpected error occured.")
+                        TokenValidationResult.MissingToken => Unauthorized(ApiResponse<string>.Fail("Authorization header is missing or invalid")),
+                        TokenValidationResult.InactiveToken => Unauthorized(ApiResponse<string>.Fail("User token is not active.")),
+                        TokenValidationResult.InvalidUserId => Unauthorized(ApiResponse<string>.Fail("User ID is not available in the token.")),
+                        TokenValidationResult.NoAdminPermissions => Forbid(ApiResponse<string>.Fail("User does not have permissions.").Message ?? "No admin permissions."),
+                        _ => new ObjectResult(ApiResponse<string>.Fail("Unexpected error occured.")) { StatusCode = 500 }
                     };
 
                 }
 
                 await _adminService.ActionUserAsync(Guid.Parse(adminActionDto.Id), adminActionDto.Action);
-                return Ok();
+                return Ok(ApiResponse<string>.Ok("Action performed successfully."));
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "An error occurred while processing the request.");
-                return StatusCode(500, "Internal server error.");
+                return StatusCode(500, ApiResponse<string>.Fail("Internal server error."));
             }
         }
 
@@ -115,11 +116,11 @@ namespace MatHelper.API.Controllers
                 {
                     return validationResult switch
                     {
-                        TokenValidationResult.MissingToken => Unauthorized("Authorization header is missing or invalid"),
-                        TokenValidationResult.InactiveToken => Unauthorized("User token is not active."),
-                        TokenValidationResult.InvalidUserId => Unauthorized("User ID is not available in the token."),
-                        TokenValidationResult.NoAdminPermissions => Forbid("User does not have permissions."),
-                        _ => StatusCode(500, "Unexpected error occured.")
+                        TokenValidationResult.MissingToken => Unauthorized(ApiResponse<string>.Fail("Authorization header is missing or invalid")),
+                        TokenValidationResult.InactiveToken => Unauthorized(ApiResponse<string>.Fail("User token is not active.")),
+                        TokenValidationResult.InvalidUserId => Unauthorized(ApiResponse<string>.Fail("User ID is not available in the token.")),
+                        TokenValidationResult.NoAdminPermissions => Forbid(ApiResponse<string>.Fail("User does not have permissions.").Message ?? "No admin permissions."),
+                        _ => new ObjectResult(ApiResponse<string>.Fail("Unexpected error occured.")) { StatusCode = 500 }
                     };
 
                 }
@@ -128,15 +129,15 @@ namespace MatHelper.API.Controllers
                 if (tokens == null || !tokens.Any())
                 {
                     _logger.LogError("Users data not found.");
-                    return NotFound("Users data not found.");
+                    return NotFound(ApiResponse<string>.Fail("Users data not found."));
                 }
 
-                return Ok(tokens);
+                return Ok(ApiResponse<List<TokenDto>>.Ok(tokens));
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "An error occurred while processing the request.");
-                return StatusCode(500, "Internal server error.");
+                return StatusCode(500, ApiResponse<string>.Fail("Internal server error."));
             }
         }
 
@@ -146,7 +147,7 @@ namespace MatHelper.API.Controllers
         {
             if (adminActionDto == null)
             {
-                return BadRequest("Invalid data.");
+                return BadRequest(ApiResponse<string>.Fail("Invalid data."));
             }
 
             try
@@ -156,22 +157,22 @@ namespace MatHelper.API.Controllers
                 {
                     return validationResult switch
                     {
-                        TokenValidationResult.MissingToken => Unauthorized("Authorization header is missing or invalid"),
-                        TokenValidationResult.InactiveToken => Unauthorized("User token is not active."),
-                        TokenValidationResult.InvalidUserId => Unauthorized("User ID is not available in the token."),
-                        TokenValidationResult.NoAdminPermissions => Forbid("User does not have permissions."),
-                        _ => StatusCode(500, "Unexpected error occured.")
+                        TokenValidationResult.MissingToken => Unauthorized(ApiResponse<string>.Fail("Authorization header is missing or invalid")),
+                        TokenValidationResult.InactiveToken => Unauthorized(ApiResponse<string>.Fail("User token is not active.")),
+                        TokenValidationResult.InvalidUserId => Unauthorized(ApiResponse<string>.Fail("User ID is not available in the token.")),
+                        TokenValidationResult.NoAdminPermissions => Forbid(ApiResponse<string>.Fail("User does not have permissions.").Message ?? "No admin permissions."),
+                        _ => new ObjectResult(ApiResponse<string>.Fail("Unexpected error occured.")) { StatusCode = 500 }
                     };
 
                 }
 
                 await _adminService.ActionTokenAsync(adminActionDto.Id, adminActionDto.Action);
-                return Ok();
+                return Ok(ApiResponse<string>.Ok("Token action performed successfully."));
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "An error occurred while processing the request.");
-                return StatusCode(500, "Internal server error.");
+                return StatusCode(500, ApiResponse<string>.Fail("Internal server error."));
             }
         }
 
@@ -186,11 +187,11 @@ namespace MatHelper.API.Controllers
                 {
                     return validationResult switch
                     {
-                        TokenValidationResult.MissingToken => Unauthorized("Authorization header is missing or invalid"),
-                        TokenValidationResult.InactiveToken => Unauthorized("User token is not active."),
-                        TokenValidationResult.InvalidUserId => Unauthorized("User ID is not available in the token."),
-                        TokenValidationResult.NoAdminPermissions => Forbid("User does not have permissions."),
-                        _ => StatusCode(500, "Unexpected error occured.")
+                        TokenValidationResult.MissingToken => Unauthorized(ApiResponse<string>.Fail("Authorization header is missing or invalid")),
+                        TokenValidationResult.InactiveToken => Unauthorized(ApiResponse<string>.Fail("User token is not active.")),
+                        TokenValidationResult.InvalidUserId => Unauthorized(ApiResponse<string>.Fail("User ID is not available in the token.")),
+                        TokenValidationResult.NoAdminPermissions => Forbid(ApiResponse<string>.Fail("User does not have permissions.").Message ?? "No admin permissions."),
+                        _ => new ObjectResult(ApiResponse<string>.Fail("Unexpected error occured.")) { StatusCode = 500 }
                     };
 
                 }
@@ -199,15 +200,15 @@ namespace MatHelper.API.Controllers
                 if (registrations == null || !registrations.Any())
                 {
                     _logger.LogError("Users data not found.");
-                    return NotFound("Users data not found.");
+                    return NotFound(ApiResponse<string>.Fail("Registrations data not found."));
                 }
 
-                return Ok(registrations);
+                return Ok(ApiResponse<List<RegistrationsDto>>.Ok(registrations));
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "An error occurred while processing the request.");
-                return StatusCode(500, "Internal server error.");
+                return StatusCode(500, ApiResponse<string>.Fail("Internal server error."));
             }
         }
 
@@ -222,23 +223,23 @@ namespace MatHelper.API.Controllers
                 {
                     return validationResult switch
                     {
-                        TokenValidationResult.MissingToken => Unauthorized("Authorization header is missing or invalid"),
-                        TokenValidationResult.InactiveToken => Unauthorized("User token is not active."),
-                        TokenValidationResult.InvalidUserId => Unauthorized("User ID is not available in the token."),
-                        TokenValidationResult.NoAdminPermissions => Forbid("User does not have permissions."),
-                        _ => StatusCode(500, "Unexpected error occured.")
+                        TokenValidationResult.MissingToken => Unauthorized(ApiResponse<string>.Fail("Authorization header is missing or invalid")),
+                        TokenValidationResult.InactiveToken => Unauthorized(ApiResponse<string>.Fail("User token is not active.")),
+                        TokenValidationResult.InvalidUserId => Unauthorized(ApiResponse<string>.Fail("User ID is not available in the token.")),
+                        TokenValidationResult.NoAdminPermissions => Forbid(ApiResponse<string>.Fail("User does not have permissions.").Message ?? "No admin permissions."),
+                        _ => new ObjectResult(ApiResponse<string>.Fail("Unexpected error occured.")) { StatusCode = 500 }
                     };
 
                 }
 
                 var activeUsers = await _adminService.GetDashboardTokensAsync();
 
-                return Ok(activeUsers);
+                return Ok(ApiResponse<DashboardTokensDto>.Ok(activeUsers));
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "An error occurred while processing the request.");
-                return StatusCode(500, "Internal server error.");
+                return StatusCode(500, ApiResponse<string>.Fail("Internal server error."));
             }
         }
 
@@ -253,22 +254,21 @@ namespace MatHelper.API.Controllers
                 {
                     return validationResult switch
                     {
-                        TokenValidationResult.MissingToken => Unauthorized("Authorization header is missing or invalid"),
-                        TokenValidationResult.InactiveToken => Unauthorized("User token is not active."),
-                        TokenValidationResult.InvalidUserId => Unauthorized("User ID is not available in the token."),
-                        TokenValidationResult.NoAdminPermissions => Forbid("User does not have permissions."),
-                        _ => StatusCode(500, "Unexpected error occured.")
+                        TokenValidationResult.MissingToken => Unauthorized(ApiResponse<string>.Fail("Authorization header is missing or invalid")),
+                        TokenValidationResult.InactiveToken => Unauthorized(ApiResponse<string>.Fail("User token is not active.")),
+                        TokenValidationResult.InvalidUserId => Unauthorized(ApiResponse<string>.Fail("User ID is not available in the token.")),
+                        TokenValidationResult.NoAdminPermissions => Forbid(ApiResponse<string>.Fail("User does not have permissions.").Message ?? "No admin permissions."),
+                        _ => new ObjectResult(ApiResponse<string>.Fail("Unexpected error occured.")) { StatusCode = 500 }
                     };
-
                 }
 
                 var stats = await _logService.GetRequestStats();
-                return Ok(stats);
+                return Ok(ApiResponse<List<RequestLogDto>>.Ok(stats));
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "An error occurred while processing the request.");
-                return StatusCode(500, "Internal server error.");
+                return StatusCode(500, ApiResponse<string>.Fail("Internal server error."));
             }
         }
 
@@ -283,11 +283,11 @@ namespace MatHelper.API.Controllers
                 {
                     return validationResult switch
                     {
-                        TokenValidationResult.MissingToken => Unauthorized("Authorization header is missing or invalid"),
-                        TokenValidationResult.InactiveToken => Unauthorized("User token is not active."),
-                        TokenValidationResult.InvalidUserId => Unauthorized("User ID is not available in the token."),
-                        TokenValidationResult.NoAdminPermissions => Forbid("User does not have permissions."),
-                        _ => StatusCode(500, "Unexpected error occured.")
+                        TokenValidationResult.MissingToken => Unauthorized(ApiResponse<string>.Fail("Authorization header is missing or invalid")),
+                        TokenValidationResult.InactiveToken => Unauthorized(ApiResponse<string>.Fail("User token is not active.")),
+                        TokenValidationResult.InvalidUserId => Unauthorized(ApiResponse<string>.Fail("User ID is not available in the token.")),
+                        TokenValidationResult.NoAdminPermissions => Forbid(ApiResponse<string>.Fail("User does not have permissions.").Message ?? "No admin permissions."),
+                        _ => new ObjectResult(ApiResponse<string>.Fail("Unexpected error occured.")) { StatusCode = 500 }
                     };
 
                 }
@@ -296,15 +296,15 @@ namespace MatHelper.API.Controllers
                 
                 if(userCountryStats == null || !userCountryStats.Any())
                 {
-                    return NotFound("No users found.");
+                    return NotFound(ApiResponse<string>.Fail("No users found."));
                 }
 
-                return Ok(userCountryStats);
+                return Ok(ApiResponse<List<CountryStatsDto>>.Ok(userCountryStats));
             }
             catch(Exception ex)
             {
                 _logger.LogError(ex, "An error occured while processing the request.");
-                return StatusCode(500, "Internal server error.");
+                return StatusCode(500, ApiResponse<string>.Fail("Internal server error."));
             }
         }
 
@@ -320,11 +320,11 @@ namespace MatHelper.API.Controllers
                 {
                     return validationResult switch
                     {
-                        TokenValidationResult.MissingToken => Unauthorized("Authorization header is missing or invalid"),
-                        TokenValidationResult.InactiveToken => Unauthorized("User token is not active."),
-                        TokenValidationResult.InvalidUserId => Unauthorized("User ID is not available in the token."),
-                        TokenValidationResult.NoAdminPermissions => Forbid("User does not have permissions."),
-                        _ => StatusCode(500, "Unexpected error occured.")
+                        TokenValidationResult.MissingToken => Unauthorized(ApiResponse<string>.Fail("Authorization header is missing or invalid")),
+                        TokenValidationResult.InactiveToken => Unauthorized(ApiResponse<string>.Fail("User token is not active.")),
+                        TokenValidationResult.InvalidUserId => Unauthorized(ApiResponse<string>.Fail("User ID is not available in the token.")),
+                        TokenValidationResult.NoAdminPermissions => Forbid(ApiResponse<string>.Fail("User does not have permissions.").Message ?? "No admin permissions."),
+                        _ => new ObjectResult(ApiResponse<string>.Fail("Unexpected error occured.")) { StatusCode = 500 }
                     };
 
                 }
@@ -333,15 +333,15 @@ namespace MatHelper.API.Controllers
 
                 if (roleStats == null || !roleStats.Any())
                 {
-                    return NotFound("No stats found.");
+                    return NotFound(ApiResponse<string>.Fail("No stats found."));
                 }
 
-                return Ok(roleStats);
+                return Ok(ApiResponse<List<RoleStatsDto>>.Ok(roleStats));
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "An error occured while processing the request.");
-                return StatusCode(500, "Internal server error.");
+                return StatusCode(500, ApiResponse<string>.Fail("Internal server error."));
             }
         }
 
@@ -356,11 +356,11 @@ namespace MatHelper.API.Controllers
                 {
                     return validationResult switch
                     {
-                        TokenValidationResult.MissingToken => Unauthorized("Authorization header is missing or invalid"),
-                        TokenValidationResult.InactiveToken => Unauthorized("User token is not active."),
-                        TokenValidationResult.InvalidUserId => Unauthorized("User ID is not available in the token."),
-                        TokenValidationResult.NoAdminPermissions => Forbid("User does not have permissions."),
-                        _ => StatusCode(500, "Unexpected error occured.")
+                        TokenValidationResult.MissingToken => Unauthorized(ApiResponse<string>.Fail("Authorization header is missing or invalid")),
+                        TokenValidationResult.InactiveToken => Unauthorized(ApiResponse<string>.Fail("User token is not active.")),
+                        TokenValidationResult.InvalidUserId => Unauthorized(ApiResponse<string>.Fail("User ID is not available in the token.")),
+                        TokenValidationResult.NoAdminPermissions => Forbid(ApiResponse<string>.Fail("User does not have permissions.").Message ?? "No admin permissions."),
+                        _ => new ObjectResult(ApiResponse<string>.Fail("Unexpected error occured.")) { StatusCode = 500 }
                     };
 
                 }
@@ -369,15 +369,15 @@ namespace MatHelper.API.Controllers
 
                 if (blockStats == null || !blockStats.Any())
                 {
-                    return NotFound("No stats found.");
+                    return NotFound(ApiResponse<string>.Fail("No stats found."));
                 }
 
-                return Ok(blockStats);
+                return Ok(ApiResponse<List<BlockStatsDto>>.Ok(blockStats));
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "An error occured while processing the request.");
-                return StatusCode(500, "Internal server error.");
+                return StatusCode(500, ApiResponse<string>.Fail("Internal server error."));
             }
         }
     }

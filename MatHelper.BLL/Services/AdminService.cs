@@ -12,13 +12,15 @@ namespace MatHelper.BLL.Services
     {
         private readonly ISecurityService _securityService;
         private readonly UserRepository _userRepository;
+        private readonly IUserMapper _userMapper;
         private readonly JwtOptions _jwtOptions;
         private readonly ILogger _logger;
 
-        public AdminService(ISecurityService securityService, UserRepository userRepository, JwtOptions jwtOptions, ILogger<SecurityService> logger)
+        public AdminService(ISecurityService securityService, UserRepository userRepository, IUserMapper userMapper, JwtOptions jwtOptions, ILogger<SecurityService> logger)
         {
             _securityService = securityService;
             _userRepository = userRepository;
+            _userMapper = userMapper;
             _jwtOptions = jwtOptions;
             _logger = logger;
         }
@@ -29,55 +31,13 @@ namespace MatHelper.BLL.Services
             {
                 var users = await _userRepository.GetAllUsersAsync();
 
-                if(users == null)
+                if(users == null || users.Count == 0)
                 {
                     _logger.LogWarning("No users found in the database.");
                     throw new InvalidOperationException("No users found.");
                 }
 
-                var usersDto = users.Select(u =>
-                {
-                    try
-                    {
-                        var loginTokens = u.LoginTokens?.Select(t =>
-                        {
-
-                            var deviceInfo = t.DeviceInfo != null
-                                ? new DeviceInfo
-                                {
-                                    Platform = t.DeviceInfo.Platform,
-                                    UserAgent = t.DeviceInfo.UserAgent
-                                }
-                                : new DeviceInfo();
-
-                            return new LoginTokenDto
-                            {
-                                Expiration = t.Expiration,
-                                IpAddress = t.IpAddress,
-                                IsActive = t.IsActive,
-                                DeviceInfo = deviceInfo
-                            };
-                        }).ToList() ?? new List<LoginTokenDto>();
-
-                        return new AdminUserDto
-                        {
-                            Id = u.Id,
-                            Username = u.Username,
-                            Email = u.Email,
-                            Role = u.Role,
-                            RegistrationDate = u.RegistrationDate,
-                            IsBlocked = u.IsBlocked,
-                            LoginTokens = loginTokens
-                        };
-                    }
-                    catch (Exception ex)
-                    {
-                        _logger.LogError(ex, $"Error processing user {u.Username}");
-                        throw;
-                    }
-                }).ToList();
-
-                return usersDto;
+                return users.Select(_userMapper.MapToAdminUserDto).ToList();
             }
             catch (Exception ex)
             {

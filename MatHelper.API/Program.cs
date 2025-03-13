@@ -12,6 +12,7 @@ using MatHelper.DAL.Repositories;
 using Microsoft.IdentityModel.Tokens;
 using MatHelper.BLL.Filters;
 using MatHelper.BLL.Middlewares;
+using MatHelper.BLL.Mappers;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -59,6 +60,7 @@ builder.Services.AddScoped<IAdminService, AdminService>();
 builder.Services.AddScoped<IUserManagementService, UserManagementService>();
 builder.Services.AddScoped<IRequestLogService, RequestLogService>();
 builder.Services.AddScoped<IProcessRequestService, ProcessRequestService>();
+builder.Services.AddScoped<IUserMapper, UserMapper>();
 builder.Services.AddScoped<ErrorLogRepository>();
 builder.Services.AddScoped<UserRepository>();
 builder.Services.AddScoped<RequestLogRepository>();
