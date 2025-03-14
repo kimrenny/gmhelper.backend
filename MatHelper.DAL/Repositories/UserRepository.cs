@@ -113,10 +113,41 @@ namespace MatHelper.DAL.Repositories
             return users ?? new List<User>();
         }
 
-        public async Task<List<LoginToken>> GetAllTokensAsync()
+        public async Task<List<TokenDto>> GetAllTokensAsync()
         {
-            var tokens = await _context.LoginTokens.ToListAsync();
-            return tokens ?? new List<LoginToken>();
+            try
+            {
+                var tokens = await _context.LoginTokens
+                    .Include(t => t.DeviceInfo)
+                    .ToListAsync();
+
+                if (tokens == null || !tokens.Any())
+                {
+                    throw new InvalidOperationException("No tokens found.");
+                }
+
+                return tokens.Select(t => new TokenDto
+                {
+                    Id = t.Id,
+                    Token = t.Token,
+                    Expiration = t.Expiration,
+                    RefreshTokenExpiration = t.RefreshTokenExpiration,
+                    UserId = t.UserId,
+                    DeviceInfo = t.DeviceInfo != null
+                        ? new DeviceInfo
+                        {
+                            Platform = t.DeviceInfo.Platform,
+                            UserAgent = t.DeviceInfo.UserAgent
+                        }
+                        : new DeviceInfo(),
+                    IpAddress = t.IpAddress,
+                    IsActive = t.IsActive,
+                }).ToList();
+            }
+            catch (Exception ex)
+            {
+                throw new InvalidOperationException("Could not fetch tokens.", ex);
+            }
         }
 
         public async Task UpdateUserAsync(User user)
@@ -195,47 +226,40 @@ namespace MatHelper.DAL.Repositories
             return groupedByDate;
         }
 
-        public async Task<int> GetActiveTokensAsync()
+        public async Task<DashboardTokensDto> GetDashboardTokensAsync()
         {
-            var activeUserTokens = await _context.Users
-                .Where(u => u.LoginTokens!.Any())
-                .SelectMany(u => u.LoginTokens!)
-                .Where(t => t.Expiration > DateTime.UtcNow && t.IsActive)
-                .GroupBy(t => t.UserId)
-                .Where(g => g.Count() > 0)
-                .Select(g => g.OrderByDescending(t => t.Expiration).First())
-                .ToListAsync();
+            try
+            {
+                var tokensData = await _context.Users
+                    .Where(u => u.LoginTokens!.Any())
+                    .Select(u => new
+                    {
+                        u.Id,
+                        u.Role,
+                        ActiveTokens = u.LoginTokens!.Count(t => t.Expiration > DateTime.UtcNow && t.IsActive),
+                        TotalTokens = u.LoginTokens!.Count()
+                    })
+                    .ToListAsync();
 
-            return activeUserTokens.Count;
-        }
+                var activeTokens = tokensData.Sum(x => x.ActiveTokens);
+                var totalTokens = tokensData.Sum(x => x.TotalTokens);
+                var activeAdminTokens = tokensData.Where(u => u.Role.ToLower() == "admin" || u.Role.ToLower() == "owner")
+                                                  .Sum(u => u.ActiveTokens);
+                var totalAdminTokens = tokensData.Where(u => u.Role.ToLower() == "admin" || u.Role.ToLower() == "owner")
+                                                 .Sum(u => u.TotalTokens);
 
-        public async Task<int> GetActiveAdminTokensAsync()
-        {
-            var activeAdminTokens = await _context.Users
-                .Where(u => (u.Role.ToLower() == "admin" || u.Role.ToLower() == "owner") && u.LoginTokens!.Any())
-                .SelectMany(u => u.LoginTokens!)
-                .Where(t => t.Expiration >= DateTime.UtcNow && t.IsActive)
-                .CountAsync();
-
-            return activeAdminTokens;
-        }
-
-        public async Task<int> GetTotalTokensAsync()
-        {
-            var totalLoginTokens = await _context.Users
-                .Where(u => u.LoginTokens!.Any())
-                .SumAsync(u => u.LoginTokens!.Count);
-
-            return totalLoginTokens;
-        }
-
-        public async Task<int> GetTotalAdminTokensAsync()
-        {
-            var totalAdminTokens = await _context.Users
-                .Where(u => (u.Role.ToLower() == "admin" || u.Role.ToLower() == "owner") && u.LoginTokens!.Any())
-                .SumAsync(u => u.LoginTokens!.Count);
-
-            return totalAdminTokens;
+                return new DashboardTokensDto
+                {
+                    ActiveTokens = activeTokens,
+                    TotalTokens = totalTokens,
+                    ActiveAdminTokens = activeAdminTokens,
+                    TotalAdminTokens = totalAdminTokens
+                };
+            }
+            catch (Exception ex)
+            {
+                throw new InvalidOperationException("Could not fetch tokens.", ex);
+            }
         }
 
         public async Task<List<UserIp>> GetUsersWithLastIpAsync()

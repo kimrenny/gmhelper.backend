@@ -65,36 +65,13 @@ namespace MatHelper.BLL.Services
             {
                 var tokens = await _userRepository.GetAllTokensAsync();
 
-                if (tokens == null)
+                if (tokens == null || tokens.Count == 0)
                 {
-                    _logger.LogWarning("No users found in the database.");
-                    throw new InvalidOperationException("No users found.");
+                    _logger.LogWarning("No tokens found in the database.");
+                    throw new InvalidOperationException("No tokens found.");
                 }
 
-                var tokensDto = tokens.Select(t =>
-                {
-                       var deviceInfo = t.DeviceInfo != null
-                         ? new DeviceInfo
-                         {
-                                Platform = t.DeviceInfo.Platform,
-                                UserAgent = t.DeviceInfo.UserAgent
-                         }
-                         : new DeviceInfo();
-
-                    return new TokenDto
-                    {
-                        Id = t.Id,
-                        Token = t.Token,
-                        Expiration = t.Expiration,
-                        RefreshTokenExpiration = t.RefreshTokenExpiration,
-                        UserId = t.UserId,
-                        DeviceInfo = deviceInfo,
-                        IpAddress = t.IpAddress,
-                        IsActive = t.IsActive,
-                    };
-                }).ToList() ?? new List<TokenDto>();
-
-                return tokensDto;
+                return tokens;
             }
             catch (Exception ex)
             {
@@ -135,18 +112,8 @@ namespace MatHelper.BLL.Services
         {
             try
             {
-                var activeTokens = await _userRepository.GetActiveTokensAsync();
-                var totalTokens = await _userRepository.GetTotalTokensAsync();
-                var activeAdminTokens = await _userRepository.GetActiveAdminTokensAsync();
-                var totalAdminTokens = await _userRepository.GetTotalAdminTokensAsync();
-
-                return new DashboardTokensDto
-                {
-                    ActiveTokens = activeTokens,
-                    TotalTokens = totalTokens,
-                    ActiveAdminTokens = activeAdminTokens,
-                    TotalAdminTokens = totalAdminTokens
-                };
+                var tokens = await _userRepository.GetDashboardTokensAsync();
+                return tokens;
             }
             catch (Exception ex)
             {
