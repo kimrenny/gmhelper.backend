@@ -104,9 +104,13 @@ app.Use(async (context, next) =>
 {
     context.Request.EnableBuffering();
     var logger = context.RequestServices.GetRequiredService<ILogger<Program>>();
-    logger.LogInformation("Handling request: {Method} {Path}", context.Request.Method, context.Request.Path);
+    var startTime = DateTime.UtcNow;
+    logger.LogInformation($"[{DateTime.UtcNow}] Handling request: {context.Request.Method} {context.Request.Path}");
+    
     await next();
-    logger.LogInformation("Response status: {StatusCode}", context.Response.StatusCode);
+
+    var elapsedTime = DateTime.UtcNow - startTime;
+    logger.LogInformation($"[{DateTime.UtcNow}] Response status: {context.Response.StatusCode}. Time taken: {elapsedTime}.");
 });
 
 app.UseAuthentication();
