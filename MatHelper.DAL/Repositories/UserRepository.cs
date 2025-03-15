@@ -1,6 +1,7 @@
 using MatHelper.CORE.Models;
 using MatHelper.DAL.Database;
 using Microsoft.EntityFrameworkCore;
+using System.Linq.Expressions;
 
 namespace MatHelper.DAL.Repositories
 {
@@ -19,14 +20,16 @@ namespace MatHelper.DAL.Repositories
             await _context.SaveChangesAsync();
         }
 
+        public async Task<User?> GetUserAsync(Expression<Func<User, bool>> predicate)
+        {
+            return await _context.Users.Include(u => u.LoginTokens).FirstOrDefaultAsync(predicate);
+        }
+
         public async Task<User?> GetUserByEmailAsync(string email)
         {
-            if (string.IsNullOrWhiteSpace(email))
-            {
-                throw new InvalidDataException("email is null or empty");
-            }
+            ValidateEmailOrUsername(email, "email");
 
-            var user = await _context.Users.Include(u => u.LoginTokens).FirstOrDefaultAsync(u => u.Email == email);
+            var user = await GetUserAsync(u => u.Email == email);
             if (user != null && user.IsBlocked)
             {
                 throw new InvalidOperationException("User is blocked.");
@@ -36,12 +39,9 @@ namespace MatHelper.DAL.Repositories
 
         public async Task<User?> GetUserByUsernameAsync(string username)
         {
-            if (string.IsNullOrWhiteSpace(username))
-            {
-                throw new InvalidDataException("username is null or empty");
-            }
+            ValidateEmailOrUsername(username, "username");
 
-            var user = await _context.Users.Include(u => u.LoginTokens).FirstOrDefaultAsync(u => u.Username == username);
+            var user = await GetUserAsync(u => u.Username == username);
             if (user != null && user.IsBlocked)
             {
                 throw new InvalidOperationException("User is blocked.");
@@ -51,12 +51,12 @@ namespace MatHelper.DAL.Repositories
 
         public async Task<User?> GetUserByIdAsync(Guid id)
         {
-            if (string.IsNullOrWhiteSpace(id.ToString()))
+            if (id == Guid.Empty)
             {
                 throw new InvalidDataException("id is null or empty");
             }
 
-            var user = await _context.Users.Include(u => u.LoginTokens).FirstOrDefaultAsync(u => u.Id == id);
+            var user = await GetUserAsync(u => u.Id == id);
             if (user != null && user.IsBlocked)
             {
                 throw new InvalidOperationException("User is blocked.");
@@ -276,6 +276,14 @@ namespace MatHelper.DAL.Repositories
                 })
                 .AsNoTracking()
                 .ToListAsync();
+        }
+
+        private void ValidateEmailOrUsername(string value, string fieldName)
+        {
+            if (string.IsNullOrWhiteSpace(value))
+            {
+                throw new InvalidDataException($"{fieldName} is null or empty.");
+            }
         }
 
         public async Task SaveChangesAsync()
