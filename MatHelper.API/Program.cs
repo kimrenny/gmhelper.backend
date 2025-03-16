@@ -110,7 +110,7 @@ app.Use(async (context, next) =>
     await next();
 
     var elapsedTime = DateTime.UtcNow - startTime;
-    logger.LogInformation($"[{DateTime.UtcNow}] Response status: {context.Response.StatusCode}. Time taken: {elapsedTime}.");
+    logger.LogInformation($"[{DateTime.UtcNow}] Response status: {context.Response.StatusCode}. Time taken: {elapsedTime}. [{context.Request.Method} {context.Request.Path}]");
 });
 
 app.UseAuthentication();
