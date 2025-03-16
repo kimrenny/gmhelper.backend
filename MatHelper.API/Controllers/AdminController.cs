@@ -243,35 +243,6 @@ namespace MatHelper.API.Controllers
             }
         }
 
-        [HttpGet("request-stats")]
-        [Authorize(Roles = "Admin, Owner")]
-        public async Task<IActionResult> GetRequestStats()
-        {
-            try
-            {
-                var validationResult = await _tokenService.ValidateAdminAccessAsync(Request, User);
-                if(validationResult != TokenValidationResult.Valid)
-                {
-                    return validationResult switch
-                    {
-                        TokenValidationResult.MissingToken => Unauthorized(ApiResponse<string>.Fail("Authorization header is missing or invalid")),
-                        TokenValidationResult.InactiveToken => Unauthorized(ApiResponse<string>.Fail("User token is not active.")),
-                        TokenValidationResult.InvalidUserId => Unauthorized(ApiResponse<string>.Fail("User ID is not available in the token.")),
-                        TokenValidationResult.NoAdminPermissions => Forbid(ApiResponse<string>.Fail("User does not have permissions.").Message ?? "No admin permissions."),
-                        _ => new ObjectResult(ApiResponse<string>.Fail("Unexpected error occured.")) { StatusCode = 500 }
-                    };
-                }
-
-                var stats = await _logService.GetRequestStats();
-                return Ok(ApiResponse<List<RequestLogDto>>.Ok(stats));
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "An error occurred while processing the request.");
-                return StatusCode(500, ApiResponse<string>.Fail("Internal server error."));
-            }
-        }
-
         [HttpGet("country-rating")]
         [Authorize(Roles = "Admin, Owner")]
         public async Task<IActionResult> GetUsersByCountry()

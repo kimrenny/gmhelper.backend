@@ -54,7 +54,7 @@ namespace MatHelper.API.Controllers
                 {
                     return NotFound(ApiResponse<string>.Fail("No data available"));
                 }
-                return Ok(ApiResponse<List<RequestLogDto>>.Ok(stats));
+                return Ok(ApiResponse<CombinedRequestLogDto>.Ok(stats));
             }
             catch (Exception ex)
             {

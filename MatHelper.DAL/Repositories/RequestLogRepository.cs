@@ -91,14 +91,31 @@ namespace MatHelper.DAL.Repositories
             await _context.SaveChangesAsync();
         }
 
-        public async Task<List<RequestLogDto>> GetRequestStatsAsync()
+        public async Task<CombinedRequestLogDto> GetRequestStatsAsync()
         {
-            return await _context.RequestLogs.OrderByDescending(x => x.Date)
-                .Select(group => new RequestLogDto
+            var requestLogs = await _context.RequestLogs
+                .OrderByDescending(x => x.Date)
+                .Select(log => new RequestLogDto
                 {
-                    Date = group.Date,
-                    Count = (ushort)group.Count
-                }).ToListAsync();
+                    Date = log.Date,
+                    Count = (ushort)log.Count,
+                })
+                .ToListAsync();
+
+            var adminRequestLogs = await _context.AdminRequests
+                .OrderByDescending(x => x.Date)
+                .Select(log => new RequestLogDto
+                {
+                    Date = log.Date,
+                    Count = (ushort)log.Count,
+                })
+                .ToListAsync();
+
+            return new CombinedRequestLogDto
+            {
+                Regular = requestLogs,
+                Admin = adminRequestLogs
+            };
         }
 
         public async Task<List<RequestLogDetail>> GetAllRequestLogsAsync()

@@ -26,7 +26,7 @@ namespace MatHelper.BLL.Services
             _logger = logger;
         }
 
-        public async Task<List<RequestLogDto>> GetRequestStats()
+        public async Task<CombinedRequestLogDto> GetRequestStats()
         {
             try
             {
