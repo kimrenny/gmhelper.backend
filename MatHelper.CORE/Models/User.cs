@@ -1,3 +1,4 @@
+using MatHelper.CORE.Enums;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 
@@ -15,5 +16,6 @@ namespace MatHelper.CORE.Models
         public required string Role { get; set; }
         public List<LoginToken>? LoginTokens { get; set; }
         public bool IsBlocked { get; set; }
+        public LanguageType Language { get; set; } = LanguageType.EN;
     }
 }
