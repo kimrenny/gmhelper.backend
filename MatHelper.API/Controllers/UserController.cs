@@ -8,6 +8,7 @@ using Microsoft.OpenApi.Validations;
 using Microsoft.AspNetCore.Authorization;
 using System.Collections.Concurrent;
 using Microsoft.AspNetCore.Http;
+using MatHelper.CORE.Enums;
 
 namespace MatHelper.API.Controllers
 {
@@ -328,7 +329,7 @@ namespace MatHelper.API.Controllers
             return Ok(devices);
         }
 
-        [HttpPut("update")]
+        [HttpPatch("update-user")]
         [Authorize]
         public async Task<IActionResult> UpdateUser([FromForm] UpdateUserRequest request)
         {
@@ -341,7 +342,7 @@ namespace MatHelper.API.Controllers
 
             if (await _tokenService.IsTokenDisabled(token))
             {
-                return Unauthorized(new { message = "User token is not active." });
+                return Forbid();
             }
 
             var userId = User.FindFirstValue(ClaimTypes.Name);
@@ -359,6 +360,49 @@ namespace MatHelper.API.Controllers
                 return BadRequest(ex.Message);
             }
             catch (Exception ex) {
+                _logger.LogError(ex, "Error updating user data.");
+                return StatusCode(500, new { message = "An unexpected error occured." });
+            }
+        }
+
+        [HttpPatch("update-language")]
+        [Authorize]
+        public async Task<IActionResult> UpdateLanguage([FromBody] UpdateLanguageRequest request)
+        {
+            var authorizationHeader = Request.Headers["Authorization"].ToString();
+            if (string.IsNullOrEmpty(authorizationHeader) || !authorizationHeader.StartsWith("Bearer "))
+            {
+                return Unauthorized(new { message = "Authorization header is missing or invalid" });
+            }
+            var token = authorizationHeader.Substring("Bearer ".Length).Trim();
+
+            if (await _tokenService.IsTokenDisabled(token))
+            {
+                return Forbid();
+            }
+
+            var userId = User.FindFirstValue(ClaimTypes.Name);
+            if (string.IsNullOrWhiteSpace(userId))
+            {
+                return Unauthorized(new { message = "User ID is not available in the token." });
+            }
+
+            if(!Enum.IsDefined(typeof(LanguageType), request.Language))
+            {
+                return BadRequest(new { message = "Invalid language type." });
+            }
+
+            try
+            {
+                await _userManagementService.UpdateUserLanguageAsync(Guid.Parse(userId), request.Language);
+                return Ok(new { message = "Language updated successfully." });
+            }
+            catch (InvalidOperationException ex)
+            {
+                return BadRequest(ex.Message);
+            }
+            catch (Exception ex)
+            {
                 _logger.LogError(ex, "Error updating user data.");
                 return StatusCode(500, new { message = "An unexpected error occured." });
             }
