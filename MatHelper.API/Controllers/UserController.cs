@@ -282,11 +282,7 @@ namespace MatHelper.API.Controllers
                     return NotFound("User not found.");
                 }
 
-                return Ok(new
-                {
-                    nickname = user.Username,
-                    avatar = user.Avatar,
-                });
+                return Ok(user);
             }
             catch(InvalidDataException ex)
             {
@@ -387,14 +383,14 @@ namespace MatHelper.API.Controllers
                 return Unauthorized(new { message = "User ID is not available in the token." });
             }
 
-            if(!Enum.IsDefined(typeof(LanguageType), request.Language))
+            if(!Enum.TryParse(typeof(LanguageType), request.Language, true, out var parsedLanguage) || !Enum.IsDefined(typeof(LanguageType), parsedLanguage))
             {
                 return BadRequest(new { message = "Invalid language type." });
             }
 
             try
             {
-                await _userManagementService.UpdateUserLanguageAsync(Guid.Parse(userId), request.Language);
+                await _userManagementService.UpdateUserLanguageAsync(Guid.Parse(userId), (LanguageType)parsedLanguage);
                 return Ok(new { message = "Language updated successfully." });
             }
             catch (InvalidOperationException ex)

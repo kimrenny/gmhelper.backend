@@ -29,12 +29,17 @@ namespace MatHelper.BLL.Services
             _logger = logger;
         }
 
-        public async Task<User> GetUserDetailsAsync(Guid userId)
+        public async Task<UserDetails> GetUserDetailsAsync(Guid userId)
         {
             var user = await _userRepository.GetUserByIdAsync(userId);
             if (user == null) throw new InvalidDataException("User not found.");
 
-            return user;
+            return new UserDetails
+            {
+                Avatar = user.Avatar != null ? user.Avatar : null,
+                Nickname = user.Username,
+                Language = user.Language.ToString()
+            };
         }
 
         public async Task<byte[]> GetUserAvatarAsync(Guid userId)

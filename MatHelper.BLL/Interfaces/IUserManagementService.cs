@@ -7,7 +7,7 @@ namespace MatHelper.BLL.Interfaces
 {
     public interface IUserManagementService
     {
-        Task<User> GetUserDetailsAsync(Guid userId);
+        Task<UserDetails> GetUserDetailsAsync(Guid userId);
         Task<byte[]> GetUserAvatarAsync(Guid userId);
         Task<IEnumerable<object>> GetLoggedDevicesAsync(Guid userId);
         Task SaveUserAvatarAsync(string userId, byte[] avatarBytes);
