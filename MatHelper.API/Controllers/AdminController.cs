@@ -19,15 +19,17 @@ namespace MatHelper.API.Controllers
     public class AdminController : ControllerBase
     {
         private readonly IAdminService _adminService;
+        private readonly IAdminSettingsService _adminSettingsService;
         private readonly ITokenService _tokenService;
         private readonly ISecurityService _securityService;
         private readonly ILogger<UserController> _logger;
         private static readonly ConcurrentDictionary<string, bool> ProcessingTokens = new();
         private readonly IRequestLogService _logService;
 
-        public AdminController(IAdminService adminService, ITokenService tokenService, ISecurityService securityService, ILogger<UserController> logger, IRequestLogService logService)
+        public AdminController(IAdminService adminService, IAdminSettingsService AdminSettingsService, ITokenService tokenService, ISecurityService securityService, ILogger<UserController> logger, IRequestLogService logService)
         {
             _adminService = adminService;
+            _adminSettingsService = AdminSettingsService;
             _tokenService = tokenService;
             _securityService = securityService;
             _logger = logger;
@@ -351,5 +353,107 @@ namespace MatHelper.API.Controllers
                 return StatusCode(500, ApiResponse<string>.Fail("Internal server error."));
             }
         }
+
+        [HttpGet("settings")]
+        [Authorize(Roles = "Admin, Owner")]
+        public async Task<IActionResult> GetAdminSettings()
+        {
+            var userId = User.FindFirstValue(ClaimTypes.Name);
+            if (string.IsNullOrWhiteSpace(userId))
+            {
+                _logger.LogWarning("User ID is missing in the token.");
+                return Unauthorized(ApiResponse<string>.Fail("User ID is not available in the token."));
+            }
+
+            try
+            {
+                var validationResult = await _tokenService.ValidateAdminAccessAsync(Request, User);
+
+                if (validationResult != TokenValidationResult.Valid)
+                {
+                    _logger.LogWarning("Token validation failed: {ValidationResult}", validationResult);
+                    return validationResult switch
+                    {
+                        TokenValidationResult.MissingToken => Unauthorized(ApiResponse<string>.Fail("Authorization header is missing or invalid")),
+                        TokenValidationResult.InactiveToken => Unauthorized(ApiResponse<string>.Fail("User token is not active.")),
+                        TokenValidationResult.InvalidUserId => Unauthorized(ApiResponse<string>.Fail("User ID is not available in the token.")),
+                        TokenValidationResult.NoAdminPermissions =>
+                            Forbid(ApiResponse<string>.Fail("User does not have permissions.").Message ?? "No admin permissions."),
+                        _ => new ObjectResult(ApiResponse<string>.Fail("Unexpected error occurred.")) { StatusCode = 500 }
+                    };
+                }
+
+                if (!Guid.TryParse(userId, out var parsedUserId))
+                {
+                    _logger.LogError("Failed to parse User ID: {UserId}", userId);
+                    return BadRequest(ApiResponse<string>.Fail("Invalid User ID format."));
+                }
+
+                var settings = await _adminSettingsService.GetOrCreateAdminSettingsAsync(parsedUserId);
+                if (settings == null)
+                {
+                    _logger.LogWarning("No settings found for User ID: {UserId}", userId);
+                    return NotFound(ApiResponse<string>.Fail("No settings found."));
+                }
+
+                return Ok(ApiResponse<bool[][]>.Ok(settings));
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "An error occurred while processing the request for User ID: {UserId}", userId);
+                return StatusCode(500, ApiResponse<string>.Fail("Internal server error."));
+            }
+        }
+
+        [HttpPatch("settings")]
+        [Authorize(Roles = "Admin, Owner")]
+        public async Task<IActionResult> UpdateSwitch([FromBody] SwitchUpdateRequest request)
+        {
+            var userId = User.FindFirstValue(ClaimTypes.Name);
+            if (string.IsNullOrWhiteSpace(userId))
+            {
+                _logger.LogWarning("User ID is missing in the token.");
+                return Unauthorized(ApiResponse<string>.Fail("User ID is not available in the token."));
+            }
+
+            try
+            {
+                var validationResult = await _tokenService.ValidateAdminAccessAsync(Request, User);
+
+                if (validationResult != TokenValidationResult.Valid)
+                {
+                    _logger.LogWarning("Token validation failed: {ValidationResult}", validationResult);
+                    return validationResult switch
+                    {
+                        TokenValidationResult.MissingToken => Unauthorized(ApiResponse<string>.Fail("Authorization header is missing or invalid")),
+                        TokenValidationResult.InactiveToken => Unauthorized(ApiResponse<string>.Fail("User token is not active.")),
+                        TokenValidationResult.InvalidUserId => Unauthorized(ApiResponse<string>.Fail("User ID is not available in the token.")),
+                        TokenValidationResult.NoAdminPermissions =>
+                            Forbid(ApiResponse<string>.Fail("User does not have permissions.").Message ?? "No admin permissions."),
+                        _ => new ObjectResult(ApiResponse<string>.Fail("Unexpected error occurred.")) { StatusCode = 500 }
+                    };
+                }
+
+                if (!Guid.TryParse(userId, out var parsedUserId))
+                {
+                    _logger.LogError("Failed to parse User ID: {UserId}", userId);
+                    return BadRequest(ApiResponse<string>.Fail("Invalid User ID format."));
+                }
+
+                var result = await _adminSettingsService.UpdateSwitchAsync(parsedUserId, request.SectionId, request.SwitchLabel, request.NewValue);
+
+                if (result)
+                {
+                    return Ok(ApiResponse<string>.Ok("Switch updated successfully."));
+                }
+                return BadRequest(ApiResponse<string>.Fail("Failed to update switch."));
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "An error occurred while processing the request for User ID: {UserId}", userId);
+                return StatusCode(500, ApiResponse<string>.Fail("Internal server error."));
+            }
+        }
+
     }
 }

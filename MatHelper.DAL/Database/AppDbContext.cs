@@ -13,6 +13,9 @@ namespace MatHelper.DAL.Database
         public DbSet<RequestLogDetail> RequestLogDetails { get; set; }
         public DbSet<AuthLog> AuthLogs { get; set; }
         public DbSet<ErrorLog> ErrorLogs { get; set; }
+        public DbSet<AdminSettings> AdminSettings { get; set; }
+        public DbSet<AdminSection> AdminSections { get; set; }
+        public DbSet<AdminSwitch> AdminSwitches { get; set; }
 
         public AppDbContext(DbContextOptions<AppDbContext> options) : base(options) { }
 
@@ -27,6 +30,24 @@ namespace MatHelper.DAL.Database
             modelBuilder.Entity<RequestLog>().HasIndex(r => r.Date).IsUnique();
 
             modelBuilder.Entity<AdminRequestLog>().HasIndex(r => r.Date).IsUnique();
+
+            modelBuilder.Entity<AdminSettings>()
+                .HasOne(a => a.User)
+                .WithOne()
+                .HasForeignKey<AdminSettings>(a => a.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            modelBuilder.Entity<AdminSection>()
+                .HasOne(s => s.AdminSettings)
+                .WithMany(a => a.Sections)
+                .HasForeignKey(s => s.AdminSettingsId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            modelBuilder.Entity<AdminSwitch>()
+                .HasOne(sw => sw.AdminSection)
+                .WithMany(s => s.Switches)
+                .HasForeignKey(sw => sw.AdminSectionId)
+                .OnDelete(DeleteBehavior.Cascade);
         }
     }
 }
