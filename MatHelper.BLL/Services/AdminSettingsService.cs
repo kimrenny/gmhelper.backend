@@ -69,14 +69,59 @@ namespace MatHelper.BLL.Services
 
         private List<AdminSwitch> GenerateDefaultSwitches(AdminSection section)
         {
-            return new List<AdminSwitch>
+            switch (section.Title)
             {
-                new AdminSwitch { Label = "Setting1", Value = true, AdminSection = section },
-                new AdminSwitch { Label = "Setting2", Value = true, AdminSection = section },
-                new AdminSwitch { Label = "Setting3", Value = true, AdminSection = section },
-                new AdminSwitch { Label = "Setting4", Value = true, AdminSection = section },
-                new AdminSwitch { Label = "Setting5", Value = true, AdminSection = section }
-            };
+                case "Dashboard":
+                    {
+
+                        return new List<AdminSwitch>
+                        {
+                            new AdminSwitch { Label = "Requests", Value = true, AdminSection = section },
+                            new AdminSwitch { Label = "Tokens", Value = true, AdminSection = section },
+                            new AdminSwitch { Label = "Banned", Value = true, AdminSection = section },
+                            new AdminSwitch { Label = "Roles", Value = true, AdminSection = section },
+                            new AdminSwitch { Label = "Country", Value = true, AdminSection = section }
+                        };
+                    }
+                case "Users":
+                    {
+                        return new List<AdminSwitch>
+                        {
+                            new AdminSwitch { Label = "Username", Value = true, AdminSection = section },
+                            new AdminSwitch { Label = "Email", Value = true, AdminSection = section },
+                            new AdminSwitch { Label = "Registration", Value = true, AdminSection = section },
+                            new AdminSwitch { Label = "Modal", Value = true, AdminSection = section },
+                            new AdminSwitch { Label = "Modal: Token", Value = true, AdminSection = section }
+                        };
+                    }
+                case "Tokens":
+                    {
+                        return new List<AdminSwitch>
+                        {
+                            new AdminSwitch { Label = "Token", Value = true, AdminSection = section },
+                            new AdminSwitch { Label = "Expirations", Value = true, AdminSection = section },
+                            new AdminSwitch { Label = "User ID", Value = true, AdminSection = section },
+                            new AdminSwitch { Label = "Modal", Value = true, AdminSection = section },
+                            new AdminSwitch { Label = "Actions", Value = true, AdminSection = section }
+                        };
+                    }
+                case "Logs":
+                    {
+                        return new List<AdminSwitch>
+                        {
+                            new AdminSwitch { Label = "Timestamp", Value = true, AdminSection = section },
+                            new AdminSwitch { Label = "Duration", Value = true, AdminSection = section },
+                            new AdminSwitch { Label = "Request", Value = true, AdminSection = section },
+                            new AdminSwitch { Label = "User ID", Value = true, AdminSection = section },
+                            new AdminSwitch { Label = "Modal", Value = true, AdminSection = section }
+                        };
+                    }
+                default:
+                    {
+                        _logger.LogError($"Error occured during GenerateDefaultSwitches, switch block, section: {section}");
+                        throw new InvalidDataException();
+                    }
+            }
         }
 
         public async Task<bool> UpdateSwitchAsync(Guid userId, int sectionId, string switchLabel, bool newValue)
