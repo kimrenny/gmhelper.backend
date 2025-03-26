@@ -9,6 +9,6 @@ namespace MatHelper.BLL.Interfaces
     public interface IAdminSettingsService
     {
         Task<bool[][]> GetOrCreateAdminSettingsAsync(Guid userId);
-        Task<bool> UpdateSwitchAsync(Guid userId, int sectionId, string switchLabel, bool newValue);
+        Task<bool> UpdateSwitchAsync(Guid userId, string sectionTitle, string switchLabel, bool newValue);
     }
 }

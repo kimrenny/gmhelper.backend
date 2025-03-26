@@ -34,7 +34,7 @@ namespace MatHelper.DAL.Repositories
             await _context.SaveChangesAsync();
         }
 
-        public async Task<bool> UpdateSwitchAsync(Guid userId, int sectionId, string switchLabel, bool newValue)
+        public async Task<bool> UpdateSwitchAsync(Guid userId, string sectionTitle, string switchLabel, bool newValue)
         {
             var adminSettings = await _context.AdminSettings
                 .Include(a => a.Sections)
@@ -46,7 +46,7 @@ namespace MatHelper.DAL.Repositories
                 return false;
             }
 
-            var section = adminSettings.Sections.FirstOrDefault(s => s.Id == sectionId);
+            var section = adminSettings.Sections.FirstOrDefault(s => s.Title == sectionTitle);
             if(section == null)
             {
                 return false;

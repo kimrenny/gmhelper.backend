@@ -440,7 +440,7 @@ namespace MatHelper.API.Controllers
                     return BadRequest(ApiResponse<string>.Fail("Invalid User ID format."));
                 }
 
-                var result = await _adminSettingsService.UpdateSwitchAsync(parsedUserId, request.SectionId, request.SwitchLabel, request.NewValue);
+                var result = await _adminSettingsService.UpdateSwitchAsync(parsedUserId, request.SectionTitle, request.SwitchLabel, request.NewValue);
 
                 if (result)
                 {

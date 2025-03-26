@@ -124,11 +124,11 @@ namespace MatHelper.BLL.Services
             }
         }
 
-        public async Task<bool> UpdateSwitchAsync(Guid userId, int sectionId, string switchLabel, bool newValue)
+        public async Task<bool> UpdateSwitchAsync(Guid userId, string sectionTitle, string switchLabel, bool newValue)
         {
             try
             {
-                return await _adminSettingsRepository.UpdateSwitchAsync(userId, sectionId, switchLabel, newValue);
+                return await _adminSettingsRepository.UpdateSwitchAsync(userId, sectionTitle, switchLabel, newValue);
             }
             catch (Exception ex) 
             {
