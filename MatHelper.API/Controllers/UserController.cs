@@ -9,6 +9,7 @@ using Microsoft.AspNetCore.Authorization;
 using System.Collections.Concurrent;
 using Microsoft.AspNetCore.Http;
 using MatHelper.CORE.Enums;
+using MatHelper.API.Common;
 
 namespace MatHelper.API.Controllers
 {
@@ -40,7 +41,7 @@ namespace MatHelper.API.Controllers
             if(userDto == null)
             {
                 _logger.LogError("Received null userDto.");
-                return BadRequest("Invalid data.");
+                return BadRequest(ApiResponse<string>.Fail("Invalid data."));
             }
 
             _logger.LogInformation("Register attempt for user: {Email}", userDto.Email);
@@ -48,7 +49,7 @@ namespace MatHelper.API.Controllers
             if (!await _captchaValidationService.ValidateCaptchaAsync(userDto.CaptchaToken))
             {
                 _logger.LogWarning("Invalid CAPTCHA token for user: {Email}", userDto.Email);
-                return BadRequest("Invalid CAPTCHA token.");
+                return BadRequest(ApiResponse<string>.Fail("Invalid CAPTCHA token."));
             }
 
             try
@@ -58,14 +59,14 @@ namespace MatHelper.API.Controllers
                 if(ipAddress == null)
                 {
                     _logger.LogWarning("Failed to retrieve IP address for user: {Email}", userDto.Email);
-                    return BadRequest("Unable to determine IP address.");
+                    return BadRequest(ApiResponse<string>.Fail("Unable to determine IP address."));
                 }
 
                 var result = await _authenticationService.RegisterUserAsync(userDto, deviceInfo, ipAddress);
                 if (result)
                 {
                     _logger.LogInformation("Register successful for user: {Email}", userDto.Email);
-                    return Ok();
+                    return Ok(ApiResponse<string>.Ok("Register successful."));
                 }
             }
             catch(InvalidOperationException ex)
@@ -73,19 +74,19 @@ namespace MatHelper.API.Controllers
                 if(ex.Message == "Violation of service rules. All user accounts have been blocked.")
                 {
                     _logger.LogWarning("Register failed for user: {Email} due to violation of service rules.", userDto.Email);
-                    return BadRequest("Violation of service rules. All user accounts have been blocked.");
+                    return BadRequest(ApiResponse<string>.Fail("Violation of service rules. All user accounts have been blocked."));
                 }
 
                 _logger.LogWarning("Register failed for user: {Email} due to error: {Error}", userDto.Email, ex.Message);
-                return BadRequest(ex.Message);
+                return BadRequest(ApiResponse<string>.Fail(ex.Message));
             }
             catch (Exception ex)
             {
                 _logger.LogError("Register failed for user: {Email} due to error: {Error}", userDto.Email, ex.Message);
-                return BadRequest(ex.Message);
+                return BadRequest(ApiResponse<string>.Fail(ex.Message));
             }
 
-            return BadRequest("Unknown error occured during registration.");
+            return BadRequest(ApiResponse<string>.Fail("Unknown error occured during registration."));
         }
 
         [HttpPost("login")]
@@ -94,7 +95,7 @@ namespace MatHelper.API.Controllers
             if(!await _captchaValidationService.ValidateCaptchaAsync(loginDto.CaptchaToken))
             {
                 _logger.LogWarning("Invalid CAPTCHA token for user: {Email}", loginDto.Email);
-                return BadRequest("Invalid CAPTCHA token.");
+                return BadRequest(ApiResponse<string>.Fail("Invalid CAPTCHA token."));
             }
 
             try
@@ -103,7 +104,7 @@ namespace MatHelper.API.Controllers
                 if (ipAddress == null)
                 {
                     _logger.LogWarning("Failed to retrieve IP address for user: {Email}", loginDto.Email);
-                    return BadRequest("Unable to determine IP address.");
+                    return BadRequest(ApiResponse<string>.Fail("Unable to determine IP address."));
                 }
 
                 var (accessToken, refreshToken) = await _authenticationService.LoginUserAsync(loginDto, deviceInfo, ipAddress);
@@ -111,7 +112,7 @@ namespace MatHelper.API.Controllers
                 if (accessToken == null || refreshToken == null)
                 {
                     _logger.LogWarning("Login failed for user: {Email}.", loginDto.Email);
-                    return Unauthorized("Invalid credentials.");
+                    return Unauthorized(ApiResponse<string>.Fail("Invalid credentials."));
                 }
 
                 return Ok(new { AccessToken = accessToken, RefreshToken = refreshToken });
@@ -119,21 +120,21 @@ namespace MatHelper.API.Controllers
             catch (InvalidOperationException ex)
             {
                 _logger.LogError($"Login failed for user: {loginDto.Email}. Reason: {ex.Message}");
-                return Unauthorized("User not found.");
+                return Unauthorized(ApiResponse<string>.Fail("User not found."));
             }
             catch (UnauthorizedAccessException ex)
             {
                 _logger.LogError($"Login failed for user: {loginDto.Email}. Reason: {ex.Message}");
                 if(ex.Message == "Invalid password.")
                 {
-                    return Unauthorized("Invalid credentials.");
+                    return Unauthorized(ApiResponse<string>.Fail("Invalid credentials."));
                 }
-                return Unauthorized("User is banned.");
+                return Unauthorized(ApiResponse<string>.Fail("User is banned."));
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error during login for user: {Email}", loginDto.Email);
-                return StatusCode(500, "An unexpected error occured.");
+                return StatusCode(500, ApiResponse<string>.Fail("An unexpected error occured."));
             }
         }
 
@@ -143,13 +144,13 @@ namespace MatHelper.API.Controllers
             if (!await _captchaValidationService.ValidateCaptchaAsync(recoveryDto.CaptchaToken))
             {
                 _logger.LogWarning("Invalid CAPTCHA token for user: {Email}", recoveryDto.Email);
-                return BadRequest("Invalid CAPTCHA token.");
+                return BadRequest(ApiResponse<string>.Fail("Invalid CAPTCHA token."));
             }
 
             if (!await _authenticationService.RecoverPasswordAsync(recoveryDto))
-                return NotFound("User not found.");
+                return NotFound(ApiResponse<string>.Fail("User not found."));
 
-            return Ok("Password recovery instructions sent.");
+            return Ok(ApiResponse<string>.Ok("Password recovery instructions sent."));
         }
 
         [HttpPost("refresh-token")]
@@ -158,13 +159,13 @@ namespace MatHelper.API.Controllers
             if (string.IsNullOrEmpty(request.RefreshToken))
             {
                 _logger.LogWarning("Attempt to refresh token with an empty token.");
-                return BadRequest("Refresh token is required.");
+                return BadRequest(ApiResponse<string>.Fail("Refresh token is required."));
             }
 
             if (!ProcessingTokens.TryAdd(request.RefreshToken, true))
             {
                 _logger.LogWarning("Refresh token request already in progress: {RefreshToken}", request.RefreshToken);
-                return Conflict("Token refresh already in progress.");
+                return Conflict(ApiResponse<string>.Fail("Token refresh already in progress."));
             }
 
             try
@@ -180,7 +181,7 @@ namespace MatHelper.API.Controllers
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error during refreshing token for refreshToken: {RefreshToken}", request.RefreshToken);
-                return Unauthorized(ex.Message);
+                return Unauthorized(ApiResponse<string>.Fail(ex.Message));
             }
             finally
             {
@@ -195,16 +196,16 @@ namespace MatHelper.API.Controllers
             var token = Request.Headers["Authorization"].ToString().Split(" ").Last();
             if (await _tokenService.IsTokenDisabled(token))
             {
-                return Unauthorized(new { message = "User token is not active." });
+                return Unauthorized(ApiResponse<string>.Fail("User token is not active."));
             }
 
             if (avatar == null || avatar.Length == 0)
-                return BadRequest("Invalid file.");
+                return BadRequest(ApiResponse<string>.Fail("Invalid file."));
 
             var userId = User.Identity?.Name;
             if (string.IsNullOrEmpty(userId))
             {
-                return Unauthorized(new { message = "User is not authenticated." });
+                return Unauthorized(ApiResponse<string>.Fail("User is not authenticated."));
             }
 
             try
@@ -214,11 +215,11 @@ namespace MatHelper.API.Controllers
                 var avatarBytes = memoryStream.ToArray();
 
                 await _userManagementService.SaveUserAvatarAsync(userId, avatarBytes);
-                return Ok(new { message = "Avatar uploaded successfully." });
+                return Ok(ApiResponse<string>.Ok("Avatar uploaded successfully."));
             }
             catch(Exception ex)
             {
-                return StatusCode(500, new { message = $"Internal server error: {ex.Message}" });
+                return StatusCode(500, ApiResponse<string>.Fail(ex.Message));
             }
             
         }
@@ -230,19 +231,19 @@ namespace MatHelper.API.Controllers
             var token = Request.Headers["Authorization"].ToString().Split(" ").Last();
             if (await _tokenService.IsTokenDisabled(token))
             {
-                return Unauthorized(new { message = "User token is not active." });
+                return Unauthorized(ApiResponse<string>.Fail("User token is not active."));
             }
 
             var userIdString = User.FindFirst(ClaimTypes.Name)?.Value;
             if (string.IsNullOrEmpty(userIdString) || !Guid.TryParse(userIdString, out var userId))
             {
-                return Unauthorized("Invalid token.");
+                return Unauthorized(ApiResponse<string>.Fail("Invalid token."));
             }
 
             var avatar = await _userManagementService.GetUserAvatarAsync(userId);
             if(avatar == null || avatar.Length == 0)
             {
-                return NotFound("Avatar not found.");
+                return NotFound(ApiResponse<string>.Fail("Avatar not found."));
             }
 
             return File(avatar, "image/jpeg");
@@ -256,14 +257,14 @@ namespace MatHelper.API.Controllers
             if (string.IsNullOrEmpty(authorizationHeader) || !authorizationHeader.StartsWith("Bearer "))
             {
                 this._logger.LogError("Authorization header is missing or invalid {authorizationHeader}.", authorizationHeader);
-                return Unauthorized("Authorization header is missing or invalid");
+                return Unauthorized(ApiResponse<string>.Fail("Authorization header is missing or invalid"));
             }
             var token = authorizationHeader.Substring("Bearer ".Length).Trim();
 
             if (await _tokenService.IsTokenDisabled(token))
             {
                 this._logger.LogError("User token is not active: {token}", token);
-                return Unauthorized("User token is not active.");
+                return Unauthorized(ApiResponse<string>.Fail("User token is not active."));
             }
 
             try
@@ -272,25 +273,25 @@ namespace MatHelper.API.Controllers
                 if (string.IsNullOrEmpty(userIdString) || !Guid.TryParse(userIdString, out var userId))
                 {
                     this._logger.LogError("Invalid token: {token}", token);
-                    return Unauthorized("Invalid token.");
+                    return Unauthorized(ApiResponse<string>.Fail("Invalid token."));
                 }
 
                 var user = await _userManagementService.GetUserDetailsAsync(userId);
                 if (user == null)
                 {
                     this._logger.LogError("User not found for token: {token}", token);
-                    return NotFound("User not found.");
+                    return NotFound(ApiResponse<string>.Fail("User not found."));
                 }
 
-                return Ok(user);
+                return Ok(ApiResponse<UserDetails>.Ok(user));
             }
             catch(InvalidDataException ex)
             {
                 this._logger.LogError("Invalid data: {ex}", ex);
-                return Unauthorized("Invalid data");
+                return Unauthorized(ApiResponse<string>.Fail("Invalid data"));
             }
             catch (Exception ex) {
-                return StatusCode(500, ex.Message);
+                return StatusCode(500, ApiResponse<string>.Fail(ex.Message));
             }
         }
 
@@ -301,25 +302,25 @@ namespace MatHelper.API.Controllers
             var authorizationHeader = Request.Headers["Authorization"].ToString();
             if (string.IsNullOrEmpty(authorizationHeader) || !authorizationHeader.StartsWith("Bearer "))
             {
-                return Unauthorized("Authorization header is missing or invalid");
+                return Unauthorized(ApiResponse<string>.Fail("Authorization header is missing or invalid"));
             }
             var token = authorizationHeader.Substring("Bearer ".Length).Trim();
 
             if (await _tokenService.IsTokenDisabled(token))
             {
-                return Unauthorized("User token is not active.");
+                return Unauthorized(ApiResponse<string>.Fail("User token is not active."));
             }
 
             var userId = User.FindFirstValue(ClaimTypes.Name);
             if (string.IsNullOrWhiteSpace(userId))
             {
-                return Unauthorized("User ID is not available in the token.");
+                return Unauthorized(ApiResponse<string>.Fail("User ID is not available in the token."));
             }
 
             var devices = await _userManagementService.GetLoggedDevicesAsync(Guid.Parse(userId));
             if(devices == null || !devices.Any())
             {
-                return NotFound("No devices found for this user.");
+                return NotFound(ApiResponse<string>.Fail("No devices found for this user."));
             }
 
             return Ok(devices);
@@ -343,21 +344,21 @@ namespace MatHelper.API.Controllers
 
             var userId = User.FindFirstValue(ClaimTypes.Name);
             if (string.IsNullOrWhiteSpace(userId)) {
-                return Unauthorized(new { message = "User ID is not available in the token." });
+                return Unauthorized(ApiResponse<string>.Fail("User ID is not available in the token."));
             }
 
             try
             {
                 await _userManagementService.UpdateUserAsync(Guid.Parse(userId), request);
-                return Ok(new { message = "User data updated successfully." });
+                return Ok(ApiResponse<string>.Ok("User data updated successfully."));
             }
             catch (InvalidOperationException ex)
             {
-                return BadRequest(ex.Message);
+                return BadRequest(ApiResponse<string>.Fail(ex.Message));
             }
             catch (Exception ex) {
                 _logger.LogError(ex, "Error updating user data.");
-                return StatusCode(500, new { message = "An unexpected error occured." });
+                return StatusCode(500, ApiResponse<string>.Fail("An unexpected error occured."));
             }
         }
 
@@ -368,39 +369,39 @@ namespace MatHelper.API.Controllers
             var authorizationHeader = Request.Headers["Authorization"].ToString();
             if (string.IsNullOrEmpty(authorizationHeader) || !authorizationHeader.StartsWith("Bearer "))
             {
-                return Unauthorized(new { message = "Authorization header is missing or invalid" });
+                return Unauthorized(ApiResponse<string>.Fail("Authorization header is missing or invalid"));
             }
             var token = authorizationHeader.Substring("Bearer ".Length).Trim();
 
             if (await _tokenService.IsTokenDisabled(token))
             {
-                return Forbid();
+                return Forbid(ApiResponse<string>.Fail("Token is disabled.").Message ?? "Token is disabled.");
             }
 
             var userId = User.FindFirstValue(ClaimTypes.Name);
             if (string.IsNullOrWhiteSpace(userId))
             {
-                return Unauthorized(new { message = "User ID is not available in the token." });
+                return Unauthorized(ApiResponse<string>.Fail("User ID is not available in the token."));
             }
 
             if(!Enum.TryParse(typeof(LanguageType), request.Language, true, out var parsedLanguage) || !Enum.IsDefined(typeof(LanguageType), parsedLanguage))
             {
-                return BadRequest(new { message = "Invalid language type." });
+                return BadRequest(ApiResponse<string>.Fail("Invalid language type."));
             }
 
             try
             {
                 await _userManagementService.UpdateUserLanguageAsync(Guid.Parse(userId), (LanguageType)parsedLanguage);
-                return Ok(new { message = "Language updated successfully." });
+                return Ok(ApiResponse<string>.Fail("Language updated successfully."));
             }
             catch (InvalidOperationException ex)
             {
-                return BadRequest(ex.Message);
+                return BadRequest(ApiResponse<string>.Fail(ex.Message));
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error updating user data.");
-                return StatusCode(500, new { message = "An unexpected error occured." });
+                return StatusCode(500, ApiResponse<string>.Fail("An unexpected error occured."));
             }
         }
 
@@ -411,19 +412,19 @@ namespace MatHelper.API.Controllers
             var authorizationHeader = Request.Headers["Authorization"].ToString();
             if (string.IsNullOrEmpty(authorizationHeader) || !authorizationHeader.StartsWith("Bearer "))
             {
-                return Unauthorized(new { message = "Authorization header is missing or invalid" });
+                return Unauthorized(ApiResponse<string>.Fail("Authorization header is missing or invalid"));
             }
             var token = authorizationHeader.Substring("Bearer ".Length).Trim();
 
             if (await _tokenService.IsTokenDisabled(token))
             {
-                return Unauthorized(new { message = "User token is not active." });
+                return Unauthorized(ApiResponse<string>.Fail("User token is not active."));
             }
 
             var userId = User.FindFirstValue(ClaimTypes.Name);
             if (string.IsNullOrWhiteSpace(userId))
             {
-                return Unauthorized(new { message = "User ID is not available in the token." });
+                return Unauthorized(ApiResponse<string>.Fail("User ID is not available in the token."));
             }
 
             try
@@ -431,15 +432,15 @@ namespace MatHelper.API.Controllers
                 var result = await _userManagementService.RemoveDeviceAsync(Guid.Parse(userId), request.UserAgent, request.Platform, request.IpAddress, token);
                 if(result.ToString() == "User not found." || result.ToString() == "Device not found or inactive." || result.ToString() == "The current device cannot be deactivated." || result.ToString() == "An unexpected error occured.")
                 {
-                    return BadRequest(new { message = result });
+                    return BadRequest(ApiResponse<string>.Fail(result));
                 }
 
-                return Ok(new { message = result });
+                return Ok(ApiResponse<string>.Ok(result));
 
             } catch(Exception ex)
             {
                 _logger.LogError(ex, "Error while removing device for user {UserId}", userId);
-                return StatusCode(500, new { message = "An unexpected error occured." });
+                return StatusCode(500, ApiResponse<string>.Fail("An unexpected error occured."));
             }
         }
     }
