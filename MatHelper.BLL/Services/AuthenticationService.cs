@@ -138,7 +138,7 @@ namespace MatHelper.BLL.Services
             return true;
         }
 
-        public async Task<(string AccessToken, string RefreshToken)> LoginUserAsync(LoginDto loginDto, DeviceInfo deviceInfo, string ipAddress)
+        public async Task<LoginResponse> LoginUserAsync(LoginDto loginDto, DeviceInfo deviceInfo, string ipAddress)
         {
             var user = await _userRepository.GetUserByEmailAsync(loginDto.Email);
             if (user == null)
@@ -220,7 +220,11 @@ namespace MatHelper.BLL.Services
                     throw new UnauthorizedAccessException("Suspicious activity detected. Accounts blocked.");
                 }
 
-                return (AccessToken: accessToken, RefreshToken: refreshToken);
+                return new LoginResponse
+                {
+                    AccessToken = accessToken,
+                    RefreshToken = refreshToken,
+                };
             }
             catch (Exception ex) when (ex is UnauthorizedAccessException
                         || ex is InvalidOperationException

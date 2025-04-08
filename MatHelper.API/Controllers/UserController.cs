@@ -107,15 +107,15 @@ namespace MatHelper.API.Controllers
                     return BadRequest(ApiResponse<string>.Fail("Unable to determine IP address."));
                 }
 
-                var (accessToken, refreshToken) = await _authenticationService.LoginUserAsync(loginDto, deviceInfo, ipAddress);
+                var result = await _authenticationService.LoginUserAsync(loginDto, deviceInfo, ipAddress);
 
-                if (accessToken == null || refreshToken == null)
+                if (result.AccessToken == null || result.RefreshToken == null)
                 {
                     _logger.LogWarning("Login failed for user: {Email}.", loginDto.Email);
                     return Unauthorized(ApiResponse<string>.Fail("Invalid credentials."));
                 }
 
-                return Ok(new { AccessToken = accessToken, RefreshToken = refreshToken });
+                return Ok(ApiResponse<LoginResponse>.Ok(result));
             }
             catch (InvalidOperationException ex)
             {
