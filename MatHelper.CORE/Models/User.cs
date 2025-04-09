@@ -16,6 +16,7 @@ namespace MatHelper.CORE.Models
         public required string Role { get; set; }
         public List<LoginToken>? LoginTokens { get; set; }
         public bool IsBlocked { get; set; }
+        public bool IsActive { get; set; }
         public LanguageType Language { get; set; } = LanguageType.EN;
     }
 }

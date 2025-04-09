@@ -1,5 +1,6 @@
 using MatHelper.CORE.Models;
 using MatHelper.DAL.Database;
+using MatHelper.DAL.Models;
 using Microsoft.EntityFrameworkCore;
 using System.Linq.Expressions;
 
@@ -19,6 +20,32 @@ namespace MatHelper.DAL.Repositories
             _context.Users.Add(user);
             await _context.SaveChangesAsync();
         }
+
+        public async Task AddEmailConfirmationTokenAsync(EmailConfirmationToken emailConfirmationToken)
+        {
+            await _context.EmailConfirmationTokens.AddAsync(emailConfirmationToken);
+            await _context.SaveChangesAsync();
+        }
+
+        public async Task<bool> ConfirmUserByTokenAsync(string token)
+        {
+            var confirmationToken = await _context.EmailConfirmationTokens
+                .Include(t => t.User)
+                .FirstOrDefaultAsync(t => t.Token == token);
+
+            if (confirmationToken == null || confirmationToken.IsUsed || confirmationToken.ExpirationDate <= DateTime.UtcNow)
+            {
+                throw new InvalidDataException("Invalid or expired token");
+            }
+
+            confirmationToken.IsUsed = true;
+            confirmationToken.User.IsActive = true;
+
+            await _context.SaveChangesAsync();
+
+            return true;
+        }
+
 
         public async Task<User?> GetUserAsync(Expression<Func<User, bool>> predicate)
         {

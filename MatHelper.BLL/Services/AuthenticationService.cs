@@ -1,6 +1,7 @@
 using MatHelper.BLL.Interfaces;
 using MatHelper.CORE.Models;
 using MatHelper.CORE.Options;
+using MatHelper.DAL.Models;
 using MatHelper.DAL.Repositories;
 using Microsoft.Extensions.Logging;
 using Microsoft.IdentityModel.Tokens;
@@ -16,15 +17,17 @@ namespace MatHelper.BLL.Services
     {
         private readonly UserRepository _userRepository;
         private readonly AuthLogRepository _authLogRepository;
+        private readonly IMailService _mailService;
         private readonly JwtOptions _jwtOptions;
         private readonly ISecurityService _securityService;
         private readonly ITokenService _tokenService;
         private readonly ILogger _logger;
 
-        public AuthenticationService(UserRepository userRepository, AuthLogRepository authLogRepository, JwtOptions jwtOptions, ISecurityService securityService, ITokenService tokenService, ILogger<AuthenticationService> logger)
+        public AuthenticationService(UserRepository userRepository, AuthLogRepository authLogRepository, IMailService mailService, JwtOptions jwtOptions, ISecurityService securityService, ITokenService tokenService, ILogger<AuthenticationService> logger)
         {
             _userRepository = userRepository;
             _authLogRepository = authLogRepository;
+            _mailService = mailService;
             _jwtOptions = jwtOptions;
             _securityService = securityService;
             _tokenService = tokenService;
@@ -33,52 +36,67 @@ namespace MatHelper.BLL.Services
 
         public async Task<bool> RegisterUserAsync(UserDto userDto, DeviceInfo deviceInfo, string ipAddress)
         {
+            _logger.LogInformation("Attempting to register user with email: {Email} and username: {Username}", userDto.Email, userDto.UserName);
+
             if (string.IsNullOrWhiteSpace(userDto.Email))
+            {
+                _logger.LogError("Email cannot be null or empty.");
                 throw new ArgumentException("Email cannot be null or empty.");
+            }
             if (string.IsNullOrWhiteSpace(userDto.UserName))
+            {
+                _logger.LogError("Username cannot be null or empty.");
                 throw new ArgumentException("Username cannot be null or empty.");
+            }
             if (string.IsNullOrWhiteSpace(ipAddress))
+            {
+                _logger.LogError("IP Address cannot be null or empty.");
                 throw new ArgumentException("IP Address cannot be null or empty.");
+            }
 
             var existingUserByEmail = await _userRepository.GetUserByEmailAsync(userDto.Email);
-            if (existingUserByEmail != null) throw new InvalidOperationException("Email is already used by another user.");
+            if (existingUserByEmail != null)
+            {
+                _logger.LogError("Email is already used by another user: {Email}", userDto.Email);
+                throw new InvalidOperationException("Email is already used by another user.");
+            }
 
             var existingUserByUsername = await _userRepository.GetUserByUsernameAsync(userDto.UserName);
-            if (existingUserByUsername != null) throw new InvalidOperationException("Username is already used by another user.");
+            if (existingUserByUsername != null)
+            {
+                _logger.LogError("Username is already used by another user: {Username}", userDto.UserName);
+                throw new InvalidOperationException("Username is already used by another user.");
+            }
 
             var userCountByIp = await _userRepository.GetUserCountByIpAsync(ipAddress);
 
             if (userCountByIp >= 3)
             {
+                _logger.LogWarning("IP address {IpAddress} has exceeded the registration limit.", ipAddress);
                 var usersToBlock = await _userRepository.GetUsersByIpAsync(ipAddress);
 
                 if (usersToBlock == null || !usersToBlock.Any())
                     throw new InvalidOperationException("No users found with the specified IP address.");
 
-                if(usersToBlock != null && usersToBlock.Count > 0)
+                foreach (var blockedUser in usersToBlock)
                 {
-                    foreach (var blockedUser in usersToBlock)
+                    if (blockedUser != null)
                     {
-                        if (blockedUser != null)
+                        blockedUser.IsBlocked = true;
+                        if (blockedUser.LoginTokens != null)
                         {
-                            blockedUser.IsBlocked = true;
-                            if(blockedUser.LoginTokens != null)
+                            var tokens = blockedUser.LoginTokens.Where(t => t.IsActive);
+                            foreach (var token in tokens)
                             {
-                                IEnumerable<LoginToken> tokens = blockedUser.LoginTokens.Where(t => t.IsActive);
-                                if (tokens.Count() > 0)
-                                {
-                                    foreach (var token in tokens)
-                                    {
-                                        if (token != null)
-                                            token.IsActive = false;
-                                    }
-                                }
+                                if (token != null)
+                                    token.IsActive = false;
                             }
                         }
                     }
                 }
 
                 await _userRepository.SaveChangesAsync();
+                _logger.LogWarning("Accounts from IP {IpAddress} have been blocked due to violation of service rules.", ipAddress);
                 throw new UnauthorizedAccessException("Violation of service rules. All user accounts have been blocked.");
             }
 
@@ -95,47 +113,50 @@ namespace MatHelper.BLL.Services
                 PasswordSalt = salt,
                 Avatar = null,
                 Role = "User",
+                IsActive = false,
             };
 
             await _userRepository.AddUserAsync(user);
 
-            var loginToken = new LoginToken
+            _logger.LogInformation("User {UserName} created successfully. Awaiting email confirmation.", userDto.UserName);
+
+            var activationToken = Guid.NewGuid().ToString();
+            var emailConfirmationToken = new EmailConfirmationToken
             {
-                Token = _tokenService.GenerateJwtToken(user, deviceInfo),
-                RefreshToken = _tokenService.GenerateRefreshToken(),
-                Expiration = DateTime.UtcNow.AddMinutes(30),
-                RefreshTokenExpiration = DateTime.UtcNow.AddDays(7),
+                Token = activationToken,
                 UserId = user.Id,
-                DeviceInfo = deviceInfo,
-                IpAddress = ipAddress,
-                IsActive = true
+                ExpirationDate = DateTime.UtcNow.AddHours(1),
+                IsUsed = false
             };
 
-            var createdUser = await _userRepository.GetUserByEmailAsync(userDto.Email);
+            await _userRepository.AddEmailConfirmationTokenAsync(emailConfirmationToken);
+            await _userRepository.SaveChangesAsync();
 
-            if (createdUser != null)
-            {
-                createdUser.LoginTokens ??= new List<LoginToken>();
-                createdUser.LoginTokens.Add(loginToken);
-                await _userRepository.SaveChangesAsync();
-            }
-            else
-            {
-                throw new InvalidOperationException("Error due add token to the user.");
-            }
+            _logger.LogInformation("Activation token generated and stored for user {UserName}", userDto.UserName);
 
-            if (deviceInfo.UserAgent == null || deviceInfo.Platform == null)
-            {
-                _logger.LogError("deviceInfo does not meet the requirements");
-                throw new InvalidDataException("deviceInfo does not meet the requirements");
-            }
+            var confirmationLink = $"https://localhost:4200/confirm?token={activationToken}";
 
-            if (await _securityService.CheckSuspiciousActivityAsync(ipAddress, deviceInfo.UserAgent, deviceInfo.Platform))
-            {
-                throw new UnauthorizedAccessException("Suspicious activity detected. Accounts blocked.");
-            }
+            _logger.LogInformation("Sending email confirmation to {Email} with token link.", userDto.Email);
+            await _mailService.SendConfirmationEmailAsync(user.Email, confirmationLink);
 
             return true;
+        }
+
+        public async Task<bool> ConfirmEmailAsync(string token)
+        {
+            try
+            {
+                var result = await _userRepository.ConfirmUserByTokenAsync(token);
+                return result ? true : false;
+            }
+            catch (InvalidDataException)
+            {
+                throw new InvalidDataException("Invalid or expired token");
+            }
+            catch (Exception ex)
+            {
+                throw new Exception("Unknown error occurred during request", ex);
+            }
         }
 
         public async Task<LoginResponse> LoginUserAsync(LoginDto loginDto, DeviceInfo deviceInfo, string ipAddress)
@@ -144,6 +165,11 @@ namespace MatHelper.BLL.Services
             if (user == null)
             {
                 throw new InvalidOperationException("User not found.");
+            }
+
+            if (!user.IsActive)
+            {
+                throw new UnauthorizedAccessException("Please activate your account by following the link sent to your email.");
             }
 
             try

@@ -20,16 +20,18 @@ namespace MatHelper.API.Controllers
         private readonly IAuthenticationService _authenticationService;
         private readonly ITokenService _tokenService;
         private readonly IUserManagementService _userManagementService;
+        private readonly IMailService _mailService;
         private readonly ILogger<UserController> _logger;
         private readonly IProcessRequestService _processRequestService;
         private readonly CaptchaValidationService _captchaValidationService;
         private static readonly ConcurrentDictionary<string, bool> ProcessingTokens = new();
 
-        public UserController(IAuthenticationService authenticationService, ITokenService tokenService, IUserManagementService userManagementService, ILogger<UserController> logger, IProcessRequestService processRequestService, CaptchaValidationService captchaValidationService)
+        public UserController(IAuthenticationService authenticationService, ITokenService tokenService, IUserManagementService userManagementService, IMailService mailService, ILogger<UserController> logger, IProcessRequestService processRequestService, CaptchaValidationService captchaValidationService)
         {
             _authenticationService = authenticationService;
             _tokenService = tokenService;
             _userManagementService = userManagementService;
+            _mailService = mailService;
             _logger = logger;
             _processRequestService = processRequestService;
             _captchaValidationService = captchaValidationService;
@@ -66,7 +68,8 @@ namespace MatHelper.API.Controllers
                 if (result)
                 {
                     _logger.LogInformation("Register successful for user: {Email}", userDto.Email);
-                    return Ok(ApiResponse<string>.Ok("Register successful."));
+
+                    return Ok(ApiResponse<string>.Ok("Register successful. Please check your email for confirmation."));
                 }
             }
             catch(InvalidOperationException ex)
@@ -87,6 +90,28 @@ namespace MatHelper.API.Controllers
             }
 
             return BadRequest(ApiResponse<string>.Fail("Unknown error occured during registration."));
+        }
+
+        [HttpPost("confirm")]
+        public async Task<IActionResult> ConfirmEmail([FromBody] ConfirmEmailDto dto)
+        {
+            try
+            {
+                var result = await _authenticationService.ConfirmEmailAsync(dto.Token);
+                if (!result) return BadRequest("Invalid or expired token.");
+
+                return Ok(ApiResponse<string>.Ok("Email confirmed successfully."));
+            }
+            catch(InvalidDataException ex)
+            {
+                _logger.LogWarning($"Invalid or expired token error occured: {ex.Message}");
+                return BadRequest(ApiResponse<string>.Fail("Invalid or expired token."));
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning($"Email confirmation failed: {ex.Message}");
+                return StatusCode(500, ApiResponse<string>.Fail("An unexpected error occured."));
+            }
         }
 
         [HttpPost("login")]
@@ -128,6 +153,10 @@ namespace MatHelper.API.Controllers
                 if(ex.Message == "Invalid password.")
                 {
                     return Unauthorized(ApiResponse<string>.Fail("Invalid credentials."));
+                }
+                else if(ex.Message == "Please activate your account by following the link sent to your email.")
+                {
+                    return Unauthorized(ApiResponse<string>.Fail("Please activate your account by following the link sent to your email."));
                 }
                 return Unauthorized(ApiResponse<string>.Fail("User is banned."));
             }

@@ -13,8 +13,11 @@ using Microsoft.IdentityModel.Tokens;
 using MatHelper.BLL.Filters;
 using MatHelper.BLL.Middlewares;
 using MatHelper.BLL.Mappers;
+using DotNetEnv;
 
 var builder = WebApplication.CreateBuilder(args);
+
+Env.Load("../.env");
 
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddControllers(options =>
@@ -61,6 +64,7 @@ builder.Services.AddScoped<IUserManagementService, UserManagementService>();
 builder.Services.AddScoped<IRequestLogService, RequestLogService>();
 builder.Services.AddScoped<IProcessRequestService, ProcessRequestService>();
 builder.Services.AddScoped<IAdminSettingsService, AdminSettingsService>();
+builder.Services.AddScoped<IMailService, MailService>();
 builder.Services.AddScoped<IUserMapper, UserMapper>();
 builder.Services.AddScoped<ErrorLogRepository>();
 builder.Services.AddScoped<UserRepository>();

@@ -8,6 +8,7 @@ namespace MatHelper.DAL.Database
     {
         public DbSet<User> Users { get; set; }
         public DbSet<LoginToken> LoginTokens { get; set; }
+        public DbSet<EmailConfirmationToken> EmailConfirmationTokens { get; set; }
         public DbSet<RequestLog> RequestLogs { get; set; }
         public DbSet<AdminRequestLog> AdminRequests { get; set; }
         public DbSet<RequestLogDetail> RequestLogDetails { get; set; }
