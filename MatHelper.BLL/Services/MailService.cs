@@ -44,7 +44,15 @@ namespace MatHelper.BLL.Services
                 var fromAddress = new MailAddress(smtpFrom, "GMHelper");
                 var toAddress = new MailAddress(toEmail);
                 var subject = "Email Confirmation";
-                var body = $"Please confirm your email by clicking the following link: https://localhost:4200/confirm?token={token}";
+
+                var clientBaseUrl = _configuration["ClientApp:BaseUrl"];
+                if(string.IsNullOrWhiteSpace(clientBaseUrl))
+                {
+                    throw new InvalidOperationException("Client application base URL is not configured.");
+                }
+
+                var confirmationLink = $"{clientBaseUrl.TrimEnd('/')}/confirm?token={token}";
+                var body = $"Please confirm your email by clicking the following link: {confirmationLink}";
 
                 using (var smtpClient = new SmtpClient(smtpHost, smtpPort))
                 {

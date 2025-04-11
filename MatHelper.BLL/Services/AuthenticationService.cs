@@ -134,10 +134,8 @@ namespace MatHelper.BLL.Services
 
             _logger.LogInformation("Activation token generated and stored for user {UserName}", userDto.UserName);
 
-            var confirmationLink = $"https://localhost:4200/confirm?token={activationToken}";
-
             _logger.LogInformation("Sending email confirmation to {Email} with token link.", userDto.Email);
-            await _mailService.SendConfirmationEmailAsync(user.Email, confirmationLink);
+            await _mailService.SendConfirmationEmailAsync(user.Email, activationToken);
 
             return true;
         }
