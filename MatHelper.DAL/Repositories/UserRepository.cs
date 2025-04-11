@@ -1,3 +1,4 @@
+using MatHelper.CORE.Enums;
 using MatHelper.CORE.Models;
 using MatHelper.DAL.Database;
 using MatHelper.DAL.Models;
@@ -27,23 +28,32 @@ namespace MatHelper.DAL.Repositories
             await _context.SaveChangesAsync();
         }
 
-        public async Task<bool> ConfirmUserByTokenAsync(string token)
+        public async Task<(ConfirmTokenResult Result, User? User)> ConfirmUserByTokenAsync(string token)
         {
             var confirmationToken = await _context.EmailConfirmationTokens
                 .Include(t => t.User)
                 .FirstOrDefaultAsync(t => t.Token == token);
 
-            if (confirmationToken == null || confirmationToken.IsUsed || confirmationToken.ExpirationDate <= DateTime.UtcNow)
+            if (confirmationToken == null)
             {
-                throw new InvalidDataException("Invalid or expired token");
+                return (ConfirmTokenResult.TokenNotFound, null);
+            }
+
+            if (confirmationToken.IsUsed)
+            {
+                return (ConfirmTokenResult.TokenUsed, null);
+            }
+
+            if(confirmationToken.ExpirationDate <= DateTime.UtcNow)
+            {
+                return (ConfirmTokenResult.TokenExpired, confirmationToken.User);
             }
 
             confirmationToken.IsUsed = true;
             confirmationToken.User.IsActive = true;
 
             await _context.SaveChangesAsync();
-
-            return true;
+            return (ConfirmTokenResult.Success, null);
         }
 
 

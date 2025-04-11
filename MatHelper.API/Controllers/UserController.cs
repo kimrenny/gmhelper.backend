@@ -95,12 +95,24 @@ namespace MatHelper.API.Controllers
         [HttpPost("confirm")]
         public async Task<IActionResult> ConfirmEmail([FromBody] ConfirmEmailDto dto)
         {
+            if (!await _captchaValidationService.ValidateCaptchaAsync(dto.CaptchaToken))
+            {
+                _logger.LogWarning("Invalid CAPTCHA token for confirmation token: {Token}", dto.Token);
+                return BadRequest(ApiResponse<string>.Fail("Invalid CAPTCHA token."));
+            }
+
             try
             {
                 var result = await _authenticationService.ConfirmEmailAsync(dto.Token);
-                if (!result) return BadRequest("Invalid or expired token.");
 
-                return Ok(ApiResponse<string>.Ok("Email confirmed successfully."));
+                return result switch
+                {
+                    ConfirmTokenResult.Success => Ok(ApiResponse<string>.Ok("Email confirmed successfully.")),
+                    ConfirmTokenResult.TokenNotFound => BadRequest(ApiResponse<string>.Fail("Invalid confirmation token.")),
+                    ConfirmTokenResult.TokenUsed => BadRequest(ApiResponse<string>.Fail("This confirmation link has already been used.")),
+                    ConfirmTokenResult.TokenExpired => BadRequest(ApiResponse<string>.Fail("Token expired. A new confirmation link has been sent to your email.")),
+                    _ => StatusCode(500, ApiResponse<string>.Fail("Unknown error occurred."))
+                };
             }
             catch(InvalidDataException ex)
             {

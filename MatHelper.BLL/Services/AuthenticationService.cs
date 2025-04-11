@@ -1,6 +1,7 @@
 using MatHelper.BLL.Interfaces;
 using MatHelper.CORE.Models;
 using MatHelper.CORE.Options;
+using MatHelper.CORE.Enums;
 using MatHelper.DAL.Models;
 using MatHelper.DAL.Repositories;
 using Microsoft.Extensions.Logging;
@@ -140,12 +141,29 @@ namespace MatHelper.BLL.Services
             return true;
         }
 
-        public async Task<bool> ConfirmEmailAsync(string token)
+        public async Task<ConfirmTokenResult> ConfirmEmailAsync(string token)
         {
             try
             {
-                var result = await _userRepository.ConfirmUserByTokenAsync(token);
-                return result ? true : false;
+                var (result, user) = await _userRepository.ConfirmUserByTokenAsync(token);
+                
+                if(result == ConfirmTokenResult.TokenExpired && user is not null)
+                {
+                    var newToken = Guid.NewGuid().ToString();
+                    var newEmailToken = new EmailConfirmationToken
+                    {
+                        Token = newToken,
+                        UserId = user.Id,
+                        ExpirationDate = DateTime.UtcNow.AddHours(1),
+                        IsUsed = false
+                    };
+
+                    await _userRepository.AddEmailConfirmationTokenAsync(newEmailToken);
+                    await _userRepository.SaveChangesAsync();
+                    await _mailService.SendConfirmationEmailAsync(user.Email, newToken);
+                }
+
+                return result;
             }
             catch (InvalidDataException)
             {
