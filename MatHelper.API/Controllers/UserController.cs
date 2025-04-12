@@ -188,10 +188,29 @@ namespace MatHelper.API.Controllers
                 return BadRequest(ApiResponse<string>.Fail("Invalid CAPTCHA token."));
             }
 
-            if (!await _authenticationService.RecoverPasswordAsync(recoveryDto))
-                return NotFound(ApiResponse<string>.Fail("User not found."));
+            try
+            {
+                var result = await _authenticationService.SendRecoverPasswordLinkAsync(recoveryDto.Email);
 
-            return Ok(ApiResponse<string>.Ok("Password recovery instructions sent."));
+                if (result)
+                {
+                    return Ok(ApiResponse<string>.Ok("Recovery link sent."));
+                }
+                else
+                {
+                    return BadRequest(ApiResponse<string>.Fail("A problem occurred while executing the request. Please try again later."));
+                }
+            }
+            catch (InvalidDataException ex)
+            {
+                _logger.LogWarning($"Invalid or expired token error occured: {ex.Message}");
+                return BadRequest(ApiResponse<string>.Fail("Invalid or expired token."));
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning($"Email confirmation failed: {ex.Message}");
+                return StatusCode(500, ApiResponse<string>.Fail("An unexpected error occured."));
+            }
         }
 
         [HttpPost("refresh-token")]

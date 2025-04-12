@@ -127,7 +127,8 @@ namespace MatHelper.BLL.Services
                 Token = activationToken,
                 UserId = user.Id,
                 ExpirationDate = DateTime.UtcNow.AddHours(1),
-                IsUsed = false
+                IsUsed = false,
+                User = user,
             };
 
             await _userRepository.AddEmailConfirmationTokenAsync(emailConfirmationToken);
@@ -155,7 +156,8 @@ namespace MatHelper.BLL.Services
                         Token = newToken,
                         UserId = user.Id,
                         ExpirationDate = DateTime.UtcNow.AddHours(1),
-                        IsUsed = false
+                        IsUsed = false,
+                        User = user,
                     };
 
                     await _userRepository.AddEmailConfirmationTokenAsync(newEmailToken);
@@ -295,10 +297,37 @@ namespace MatHelper.BLL.Services
         }
 
 
-        public async Task<bool> RecoverPasswordAsync(PasswordRecoveryDto recoveryDto)
+        public async Task<bool> SendRecoverPasswordLinkAsync(string email)
         {
-            var user = await _userRepository.GetUserByEmailAsync(recoveryDto.Email);
-            if (user == null) return false;
+            _logger.LogInformation("Attempting password recovery for email: {Email}", email);
+
+            if (string.IsNullOrWhiteSpace(email))
+            {
+                _logger.LogError("Email cannot be null or empty.");
+                throw new ArgumentException("Email cannot be null or empty.");
+            }
+
+            var user = await _userRepository.GetUserByEmailAsync(email);
+            if (user == null)
+            {
+                _logger.LogWarning("Password recovery attempted for non-existent email: {Email}", email);
+                return false;
+            }
+
+            var recoveryToken = new PasswordRecoveryToken
+            {
+                Token = Guid.NewGuid().ToString(),
+                UserId = user.Id,
+                ExpirationDate = DateTime.UtcNow.AddMinutes(15),
+                IsUsed = false,
+                User = user
+            };
+
+            await _userRepository.AddPasswordRecoveryTokenAsync(recoveryToken);
+            await _userRepository.SaveChangesAsync();
+
+            _logger.LogInformation("Password recovery token created for user: {Email}", email);
+            await _mailService.SendPasswordRecoveryEmailAsync(user.Email, recoveryToken.Token);
 
             return true;
         }

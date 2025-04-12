@@ -6,5 +6,6 @@ namespace MatHelper.BLL.Interfaces
     public interface IMailService
     {
         Task SendConfirmationEmailAsync(string toEmail, string token);
+        Task SendPasswordRecoveryEmailAsync(string toEmail, string token);
     }
 }

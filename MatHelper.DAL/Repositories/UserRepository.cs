@@ -28,6 +28,12 @@ namespace MatHelper.DAL.Repositories
             await _context.SaveChangesAsync();
         }
 
+        public async Task AddPasswordRecoveryTokenAsync(PasswordRecoveryToken recoveryToken)
+        {
+            await _context.PasswordRecoveryTokens.AddAsync(recoveryToken);
+            await _context.SaveChangesAsync();
+        }
+
         public async Task<(ConfirmTokenResult Result, User? User)> ConfirmUserByTokenAsync(string token)
         {
             var confirmationToken = await _context.EmailConfirmationTokens

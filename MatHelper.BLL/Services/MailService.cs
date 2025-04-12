@@ -76,7 +76,65 @@ namespace MatHelper.BLL.Services
                 _logger.LogError(ex, $"Failed to send confirmation email to {toEmail}.");
                 throw;
             }
+        }
 
+        public async Task SendPasswordRecoveryEmailAsync(string toEmail, string token)
+        {
+            var smtpHost = Environment.GetEnvironmentVariable("SMTP__Host");
+            var smtpPortString = Environment.GetEnvironmentVariable("SMTP_Port");
+            var smtpUsername = Environment.GetEnvironmentVariable("SMTP__Username");
+            var smtpPassword = Environment.GetEnvironmentVariable("SMTP__Password");
+            var smtpFrom = Environment.GetEnvironmentVariable("SMTP__From");
+
+            if (string.IsNullOrWhiteSpace(smtpHost) || string.IsNullOrWhiteSpace(smtpUsername) || string.IsNullOrWhiteSpace(smtpPassword) || string.IsNullOrWhiteSpace(smtpFrom))
+            {
+                throw new InvalidOperationException("SMTP configuration is missing in the environment variables.");
+            }
+
+            if (!int.TryParse(smtpPortString, out var smtpPort))
+            {
+                throw new InvalidOperationException("Invalid SMTP port value.");
+            }
+
+            _logger.LogInformation($"Attempting to send password recovery email to {toEmail} using SMTP server {smtpHost} on port {smtpPort}.");
+
+            try
+            {
+                var fromAddress = new MailAddress(smtpFrom, "GMHelper");
+                var toAddress = new MailAddress(toEmail);
+                var subject = "Password Recovery";
+
+                var clientBaseUrl = _configuration["ClientApp:BaseUrl"];
+                if (string.IsNullOrWhiteSpace(clientBaseUrl))
+                {
+                    throw new InvalidOperationException("Client application base URL is not configured.");
+                }
+
+                var recoveryLink = $"{clientBaseUrl.TrimEnd('/')}/recover?token={token}";
+                var body = $"A password reset has been requested for your account. To proceed, please click the following link: {recoveryLink}. This link is valid for 15 minutes. If you did not request a password reset, you can safely ignore this message.";
+
+                using (var smtpClient = new SmtpClient(smtpHost, smtpPort))
+                {
+                    smtpClient.Credentials = new NetworkCredential(smtpUsername, smtpPassword);
+                    smtpClient.EnableSsl = true;
+
+                    var mailMessage = new MailMessage(fromAddress, toAddress)
+                    {
+                        Subject = subject,
+                        Body = body,
+                        IsBodyHtml = false
+                    };
+
+                    await smtpClient.SendMailAsync(mailMessage);
+
+                    _logger.LogInformation($"Password recovery email successfully sent to {toEmail}");
+                }
+            }
+            catch (Exception ex) {
+                _logger.LogError(ex, $"Failed to send password recovery email to {toEmail}");
+                throw;
+            }
         }
     }
+    
 }

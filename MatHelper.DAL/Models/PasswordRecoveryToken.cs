@@ -2,7 +2,7 @@
 
 namespace MatHelper.DAL.Models
 {
-    public class EmailConfirmationToken
+    public class PasswordRecoveryToken
     {
         public int Id { get; set; }
         public required string Token { get; set; }
