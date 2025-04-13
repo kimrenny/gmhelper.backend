@@ -11,6 +11,7 @@ using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Text;
 using System.Threading.Tasks;
+using System.Diagnostics;
 
 namespace MatHelper.BLL.Services
 {
@@ -296,7 +297,6 @@ namespace MatHelper.BLL.Services
             }
         }
 
-
         public async Task<bool> SendRecoverPasswordLinkAsync(string email)
         {
             _logger.LogInformation("Attempting password recovery for email: {Email}", email);
@@ -330,6 +330,38 @@ namespace MatHelper.BLL.Services
             await _mailService.SendPasswordRecoveryEmailAsync(user.Email, recoveryToken.Token);
 
             return true;
+        }
+
+        public async Task<RecoverPasswordResult> RecoverPassword(string token, string password)
+        {
+            try
+            {
+                //var sw = Stopwatch.StartNew();
+                var (result, user) = await _userRepository.GetUserByRecoveryToken(token);
+                //_logger.LogInformation("GetUserByRecoveryToken finished in {Time}ms with result: {Result}", sw.ElapsedMilliseconds, result);
+
+                if (user == null)
+                {
+                    return result;
+                }
+
+                if (result == RecoverPasswordResult.Success)
+                {
+                    //_logger.LogInformation("Changing password...");
+                    var salt = _securityService.GenerateSalt();
+                    var hashedPassword = _securityService.HashPassword(password, salt);
+
+                    var changePasswordResult = await _userRepository.ChangePassword(user, hashedPassword, salt);
+                    //_logger.LogInformation("Password change result: {Result}", changePasswordResult);
+                }
+
+                return result;
+            }
+            catch (Exception ex) 
+            {
+                _logger.LogError("Unknown error occurred during request: {ex}", ex);
+                return RecoverPasswordResult.Failed;
+            }
         }
     }
 }

@@ -3,6 +3,7 @@ using MatHelper.CORE.Models;
 using MatHelper.DAL.Database;
 using MatHelper.DAL.Models;
 using Microsoft.EntityFrameworkCore;
+using System.Diagnostics;
 using System.Linq.Expressions;
 
 namespace MatHelper.DAL.Repositories
@@ -62,8 +63,61 @@ namespace MatHelper.DAL.Repositories
             return (ConfirmTokenResult.Success, null);
         }
 
+        public async Task<(RecoverPasswordResult Result, User? User)> GetUserByRecoveryToken(string token)
+        {
+            Console.WriteLine("Searching for recovery token...");
+            var sw = Stopwatch.StartNew();
 
-        public async Task<User?> GetUserAsync(Expression<Func<User, bool>> predicate)
+            var recoveryToken = await _context.PasswordRecoveryTokens
+                .Include(t => t.User)
+                .FirstOrDefaultAsync(t => t.Token == token);
+
+            sw.Stop();
+
+            if (recoveryToken == null)
+            {
+                Console.WriteLine("Token not found. Search took {Time}ms", sw.ElapsedMilliseconds);
+                return (RecoverPasswordResult.TokenNotFound, null);
+            }
+
+            if (recoveryToken.IsUsed)
+            {
+                Console.WriteLine("Token already used.");
+                return (RecoverPasswordResult.TokenUsed, null);
+            }
+
+            if (recoveryToken.ExpirationDate <= DateTime.UtcNow)
+            {
+                Console.WriteLine("Token expired.");
+                return (RecoverPasswordResult.TokenExpired, null);
+            }
+
+            recoveryToken.IsUsed = true;
+            await _context.SaveChangesAsync();
+
+            Console.WriteLine("Valid token. Returning user.");
+            return (RecoverPasswordResult.Success, recoveryToken.User);
+        }
+
+        public async Task<bool> ChangePassword(User user, string password, string salt)
+        {
+            try
+            {
+                user.PasswordHash = password;
+                user.PasswordSalt = salt;
+
+                await _context.SaveChangesAsync();
+
+                return true;
+            }
+            catch (Exception ex)
+            {
+                return false;
+            }
+        }
+
+
+            public async Task<User?> GetUserAsync(Expression<Func<User, bool>> predicate)
         {
             return await _context.Users.Include(u => u.LoginTokens).FirstOrDefaultAsync(predicate);
         }

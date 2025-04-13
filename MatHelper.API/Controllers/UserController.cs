@@ -10,6 +10,7 @@ using System.Collections.Concurrent;
 using Microsoft.AspNetCore.Http;
 using MatHelper.CORE.Enums;
 using MatHelper.API.Common;
+using System.Diagnostics;
 
 namespace MatHelper.API.Controllers
 {
@@ -180,7 +181,7 @@ namespace MatHelper.API.Controllers
         }
 
         [HttpPost("password-recovery")]
-        public async Task<IActionResult> RecoverPassword([FromBody] PasswordRecoveryDto recoveryDto)
+        public async Task<IActionResult> SendRecoveryPasswordEmail([FromBody] PasswordRecoveryEmailDto recoveryDto)
         {
             if (!await _captchaValidationService.ValidateCaptchaAsync(recoveryDto.CaptchaToken))
             {
@@ -209,6 +210,66 @@ namespace MatHelper.API.Controllers
             catch (Exception ex)
             {
                 _logger.LogWarning($"Email confirmation failed: {ex.Message}");
+                return StatusCode(500, ApiResponse<string>.Fail("An unexpected error occured."));
+            }
+        }
+
+        [HttpPatch("password")]
+        public async Task<IActionResult> RecoverPassword([FromBody] PasswordRecoveryDto recoveryDto)
+        {
+            //var sw = Stopwatch.StartNew();
+            //_logger.LogInformation("RecoverPassword started.");
+
+            if (!await _captchaValidationService.ValidateCaptchaAsync(recoveryDto.CaptchaToken))
+            {
+                _logger.LogWarning("Invalid CAPTCHA token for recovery token: {Token}", recoveryDto.RecoveryToken);
+                //sw.Stop();
+                //_logger.LogInformation("RecoverPassword finished in {Time}ms (CAPTCHA failed).", sw.ElapsedMilliseconds);
+                return BadRequest(ApiResponse<string>.Fail("Invalid CAPTCHA token."));
+            }
+
+            //_logger.LogInformation("CAPTCHA validated successfully after {Time}ms.", sw.ElapsedMilliseconds);
+
+            if (recoveryDto.Password == null || recoveryDto.RecoveryToken == null)
+            {
+                _logger.LogWarning("Password or token was null.");
+                //sw.Stop();
+                //_logger.LogInformation("RecoverPassword finished in {Time}ms (null input).", sw.ElapsedMilliseconds);
+                return BadRequest(ApiResponse<string>.Fail("Password and recovery token cannot be null."));
+            }
+
+            try
+            {
+                //_logger.LogInformation("Calling RecoverPassword service method...");
+                var result = await _authenticationService.RecoverPassword(recoveryDto.RecoveryToken, recoveryDto.Password);
+                //_logger.LogInformation("RecoverPassword service call finished after {Time}ms.", sw.ElapsedMilliseconds);
+
+                //sw.Stop();
+                //_logger.LogInformation("RecoverPassword finished in {Time}ms. Result: {Result}", sw.ElapsedMilliseconds, result);
+
+                return result switch
+                {
+                    RecoverPasswordResult.Success => Ok(ApiResponse<string>.Ok("Password changed successfully.")),
+                    RecoverPasswordResult.Failed => BadRequest(ApiResponse<string>.Fail("Failed to change user password.")),
+                    RecoverPasswordResult.UserNotFound => BadRequest(ApiResponse<string>.Fail("User not found.")),
+                    RecoverPasswordResult.TokenNotFound => BadRequest(ApiResponse<string>.Fail("Invalid recovery token.")),
+                    RecoverPasswordResult.TokenUsed => BadRequest(ApiResponse<string>.Fail("This link has already been used.")),
+                    RecoverPasswordResult.TokenExpired => BadRequest(ApiResponse<string>.Fail("Token expired.")),
+                    _ => StatusCode(500, ApiResponse<string>.Fail("Unknown error occurred."))
+                };
+            }
+            catch (InvalidDataException ex)
+            {
+                //sw.Stop();
+                _logger.LogWarning("Invalid or expired token: {Message}", ex.Message);
+                //_logger.LogInformation("RecoverPassword finished in {Time}ms (InvalidDataException).", sw.ElapsedMilliseconds);
+                return BadRequest(ApiResponse<string>.Fail("Invalid or expired token."));
+            }
+            catch(Exception ex)
+            {
+                //sw.Stop();
+                _logger.LogError("Unexpected error: {Message}", ex.Message);
+                //_logger.LogInformation("RecoverPassword finished in {Time}ms (Exception).", sw.ElapsedMilliseconds);
                 return StatusCode(500, ApiResponse<string>.Fail("An unexpected error occured."));
             }
         }
