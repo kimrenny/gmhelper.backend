@@ -65,37 +65,32 @@ namespace MatHelper.DAL.Repositories
 
         public async Task<(RecoverPasswordResult Result, User? User)> GetUserByRecoveryToken(string token)
         {
-            Console.WriteLine("Searching for recovery token...");
-            var sw = Stopwatch.StartNew();
+            //var sw = Stopwatch.StartNew();
 
             var recoveryToken = await _context.PasswordRecoveryTokens
                 .Include(t => t.User)
                 .FirstOrDefaultAsync(t => t.Token == token);
 
-            sw.Stop();
+            //sw.Stop();
 
             if (recoveryToken == null)
             {
-                Console.WriteLine("Token not found. Search took {Time}ms", sw.ElapsedMilliseconds);
                 return (RecoverPasswordResult.TokenNotFound, null);
             }
 
             if (recoveryToken.IsUsed)
             {
-                Console.WriteLine("Token already used.");
                 return (RecoverPasswordResult.TokenUsed, null);
             }
 
             if (recoveryToken.ExpirationDate <= DateTime.UtcNow)
             {
-                Console.WriteLine("Token expired.");
                 return (RecoverPasswordResult.TokenExpired, null);
             }
 
             recoveryToken.IsUsed = true;
             await _context.SaveChangesAsync();
 
-            Console.WriteLine("Valid token. Returning user.");
             return (RecoverPasswordResult.Success, recoveryToken.User);
         }
 
@@ -110,7 +105,7 @@ namespace MatHelper.DAL.Repositories
 
                 return true;
             }
-            catch (Exception ex)
+            catch (Exception)
             {
                 return false;
             }
