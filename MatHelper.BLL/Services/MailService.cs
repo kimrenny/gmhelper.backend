@@ -52,7 +52,30 @@ namespace MatHelper.BLL.Services
                 }
 
                 var confirmationLink = $"{clientBaseUrl.TrimEnd('/')}/confirm?token={token}";
-                var body = $"Please confirm your email by clicking the following link: {confirmationLink}";
+                var mainLink = $"{clientBaseUrl.TrimEnd('/')}/";
+
+                var body = $@"
+                <div style='background-color:#000; color:#fff; font-family:Arial, sans-serif; max-width:600px; margin:auto; padding:20px; border-radius:10px;'>
+                    <h2 style='text-align:center;'>
+                        <a href='{mainLink}' style='text-decoration:none; font-size:28px;'>
+                            <span style='color:#C444FF;'>GM</span><span style='color:#FFFFFF;'>Helper</span>
+                        </a>
+                    </h2>
+                    <p style='color:#fff;'>Hello!</p>
+                    <p style='color:#fff;'>Thank you for registering. Please confirm your email by clicking the button below:</p>
+                    <p style='text-align:center;'>
+                        <a href='{confirmationLink}' style='display:inline-block; padding:12px 24px; background-color:#C444FF; color:#fff; text-decoration:none; border-radius:5px;'>Confirm Email</a>
+                    </p>
+                    <p style='color:#fff;'>If the button doesn't work, you can copy and paste the following link into your browser:</p>
+                    <p style='color:#fff; text-align:center;'>
+                        <a href='{confirmationLink}' style='color:#C444FF;'>{confirmationLink}</a>
+                    </p>
+                    <p style='color:#fff;'>If you did not register, you can safely ignore this message.</p>
+                    <hr style='border-color:#444;'/>
+                    <footer style='text-align:center; font-size:12px; color:#666;'>
+                        &copy; {DateTime.Now.Year} GMHelper. All rights reserved.
+                    </footer>
+                </div>";
 
                 using (var smtpClient = new SmtpClient(smtpHost, smtpPort))
                 {
@@ -63,7 +86,7 @@ namespace MatHelper.BLL.Services
                     {
                         Subject = subject,
                         Body = body,
-                        IsBodyHtml = false
+                        IsBodyHtml = true
                     };
 
                     await smtpClient.SendMailAsync(mailMessage);
@@ -111,7 +134,32 @@ namespace MatHelper.BLL.Services
                 }
 
                 var recoveryLink = $"{clientBaseUrl.TrimEnd('/')}/recover?token={token}";
-                var body = $"A password reset has been requested for your account. To proceed, please click the following link: {recoveryLink}. This link is valid for 15 minutes. If you did not request a password reset, you can safely ignore this message.";
+                var mainLink = $"{clientBaseUrl.TrimEnd('/')}/";
+
+                var body = $@"
+                <div style='background-color:#000; color:#fff; font-family:Arial, sans-serif; max-width:600px; margin:auto; padding:20px; border-radius:10px;'>
+                    <h2 style='text-align:center;'>
+                        <a href='{mainLink}' style='text-decoration:none; font-size:28px;'>
+                            <span style='color:#C444FF;'>GM</span><span style='color:#FFFFFF;'>Helper</span>
+                        </a>
+                    </h2>
+                    <p style='color:#fff;'>Hello!</p>
+                    <p style='color:#fff;'>We received a request to reset your password. Click the button below to proceed:</p>
+                    <p style='text-align:center;'>
+                        <a href='{recoveryLink}' style='display:inline-block; padding:12px 24px; background-color:#C444FF; color:#fff; text-decoration:none; border-radius:5px;'>Reset Password</a>
+                    </p>
+                    <p style='color:#fff;'>If the button doesn't work, you can copy and paste the following link into your browser:</p>
+                    <p style='color:#fff; text-align:center;'>
+                        <a href='{recoveryLink}' style='color:#C444FF;'>{recoveryLink}</a>
+                    </p>
+                    <p style='color:#fff;'>This link will expire in 15 minutes. If you did not request a password reset, you can safely ignore this message.</p>
+                    <hr style='border-color:#444;'/>
+                    <footer style='text-align:center; font-size:12px; color:#666;'>
+                        &copy; {DateTime.Now.Year} GMHelper. All rights reserved.
+                    </footer>
+                </div>";
+
+
 
                 using (var smtpClient = new SmtpClient(smtpHost, smtpPort))
                 {
@@ -122,7 +170,7 @@ namespace MatHelper.BLL.Services
                     {
                         Subject = subject,
                         Body = body,
-                        IsBodyHtml = false
+                        IsBodyHtml = true
                     };
 
                     await smtpClient.SendMailAsync(mailMessage);
