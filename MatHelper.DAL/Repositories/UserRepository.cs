@@ -23,77 +23,6 @@ namespace MatHelper.DAL.Repositories
             await _context.SaveChangesAsync();
         }
 
-        public async Task AddEmailConfirmationTokenAsync(EmailConfirmationToken emailConfirmationToken)
-        {
-            await _context.EmailConfirmationTokens.AddAsync(emailConfirmationToken);
-            await _context.SaveChangesAsync();
-        }
-
-        public async Task AddPasswordRecoveryTokenAsync(PasswordRecoveryToken recoveryToken)
-        {
-            await _context.PasswordRecoveryTokens.AddAsync(recoveryToken);
-            await _context.SaveChangesAsync();
-        }
-
-        public async Task<(ConfirmTokenResult Result, User? User)> ConfirmUserByTokenAsync(string token)
-        {
-            var confirmationToken = await _context.EmailConfirmationTokens
-                .Include(t => t.User)
-                .FirstOrDefaultAsync(t => t.Token == token);
-
-            if (confirmationToken == null)
-            {
-                return (ConfirmTokenResult.TokenNotFound, null);
-            }
-
-            if (confirmationToken.IsUsed)
-            {
-                return (ConfirmTokenResult.TokenUsed, null);
-            }
-
-            if(confirmationToken.ExpirationDate <= DateTime.UtcNow)
-            {
-                return (ConfirmTokenResult.TokenExpired, confirmationToken.User);
-            }
-
-            confirmationToken.IsUsed = true;
-            confirmationToken.User.IsActive = true;
-
-            await _context.SaveChangesAsync();
-            return (ConfirmTokenResult.Success, null);
-        }
-
-        public async Task<(RecoverPasswordResult Result, User? User)> GetUserByRecoveryToken(string token)
-        {
-            //var sw = Stopwatch.StartNew();
-
-            var recoveryToken = await _context.PasswordRecoveryTokens
-                .Include(t => t.User)
-                .FirstOrDefaultAsync(t => t.Token == token);
-
-            //sw.Stop();
-
-            if (recoveryToken == null)
-            {
-                return (RecoverPasswordResult.TokenNotFound, null);
-            }
-
-            if (recoveryToken.IsUsed)
-            {
-                return (RecoverPasswordResult.TokenUsed, null);
-            }
-
-            if (recoveryToken.ExpirationDate <= DateTime.UtcNow)
-            {
-                return (RecoverPasswordResult.TokenExpired, null);
-            }
-
-            recoveryToken.IsUsed = true;
-            await _context.SaveChangesAsync();
-
-            return (RecoverPasswordResult.Success, recoveryToken.User);
-        }
-
         public async Task<bool> ChangePassword(User user, string password, string salt)
         {
             try
@@ -176,29 +105,6 @@ namespace MatHelper.DAL.Repositories
             return await _context.LoginTokens.Where(t => t.IpAddress == ipAddress).Select(t => t.UserId).Distinct().CountAsync();
         }
 
-        public async Task<LoginToken?> GetLoginTokenByRefreshTokenAsync(string refreshToken)
-        {
-            return await _context.LoginTokens
-                .Include(t => t.User)
-                .FirstOrDefaultAsync(t => t.RefreshToken == refreshToken);
-        }
-
-        public async Task<LoginToken?> GetLoginTokenAsync(string token)
-        {
-            return await _context.LoginTokens.Where(t => t.Token == token).FirstOrDefaultAsync();
-        }
-
-        public async Task RemoveLoginTokenAsync(LoginToken token)
-        {
-            _context.LoginTokens.Remove(token);
-            await _context.SaveChangesAsync();
-        }
-
-        public async Task<List<LoginToken>> GetAllLoginTokensAsync()
-        {
-            return await _context.LoginTokens.Include(t => t.User).ToListAsync();
-        }
-
         public async Task<List<User>> GetAllUsersAsync()
         {
             var users = await _context.Users.ToListAsync();
@@ -248,7 +154,7 @@ namespace MatHelper.DAL.Repositories
             await _context.SaveChangesAsync();
         }
 
-        public async Task ActionUserAsync(Guid id, string action)
+        public async Task ActionUserAsync(Guid id, UserAction action)
         {
             if (string.IsNullOrWhiteSpace(id.ToString()))
             {
@@ -262,40 +168,7 @@ namespace MatHelper.DAL.Repositories
                 throw new InvalidOperationException("User not found.");
             }
 
-            if (action == "ban")
-            {
-                user.IsBlocked = true;
-            }
-            else if (action == "unban")
-            {
-                user.IsBlocked = false;
-            }
-
-            await _context.SaveChangesAsync();
-        }
-
-        public async Task ActionTokenAsync(string authToken, string action)
-        {
-            if (string.IsNullOrWhiteSpace(authToken))
-            {
-                throw new InvalidDataException("Id is null or empty");
-            }
-
-            var token = await _context.LoginTokens.FirstOrDefaultAsync(u => u.Token == authToken);
-
-            if (token == null)
-            {
-                throw new InvalidOperationException("Token not found.");
-            }
-
-            if (action == "disable")
-            {
-                token.IsActive = false;
-            }
-            else if (action == "activate")
-            {
-                token.IsActive = true;
-            }
+            user.IsBlocked = action == UserAction.Ban;
 
             await _context.SaveChangesAsync();
         }
@@ -316,58 +189,6 @@ namespace MatHelper.DAL.Repositories
                 .ToList();
 
             return groupedByDate;
-        }
-
-        public async Task<DashboardTokensDto> GetDashboardTokensAsync()
-        {
-            try
-            {
-                var tokensData = await _context.Users
-                    .Where(u => u.LoginTokens!.Any())
-                    .Select(u => new
-                    {
-                        u.Id,
-                        u.Role,
-                        ActiveTokens = u.LoginTokens!.Count(t => t.Expiration > DateTime.UtcNow && t.IsActive),
-                        TotalTokens = u.LoginTokens!.Count()
-                    })
-                    .ToListAsync();
-
-                var activeTokens = tokensData.Sum(x => x.ActiveTokens);
-                var totalTokens = tokensData.Sum(x => x.TotalTokens);
-                var activeAdminTokens = tokensData.Where(u => u.Role.ToLower() == "admin" || u.Role.ToLower() == "owner")
-                                                  .Sum(u => u.ActiveTokens);
-                var totalAdminTokens = tokensData.Where(u => u.Role.ToLower() == "admin" || u.Role.ToLower() == "owner")
-                                                 .Sum(u => u.TotalTokens);
-
-                return new DashboardTokensDto
-                {
-                    ActiveTokens = activeTokens,
-                    TotalTokens = totalTokens,
-                    ActiveAdminTokens = activeAdminTokens,
-                    TotalAdminTokens = totalAdminTokens
-                };
-            }
-            catch (Exception ex)
-            {
-                throw new InvalidOperationException("Could not fetch tokens.", ex);
-            }
-        }
-
-        public async Task<List<UserIp>> GetUsersWithLastIpAsync()
-        {
-            return await _context.Users
-                .Where(u => u.LoginTokens != null && u.LoginTokens.Any())
-                .Select(u => new UserIp 
-                { 
-                    Id = u.Id, 
-                    IpAddress = u.LoginTokens!
-                        .OrderByDescending(t => t.Expiration)
-                        .Select(t => t.IpAddress)
-                        .FirstOrDefault() ?? "Unknown" 
-                })
-                .AsNoTracking()
-                .ToListAsync();
         }
 
         private void ValidateEmailOrUsername(string value, string fieldName)

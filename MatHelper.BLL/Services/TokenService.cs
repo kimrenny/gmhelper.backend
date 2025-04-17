@@ -19,13 +19,15 @@ namespace MatHelper.BLL.Services
     {
         private readonly ISecurityService _securityService;
         private readonly UserRepository _userRepository;
+        private readonly LoginTokenRepository _loginTokenRepository;
         private readonly JwtOptions _jwtOptions;
         private readonly ILogger _logger;
 
-        public TokenService(ISecurityService secutiryService, UserRepository userRepository, JwtOptions jwtOptions, ILogger<TokenService> logger)
+        public TokenService(ISecurityService secutiryService, UserRepository userRepository, LoginTokenRepository loginTokenRepository, JwtOptions jwtOptions, ILogger<TokenService> logger)
         {
             _securityService = secutiryService;
             _userRepository = userRepository;
+            _loginTokenRepository = loginTokenRepository;
             _jwtOptions = jwtOptions;
             _logger = logger;
         }
@@ -68,7 +70,7 @@ namespace MatHelper.BLL.Services
         {
             _logger.LogInformation("Attempting to refresh token: {RefreshToken}", refreshToken);
 
-            var token = await _userRepository.GetLoginTokenByRefreshTokenAsync(refreshToken);
+            var token = await _loginTokenRepository.GetLoginTokenByRefreshTokenAsync(refreshToken);
             if (token == null || token.RefreshTokenExpiration < DateTime.UtcNow)
             {
                 _logger.LogWarning("Invalid or expired refresh token: {RefreshToken}", refreshToken);
@@ -97,7 +99,7 @@ namespace MatHelper.BLL.Services
 
         public async Task<bool> IsTokenDisabled(string token)
         {
-            var loginToken = await _userRepository.GetLoginTokenAsync(token);
+            var loginToken = await _loginTokenRepository.GetLoginTokenAsync(token);
             if (loginToken == null || loginToken.Expiration < DateTime.UtcNow || !loginToken.IsActive)
             {
                 return true;

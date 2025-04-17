@@ -18,6 +18,8 @@ namespace MatHelper.BLL.Services
     public class AuthenticationService: IAuthenticationService
     {
         private readonly UserRepository _userRepository;
+        private readonly EmailConfirmationRepository _emailConfirmationRepository;
+        private readonly PasswordRecoveryRepository _passwordRecoveryRepository;
         private readonly AuthLogRepository _authLogRepository;
         private readonly IMailService _mailService;
         private readonly JwtOptions _jwtOptions;
@@ -25,9 +27,11 @@ namespace MatHelper.BLL.Services
         private readonly ITokenService _tokenService;
         private readonly ILogger _logger;
 
-        public AuthenticationService(UserRepository userRepository, AuthLogRepository authLogRepository, IMailService mailService, JwtOptions jwtOptions, ISecurityService securityService, ITokenService tokenService, ILogger<AuthenticationService> logger)
+        public AuthenticationService(UserRepository userRepository, EmailConfirmationRepository emailConfirmationRepository, PasswordRecoveryRepository passwordRecoveryRepository, AuthLogRepository authLogRepository, IMailService mailService, JwtOptions jwtOptions, ISecurityService securityService, ITokenService tokenService, ILogger<AuthenticationService> logger)
         {
             _userRepository = userRepository;
+            _emailConfirmationRepository = emailConfirmationRepository;
+            _passwordRecoveryRepository = passwordRecoveryRepository;
             _authLogRepository = authLogRepository;
             _mailService = mailService;
             _jwtOptions = jwtOptions;
@@ -132,8 +136,10 @@ namespace MatHelper.BLL.Services
                 User = user,
             };
 
-            await _userRepository.AddEmailConfirmationTokenAsync(emailConfirmationToken);
+            await _emailConfirmationRepository.AddEmailConfirmationTokenAsync(emailConfirmationToken);
+
             await _userRepository.SaveChangesAsync();
+            await _emailConfirmationRepository.SaveChangesAsync();
 
             _logger.LogInformation("Activation token generated and stored for user {UserName}", userDto.UserName);
 
@@ -147,7 +153,7 @@ namespace MatHelper.BLL.Services
         {
             try
             {
-                var (result, user) = await _userRepository.ConfirmUserByTokenAsync(token);
+                var (result, user) = await _emailConfirmationRepository.ConfirmUserByTokenAsync(token);
                 
                 if(result == ConfirmTokenResult.TokenExpired && user is not null)
                 {
@@ -161,8 +167,8 @@ namespace MatHelper.BLL.Services
                         User = user,
                     };
 
-                    await _userRepository.AddEmailConfirmationTokenAsync(newEmailToken);
-                    await _userRepository.SaveChangesAsync();
+                    await _emailConfirmationRepository.AddEmailConfirmationTokenAsync(newEmailToken);
+                    await _emailConfirmationRepository.SaveChangesAsync();
                     await _mailService.SendConfirmationEmailAsync(user.Email, newToken);
                 }
 
@@ -323,8 +329,8 @@ namespace MatHelper.BLL.Services
                 User = user
             };
 
-            await _userRepository.AddPasswordRecoveryTokenAsync(recoveryToken);
-            await _userRepository.SaveChangesAsync();
+            await _passwordRecoveryRepository.AddPasswordRecoveryTokenAsync(recoveryToken);
+            await _passwordRecoveryRepository.SaveChangesAsync();
 
             _logger.LogInformation("Password recovery token created for user: {Email}", email);
             await _mailService.SendPasswordRecoveryEmailAsync(user.Email, recoveryToken.Token);
@@ -337,7 +343,7 @@ namespace MatHelper.BLL.Services
             try
             {
                 //var sw = Stopwatch.StartNew();
-                var (result, user) = await _userRepository.GetUserByRecoveryToken(token);
+                var (result, user) = await _passwordRecoveryRepository.GetUserByRecoveryToken(token);
                 //_logger.LogInformation("GetUserByRecoveryToken finished in {Time}ms with result: {Result}", sw.ElapsedMilliseconds, result);
 
                 if (user == null)

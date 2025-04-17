@@ -1,4 +1,5 @@
 using MatHelper.BLL.Interfaces;
+using MatHelper.CORE.Enums;
 using MatHelper.CORE.Models;
 using MatHelper.CORE.Options;
 using MatHelper.DAL.Repositories;
@@ -12,14 +13,16 @@ namespace MatHelper.BLL.Services
     {
         private readonly ISecurityService _securityService;
         private readonly UserRepository _userRepository;
+        private readonly LoginTokenRepository _loginTokenRepository;
         private readonly IUserMapper _userMapper;
         private readonly JwtOptions _jwtOptions;
         private readonly ILogger _logger;
 
-        public AdminService(ISecurityService securityService, UserRepository userRepository, IUserMapper userMapper, JwtOptions jwtOptions, ILogger<SecurityService> logger)
+        public AdminService(ISecurityService securityService, UserRepository userRepository, LoginTokenRepository loginTokenRepository, IUserMapper userMapper, JwtOptions jwtOptions, ILogger<SecurityService> logger)
         {
             _securityService = securityService;
             _userRepository = userRepository;
+            _loginTokenRepository = loginTokenRepository;
             _userMapper = userMapper;
             _jwtOptions = jwtOptions;
             _logger = logger;
@@ -50,7 +53,12 @@ namespace MatHelper.BLL.Services
         {
             try
             {
-                await _userRepository.ActionUserAsync(userId, action);
+                if(!Enum.TryParse<UserAction>(action, ignoreCase: true, out var parsedAction))
+                {
+                    throw new ArgumentException("Invalid user action.");
+                }
+
+                await _userRepository.ActionUserAsync(userId, parsedAction);
             }
             catch(Exception ex)
             {
@@ -84,7 +92,7 @@ namespace MatHelper.BLL.Services
         {
             try
             {
-                await _userRepository.ActionTokenAsync(token, action);
+                await _loginTokenRepository.ActionTokenAsync(token, action);
             }
             catch (Exception ex)
             {
@@ -112,7 +120,7 @@ namespace MatHelper.BLL.Services
         {
             try
             {
-                var tokens = await _userRepository.GetDashboardTokensAsync();
+                var tokens = await _loginTokenRepository.GetDashboardTokensAsync();
                 return tokens;
             }
             catch (Exception ex)
@@ -127,7 +135,7 @@ namespace MatHelper.BLL.Services
         {
             try
             {
-                var userIpList = await _userRepository.GetUsersWithLastIpAsync();
+                var userIpList = await _loginTokenRepository.GetUsersWithLastIpAsync();
 
                 if (userIpList == null || !userIpList.Any())
                 {

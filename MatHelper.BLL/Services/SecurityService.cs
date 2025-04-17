@@ -16,12 +16,14 @@ namespace MatHelper.BLL.Services
     public class SecurityService : ISecurityService
     {
         private readonly UserRepository _userRepository;
+        private readonly LoginTokenRepository _loginTokenRepository;
         private readonly JwtOptions _jwtOptions;
         private readonly ILogger _logger;
 
-        public SecurityService(UserRepository userRepository, JwtOptions jwtOptions, ILogger<SecurityService> logger)
+        public SecurityService(UserRepository userRepository, LoginTokenRepository loginTokenRepository, JwtOptions jwtOptions, ILogger<SecurityService> logger)
         {
             _userRepository = userRepository;
+            _loginTokenRepository = loginTokenRepository;
             _jwtOptions = jwtOptions;
             _logger = logger;
         }
@@ -60,7 +62,7 @@ namespace MatHelper.BLL.Services
 
         public async Task<bool> CheckSuspiciousActivityAsync(string ipAddress, string userAgent, string platform)
         {
-            var tokens = await _userRepository.GetAllLoginTokensAsync();
+            var tokens = await _loginTokenRepository.GetAllLoginTokensAsync();
             var suspiciousAccounts = tokens
                 .Where(t => t.IpAddress == ipAddress && t.DeviceInfo.UserAgent == userAgent && t.DeviceInfo.Platform == platform)
                 .Select(t => t.UserId)
