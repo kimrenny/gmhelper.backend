@@ -12,11 +12,12 @@ namespace MatHelper.BLL.Services
     {
         private readonly ILogger<CaptchaValidationService> _logger;
         private const string CaptchaVerifyUrl = "https://www.google.com/recaptcha/api/siteverify";
-        private const string SecretKey = "6LdH7qIqAAAAAKR42QLAvn6TEdjKlCdmxKi85ju3";
+        private readonly string _secretKey;
 
         public CaptchaValidationService(ILogger<CaptchaValidationService> logger)
         {
             _logger = logger;
+            _secretKey = Environment.GetEnvironmentVariable("CAPTCHA_SecretKey") ?? throw new InvalidOperationException("Captcha Secret Key not found in environment variables.");
         }
 
         public async Task<bool> ValidateCaptchaAsync(string captchaToken)
@@ -30,7 +31,7 @@ namespace MatHelper.BLL.Services
                 var response = await client.PostAsync(CaptchaVerifyUrl,
                     new FormUrlEncodedContent(new Dictionary<string, string>
                     {
-                { "secret", SecretKey },
+                { "secret", _secretKey },
                 { "response", captchaToken }
                     }));
 

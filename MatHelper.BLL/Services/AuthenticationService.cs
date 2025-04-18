@@ -18,6 +18,7 @@ namespace MatHelper.BLL.Services
     public class AuthenticationService: IAuthenticationService
     {
         private readonly UserRepository _userRepository;
+        private readonly ITokenGeneratorService _tokenGeneratorService;
         private readonly EmailConfirmationRepository _emailConfirmationRepository;
         private readonly PasswordRecoveryRepository _passwordRecoveryRepository;
         private readonly AuthLogRepository _authLogRepository;
@@ -27,9 +28,10 @@ namespace MatHelper.BLL.Services
         private readonly ITokenService _tokenService;
         private readonly ILogger _logger;
 
-        public AuthenticationService(UserRepository userRepository, EmailConfirmationRepository emailConfirmationRepository, PasswordRecoveryRepository passwordRecoveryRepository, AuthLogRepository authLogRepository, IMailService mailService, JwtOptions jwtOptions, ISecurityService securityService, ITokenService tokenService, ILogger<AuthenticationService> logger)
+        public AuthenticationService(UserRepository userRepository, ITokenGeneratorService tokenGeneratorService, EmailConfirmationRepository emailConfirmationRepository, PasswordRecoveryRepository passwordRecoveryRepository, AuthLogRepository authLogRepository, IMailService mailService, JwtOptions jwtOptions, ISecurityService securityService, ITokenService tokenService, ILogger<AuthenticationService> logger)
         {
             _userRepository = userRepository;
+            _tokenGeneratorService = tokenGeneratorService;
             _emailConfirmationRepository = emailConfirmationRepository;
             _passwordRecoveryRepository = passwordRecoveryRepository;
             _authLogRepository = authLogRepository;
@@ -246,8 +248,8 @@ namespace MatHelper.BLL.Services
 
                 var refreshTokenExpiration = loginDto.Remember == true ? DateTime.UtcNow.AddDays(28) : DateTime.UtcNow.AddHours(6);
 
-                var accessToken = _tokenService.GenerateJwtToken(user, deviceInfo);
-                var refreshToken = _tokenService.GenerateRefreshToken();
+                var accessToken = _tokenGeneratorService.GenerateJwtToken(user, deviceInfo);
+                var refreshToken = _tokenGeneratorService.GenerateRefreshToken();
 
                 var loginToken = new LoginToken
                 {

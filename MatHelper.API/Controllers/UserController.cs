@@ -21,17 +21,19 @@ namespace MatHelper.API.Controllers
         private readonly IAuthenticationService _authenticationService;
         private readonly ITokenService _tokenService;
         private readonly IUserManagementService _userManagementService;
+        private readonly IDeviceManagementService _deviceManagementService;
         private readonly IMailService _mailService;
         private readonly ILogger<UserController> _logger;
         private readonly IProcessRequestService _processRequestService;
         private readonly CaptchaValidationService _captchaValidationService;
         private static readonly ConcurrentDictionary<string, bool> ProcessingTokens = new();
 
-        public UserController(IAuthenticationService authenticationService, ITokenService tokenService, IUserManagementService userManagementService, IMailService mailService, ILogger<UserController> logger, IProcessRequestService processRequestService, CaptchaValidationService captchaValidationService)
+        public UserController(IAuthenticationService authenticationService, ITokenService tokenService, IUserManagementService userManagementService, IDeviceManagementService deviceManagementService, IMailService mailService, ILogger<UserController> logger, IProcessRequestService processRequestService, CaptchaValidationService captchaValidationService)
         {
             _authenticationService = authenticationService;
             _tokenService = tokenService;
             _userManagementService = userManagementService;
+            _deviceManagementService = deviceManagementService;
             _mailService = mailService;
             _logger = logger;
             _processRequestService = processRequestService;
@@ -438,7 +440,7 @@ namespace MatHelper.API.Controllers
                 return Unauthorized(ApiResponse<string>.Fail("User ID is not available in the token."));
             }
 
-            var devices = await _userManagementService.GetLoggedDevicesAsync(Guid.Parse(userId));
+            var devices = await _deviceManagementService.GetLoggedDevicesAsync(Guid.Parse(userId));
             if(devices == null || !devices.Any())
             {
                 return NotFound(ApiResponse<string>.Fail("No devices found for this user."));
@@ -550,7 +552,7 @@ namespace MatHelper.API.Controllers
 
             try
             {
-                var result = await _userManagementService.RemoveDeviceAsync(Guid.Parse(userId), request.UserAgent, request.Platform, request.IpAddress, token);
+                var result = await _deviceManagementService.RemoveDeviceAsync(Guid.Parse(userId), request.UserAgent, request.Platform, request.IpAddress, token);
                 if(result.ToString() == "User not found." || result.ToString() == "Device not found or inactive." || result.ToString() == "The current device cannot be deactivated." || result.ToString() == "An unexpected error occured.")
                 {
                     return BadRequest(ApiResponse<string>.Fail(result));

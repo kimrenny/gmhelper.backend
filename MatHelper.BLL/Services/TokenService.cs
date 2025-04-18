@@ -18,52 +18,20 @@ namespace MatHelper.BLL.Services
     public class TokenService : ITokenService
     {
         private readonly ISecurityService _securityService;
+        private readonly ITokenGeneratorService _tokenGeneratorService;
         private readonly UserRepository _userRepository;
         private readonly LoginTokenRepository _loginTokenRepository;
         private readonly JwtOptions _jwtOptions;
         private readonly ILogger _logger;
 
-        public TokenService(ISecurityService secutiryService, UserRepository userRepository, LoginTokenRepository loginTokenRepository, JwtOptions jwtOptions, ILogger<TokenService> logger)
+        public TokenService(ISecurityService secutiryService, ITokenGeneratorService tokenGeneratorService, UserRepository userRepository, LoginTokenRepository loginTokenRepository, JwtOptions jwtOptions, ILogger<TokenService> logger)
         {
             _securityService = secutiryService;
+            _tokenGeneratorService = tokenGeneratorService;
             _userRepository = userRepository;
             _loginTokenRepository = loginTokenRepository;
             _jwtOptions = jwtOptions;
             _logger = logger;
-        }
-
-        public string GenerateJwtToken(User user, DeviceInfo deviceInfo)
-        {
-            var key = new SymmetricSecurityKey(Convert.FromBase64String(_jwtOptions.SecretKey));
-            var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
-
-            if (deviceInfo.UserAgent == null || deviceInfo.Platform == null)
-            {
-                _logger.LogError("deviceInfo does not meet the requirements");
-                throw new InvalidDataException("deviceInfo does not meet the requirements");
-            }
-
-            var claims = new List<Claim>
-            {
-                new Claim(ClaimTypes.Name, user.Id.ToString()),
-                new Claim(ClaimTypes.Role, user!.Role),
-                new Claim("Device", deviceInfo.UserAgent),
-                new Claim("Platform", deviceInfo.Platform)
-            };
-
-            var token = new JwtSecurityToken(
-                issuer: _jwtOptions.Issuer,
-                audience: _jwtOptions.Audience,
-                claims: claims,
-                expires: DateTime.UtcNow.AddMinutes(30),
-                signingCredentials: creds);
-
-            return new JwtSecurityTokenHandler().WriteToken(token);
-        }
-
-        public string GenerateRefreshToken()
-        {
-            return Convert.ToBase64String(RandomNumberGenerator.GetBytes(64));
         }
 
         public async Task<(string AccessToken, string RefreshToken)> RefreshAccessTokenAsync(string refreshToken)
@@ -84,8 +52,8 @@ namespace MatHelper.BLL.Services
                 throw new Exception("User not found.");
             }
 
-            var accessToken = GenerateJwtToken(user, token.DeviceInfo);
-            var newRefreshToken = GenerateRefreshToken();
+            var accessToken = _tokenGeneratorService.GenerateJwtToken(user, token.DeviceInfo);
+            var newRefreshToken = _tokenGeneratorService.GenerateRefreshToken();
 
             token.Token = accessToken;
             token.Expiration = DateTime.UtcNow.AddMinutes(30);

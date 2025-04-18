@@ -34,42 +34,58 @@ namespace MatHelper.DAL.Repositories
             string status,
             string requestType)
         {
-            var today = DateOnly.FromDateTime(DateTime.UtcNow);
             if(requestType == "Admin")
             {
-                var log = await _context.AdminRequests.FirstOrDefaultAsync(x => x.Date == today);
-
-                if(log == null)
-                {
-                    log = new AdminRequestLog { Date = today, Count = 1 };
-                    await _context.AdminRequests.AddAsync(log);
-                }
-                else
-                {
-                    log.Count++;
-                    _context.AdminRequests.Update(log);
-                }
-
-                await _context.SaveChangesAsync();
+                await LogAdminRequestAsync();
             }
             else
             {
-                var log = await _context.RequestLogs.FirstOrDefaultAsync(x => x.Date == today);
-
-                if (log == null)
-                {
-                    log = new RequestLog { Date = today, Count = 1 };
-                    await _context.RequestLogs.AddAsync(log);
-                }
-                else
-                {
-                    log.Count++;
-                    _context.RequestLogs.Update(log);
-                }
-
-                await _context.SaveChangesAsync();
+                await LogRegularRequestAsync();
             }
 
+            await LogRequestDetailsAsync(method, path, userId, requestBody, statusCode, startTime, endTime, elapsedTime, ipAddress, userAgent, status, requestType);
+        }
+
+        private async Task LogAdminRequestAsync()
+        {
+            var today = DateOnly.FromDateTime(DateTime.UtcNow);
+            var log = await _context.AdminRequests.FirstOrDefaultAsync(x => x.Date == today);
+
+            if (log == null)
+            {
+                log = new AdminRequestLog { Date = today, Count = 1 };
+                await _context.AdminRequests.AddAsync(log);
+            }
+            else
+            {
+                log.Count++;
+                _context.AdminRequests.Update(log);
+            }
+
+            await _context.SaveChangesAsync();
+        }
+
+        private async Task LogRegularRequestAsync()
+        {
+            var today = DateOnly.FromDateTime(DateTime.UtcNow);
+            var log = await _context.RequestLogs.FirstOrDefaultAsync(x => x.Date == today);
+
+            if (log == null)
+            {
+                log = new RequestLog { Date = today, Count = 1 };
+                await _context.RequestLogs.AddAsync(log);
+            }
+            else
+            {
+                log.Count++;
+                _context.RequestLogs.Update(log);
+            }
+
+            await _context.SaveChangesAsync();
+        }
+
+        private async Task LogRequestDetailsAsync(string method, string path, string userId, string requestBody, int statusCode, string startTime, string endTime, double elapsedTime, string ipAddress, string userAgent, string status, string requestType)
+        {
             var requestLogDetail = new RequestLogDetail
             {
                 Timestamp = DateTime.UtcNow,
