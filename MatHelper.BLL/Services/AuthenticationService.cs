@@ -65,8 +65,26 @@ namespace MatHelper.BLL.Services
             var existingUserByEmail = await _userRepository.GetUserByEmailAsync(userDto.Email);
             if (existingUserByEmail != null)
             {
-                _logger.LogError("Email is already used by another user: {Email}", userDto.Email);
-                throw new InvalidOperationException("Email is already used by another user.");
+                if (!existingUserByEmail.IsActive)
+                {
+                    var existingToken = await _emailConfirmationRepository.GetTokenByUserIdAsync(existingUserByEmail.Id);
+                    if (existingToken != null && existingToken.ExpirationDate > DateTime.UtcNow) 
+                    {
+                        _logger.LogWarning("User with email {Email} has not confirmed email yet.", existingUserByEmail.Email);
+                        throw new InvalidOperationException("The account awaits confirmation. Follow the link in the email.");
+                    }
+                    else
+                    {
+                        _logger.LogInformation("Email confirmation token expired or null. Deleting user {Email}", existingUserByEmail.Email);
+                        await _userRepository.DeleteUserAsync(existingUserByEmail);
+                        _userRepository.Detach(existingUserByEmail);
+                    }
+                }
+                else
+                {
+                    _logger.LogError("Email is already used by another user: {Email}", userDto.Email);
+                    throw new InvalidOperationException("Email is already used by another user.");
+                }
             }
 
             var existingUserByUsername = await _userRepository.GetUserByUsernameAsync(userDto.UserName);
@@ -123,6 +141,24 @@ namespace MatHelper.BLL.Services
                 Role = "User",
                 IsActive = false,
             };
+
+            var accessToken = _tokenGeneratorService.GenerateJwtToken(user, deviceInfo);
+            var refreshToken = _tokenGeneratorService.GenerateRefreshToken();
+
+            /* Temporary inactive token used to track registration attempt (not for authentication yet) */
+            var loginToken = new LoginToken
+            {
+                Token = accessToken,
+                RefreshToken = refreshToken,
+                Expiration = DateTime.UtcNow,
+                RefreshTokenExpiration = DateTime.UtcNow,
+                UserId = user.Id,
+                DeviceInfo = deviceInfo,
+                IpAddress = ipAddress,
+                IsActive = false
+            };
+
+            user.LoginTokens = new List<LoginToken> { loginToken };
 
             await _userRepository.AddUserAsync(user);
 
@@ -203,7 +239,7 @@ namespace MatHelper.BLL.Services
             {
                 if (user.IsBlocked)
                 {
-                    throw new UnauthorizedAccessException("User is blocked");
+                    throw new UnauthorizedAccessException("User is banned.");
                 }
 
                 if (!_securityService.VerifyPassword(loginDto.Password, user.PasswordHash, user.PasswordSalt))

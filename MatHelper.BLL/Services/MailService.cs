@@ -61,16 +61,17 @@ namespace MatHelper.BLL.Services
                             <span style='color:#C444FF;'>GM</span><span style='color:#FFFFFF;'>Helper</span>
                         </a>
                     </h2>
-                    <p style='color:#fff;'>Hello!</p>
-                    <p style='color:#fff;'>Thank you for registering. Please confirm your email by clicking the button below:</p>
+                    <p style='color:#fff;'>Hello,</p>
+                    <p style='color:#fff;'>Thank you for registering with GMHelper. In order to complete your registration, please confirm your email address by clicking the button below:</p>
                     <p style='text-align:center;'>
                         <a href='{confirmationLink}' style='display:inline-block; padding:12px 24px; background-color:#C444FF; color:#fff; text-decoration:none; border-radius:5px;'>Confirm Email</a>
                     </p>
-                    <p style='color:#fff;'>If the button doesn't work, you can copy and paste the following link into your browser:</p>
+                    <p style='color:#fff;'>If the button doesn't work, you can copy and paste the following link into your browser's address bar:</p>
                     <p style='color:#fff; text-align:center;'>
                         <a href='{confirmationLink}' style='color:#C444FF;'>{confirmationLink}</a>
                     </p>
-                    <p style='color:#fff;'>If you did not register, you can safely ignore this message.</p>
+                    <p style='color:#fff;'>Please note that if you do not confirm your email within one hour, your account will be automatically deleted for security reasons.</p>
+                    <p style='color:#fff;'>If you did not register for GMHelper, please disregard this message.</p>
                     <hr style='border-color:#444;'/>
                     <footer style='text-align:center; font-size:12px; color:#666;'>
                         &copy; {DateTime.Now.Year} GMHelper. All rights reserved.
@@ -158,8 +159,6 @@ namespace MatHelper.BLL.Services
                         &copy; {DateTime.Now.Year} GMHelper. All rights reserved.
                     </footer>
                 </div>";
-
-
 
                 using (var smtpClient = new SmtpClient(smtpHost, smtpPort))
                 {

@@ -49,6 +49,12 @@ namespace MatHelper.API.Controllers
                 return BadRequest(ApiResponse<string>.Fail("Invalid data."));
             }
 
+            if (string.IsNullOrWhiteSpace(userDto.Password))
+            {
+                _logger.LogError("Password cannot be null.");
+                return BadRequest(ApiResponse<string>.Fail("Password cannot be null or empty."));
+            }
+
             _logger.LogInformation("Register attempt for user: {Email}", userDto.Email);
 
             if (!await _captchaValidationService.ValidateCaptchaAsync(userDto.CaptchaToken))
@@ -81,6 +87,11 @@ namespace MatHelper.API.Controllers
                 {
                     _logger.LogWarning("Register failed for user: {Email} due to violation of service rules.", userDto.Email);
                     return BadRequest(ApiResponse<string>.Fail("Violation of service rules. All user accounts have been blocked."));
+                }
+                else if(ex.Message == "The account awaits confirmation. Follow the link in the email.")
+                {
+                    _logger.LogWarning("User account: {Email} expects confirmation by email.", userDto.Email);
+                    return BadRequest(ApiResponse<string>.Fail("The account awaits confirmation. Follow the link in the email."));
                 }
 
                 _logger.LogWarning("Register failed for user: {Email} due to error: {Error}", userDto.Email, ex.Message);
@@ -157,23 +168,23 @@ namespace MatHelper.API.Controllers
 
                 return Ok(ApiResponse<LoginResponse>.Ok(result));
             }
-            catch (InvalidOperationException ex)
-            {
-                _logger.LogError($"Login failed for user: {loginDto.Email}. Reason: {ex.Message}");
-                return Unauthorized(ApiResponse<string>.Fail("User not found."));
-            }
             catch (UnauthorizedAccessException ex)
             {
                 _logger.LogError($"Login failed for user: {loginDto.Email}. Reason: {ex.Message}");
-                if(ex.Message == "Invalid password.")
+                if (ex.Message == "Invalid password.")
                 {
                     return Unauthorized(ApiResponse<string>.Fail("Invalid credentials."));
                 }
-                else if(ex.Message == "Please activate your account by following the link sent to your email.")
+                else if (ex.Message == "Please activate your account by following the link sent to your email.")
                 {
                     return Unauthorized(ApiResponse<string>.Fail("Please activate your account by following the link sent to your email."));
                 }
                 return Unauthorized(ApiResponse<string>.Fail("User is banned."));
+            }
+            catch (InvalidOperationException ex)
+            {
+                _logger.LogError($"Login failed for user: {loginDto.Email}. Reason: {ex.Message}");
+                return Unauthorized(ApiResponse<string>.Fail("User not found."));
             }
             catch (Exception ex)
             {

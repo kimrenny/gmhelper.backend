@@ -21,6 +21,14 @@ namespace MatHelper.DAL.Repositories
             _context = context;
         }
 
+        public async Task<EmailConfirmationToken?> GetTokenByUserIdAsync(Guid userId)
+        {
+            return await _context.EmailConfirmationTokens
+                .Where(t => t.UserId == userId && !t.IsUsed)
+                .OrderByDescending(t => t.ExpirationDate)
+                .FirstOrDefaultAsync();
+        }
+
         public async Task AddEmailConfirmationTokenAsync(EmailConfirmationToken emailConfirmationToken)
         {
             await _context.EmailConfirmationTokens.AddAsync(emailConfirmationToken);

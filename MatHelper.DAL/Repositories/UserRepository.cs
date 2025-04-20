@@ -17,9 +17,20 @@ namespace MatHelper.DAL.Repositories
             _context = context;
         }
 
+        public void Detach<TEntity>(TEntity entity) where TEntity : class
+        {
+            _context.Entry(entity).State = EntityState.Detached;
+        }
+
         public async Task AddUserAsync(User user)
         {
             _context.Users.Add(user);
+            await _context.SaveChangesAsync();
+        }
+
+        public async Task DeleteUserAsync(User user)
+        {
+            _context.Users.Remove(user);
             await _context.SaveChangesAsync();
         }
 
@@ -53,7 +64,7 @@ namespace MatHelper.DAL.Repositories
             var user = await GetUserAsync(u => u.Email == email);
             if (user != null && user.IsBlocked)
             {
-                throw new InvalidOperationException("User is blocked.");
+                throw new UnauthorizedAccessException("User is blocked.");
             }
             return user;
         }
