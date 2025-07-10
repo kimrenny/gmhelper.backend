@@ -9,6 +9,9 @@
 obj/
 bin/
 
+# Tasks data
+/MatHelper.API/wwwroot/Tasks
+
 # IDEs and editors
 .idea/
 .project

@@ -67,6 +67,7 @@ builder.Services.AddScoped<IRequestLogService, RequestLogService>();
 builder.Services.AddScoped<IProcessRequestService, ProcessRequestService>();
 builder.Services.AddScoped<IAdminSettingsService, AdminSettingsService>();
 builder.Services.AddScoped<IMailService, MailService>();
+builder.Services.AddScoped<ITaskProcessingService, TaskProcessingService>();
 builder.Services.AddScoped<IUserMapper, UserMapper>();
 builder.Services.AddScoped<ErrorLogRepository>();
 builder.Services.AddScoped<UserRepository>();
@@ -77,6 +78,7 @@ builder.Services.AddScoped<RequestLogRepository>();
 builder.Services.AddScoped<AuthLogRepository>();
 builder.Services.AddScoped<AdminSettingsRepository>();
 builder.Services.AddScoped<CaptchaValidationService>();
+builder.Services.AddScoped<TaskRequestRepository>();
 
 builder.Services.AddAuthentication(options =>
 {

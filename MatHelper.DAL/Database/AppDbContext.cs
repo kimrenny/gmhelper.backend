@@ -18,6 +18,7 @@ namespace MatHelper.DAL.Database
         public DbSet<AdminSettings> AdminSettings { get; set; }
         public DbSet<AdminSection> AdminSections { get; set; }
         public DbSet<AdminSwitch> AdminSwitches { get; set; }
+        public DbSet<TaskRequestLog> TaskRequestLogs { get; set; }
 
         public AppDbContext(DbContextOptions<AppDbContext> options) : base(options) { }
 
