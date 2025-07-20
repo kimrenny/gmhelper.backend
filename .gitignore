@@ -43,3 +43,4 @@ Thumbs.db
 
 # Secret data
 .env
+/data-protection-keys

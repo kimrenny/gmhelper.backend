@@ -1,0 +1,50 @@
+version: "3.8"
+
+services:
+  postgres:
+    image: postgres:15
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+
+  gmhelper-api:
+    build:
+      context: ./
+      dockerfile: Dockerfile
+    environment:
+      ConnectionStrings__DefaultConnection: ${ConnectionStrings__DefaultConnection}
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY}
+      JWT_ISSUER: ${JWT_ISSUER}
+      JWT_AUDIENCE: ${JWT_AUDIENCE}
+      SMTP__Host: ${SMTP__Host}
+      SMTP_Port: ${SMTP_Port}
+      SMTP__Username: ${SMTP__Username}
+      SMTP__Password: ${SMTP__Password}
+      SMTP__From: ${SMTP__From}
+      ASPNETCORE_ENVIRONMENT: Development
+    ports:
+      - "7057:7057"
+    volumes:
+      - .:/app
+      - ~/.nuget/packages:/root/.nuget/packages
+      - ./data-protection-keys:/root/.aspnet/DataProtection-Keys
+    depends_on:
+      - postgres
+
+  gmhelper-client:
+    build:
+      context: ../gmhelper.ui
+      dockerfile: Dockerfile
+    ports:
+      - "4200:4200"
+    volumes:
+      - ../gmhelper.ui:/app
+      - /app/node_modules
+
+volumes:
+  pgdata:

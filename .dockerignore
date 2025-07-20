@@ -1,0 +1,13 @@
+.vs
+.vscode
+*.DS_Store
+
+.git
+.gitignore
+
+bin/
+obj/
+
+*.dbmdl
+*.bak
+*.log
