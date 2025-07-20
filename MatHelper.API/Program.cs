@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Npgsql.EntityFrameworkCore.PostgreSQL;
 using Microsoft.Extensions.Options;
 using Microsoft.EntityFrameworkCore;
 using MatHelper.BLL.Interfaces;
@@ -16,6 +17,11 @@ using MatHelper.BLL.Mappers;
 using DotNetEnv;
 
 var builder = WebApplication.CreateBuilder(args);
+
+builder.WebHost.ConfigureKestrel(options =>
+{
+    options.ListenAnyIP(7057);
+});
 
 Env.Load("../.env");
 
@@ -43,15 +49,25 @@ builder.Services.Configure<DbOptions>(
 builder.Services.AddDbContext<AppDbContext>((provider, ctx) =>
 {
     var options = provider.GetRequiredService<IOptions<DbOptions>>().Value;
-    ctx.UseSqlServer(options.ConnectionString);
+    var connStr = Environment.GetEnvironmentVariable("ConnectionStrings__DefaultConnection") ?? options.ConnectionString;
+    ctx.UseNpgsql(connStr);
 });
 
-var jwtOptions = builder.Configuration.GetSection("Jwt").Get<JwtOptions>();
+var secretKey = Environment.GetEnvironmentVariable("JWT_SECRET_KEY") ?? builder.Configuration["Jwt:SecretKey"];
+var issuer = Environment.GetEnvironmentVariable("JWT_ISSUER") ?? builder.Configuration["Jwt:Issuer"];
+var audience = Environment.GetEnvironmentVariable("JWT_AUDIENCE") ?? builder.Configuration["Jwt:Audience"];
 
-if (jwtOptions == null)
+if (string.IsNullOrWhiteSpace(secretKey) || string.IsNullOrWhiteSpace(issuer) || string.IsNullOrWhiteSpace(audience))
 {
     throw new InvalidOperationException("JWT options are not configured properly.");
 }
+
+var jwtOptions = new JwtOptions
+{
+    SecretKey = secretKey!,
+    Issuer = issuer!,
+    Audience = audience!
+};
 
 builder.Services.AddSingleton(jwtOptions);
 builder.Services.AddSingleton<IHttpContextAccessor, HttpContextAccessor>();
@@ -101,6 +117,12 @@ builder.Services.AddAuthentication(options =>
     });
 
 var app = builder.Build();
+
+using (var scope = app.Services.CreateScope())
+{
+    var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+    db.Database.Migrate();
+}
 
 app.UseCors("AllowLocalhost");
 

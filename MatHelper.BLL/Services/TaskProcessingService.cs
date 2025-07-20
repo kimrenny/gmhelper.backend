@@ -2,6 +2,7 @@ using MatHelper.BLL.Interfaces;
 using MatHelper.CORE.Models;
 using MatHelper.DAL.Models;
 using MatHelper.DAL.Repositories;
+using System.Net;
 using System.Text.Json;
 
 namespace MatHelper.BLL.Services
