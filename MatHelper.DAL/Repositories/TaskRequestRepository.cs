@@ -22,6 +22,14 @@ namespace MatHelper.DAL.Repositories
                 .FirstOrDefaultAsync();
         }
 
+        public async Task<TaskRequestLog?> GetRequestByTaskIdAsync(string taskId)
+        {
+            return await _context.TaskRequestLogs
+                .Where(x => x.TaskId == taskId)
+                .OrderByDescending(x => x.RequestTime)
+                .FirstOrDefaultAsync();
+        }
+
         public async Task AddRequestAsync(TaskRequestLog request)
         {
             await _context.TaskRequestLogs.AddAsync(request);

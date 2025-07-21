@@ -1,11 +1,11 @@
 ﻿namespace MatHelper.DAL.Models
 {
-    public class TaskRequestLog
+    public class TaskRating
     {
         public int Id { get; set; }
         public required string TaskId { get; set; }
-        public string IpAddress { get; set; } = null!;
-        public DateTime RequestTime { get; set; }
+        public bool IsCorrect { get; set; }
         public string? UserId { get; set; }
+        public DateTime CreatedAt { get; set; }
     }
 }

@@ -49,8 +49,20 @@ builder.Services.Configure<DbOptions>(
 builder.Services.AddDbContext<AppDbContext>((provider, ctx) =>
 {
     var options = provider.GetRequiredService<IOptions<DbOptions>>().Value;
-    var connStr = Environment.GetEnvironmentVariable("ConnectionStrings__DefaultConnection") ?? options.ConnectionString;
-    ctx.UseNpgsql(connStr);
+    string? connectionString;
+
+    var env = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") ?? "Production";
+
+    if(env == "Development")
+    {
+        connectionString = Environment.GetEnvironmentVariable("ConnectionStrings__DevConnection");
+    }
+    else
+    {
+        connectionString = Environment.GetEnvironmentVariable("ConnectionStrings__DefaultConnection");
+    }
+
+    ctx.UseNpgsql(connectionString);
 });
 
 var secretKey = Environment.GetEnvironmentVariable("JWT_SECRET_KEY") ?? builder.Configuration["Jwt:SecretKey"];
@@ -95,6 +107,7 @@ builder.Services.AddScoped<AuthLogRepository>();
 builder.Services.AddScoped<AdminSettingsRepository>();
 builder.Services.AddScoped<CaptchaValidationService>();
 builder.Services.AddScoped<TaskRequestRepository>();
+builder.Services.AddScoped<TaskRatingRepository>();
 
 builder.Services.AddAuthentication(options =>
 {
