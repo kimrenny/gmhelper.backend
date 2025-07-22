@@ -1,13 +1,11 @@
 .vs
 .vscode
-*.DS_Store
-
-.git
-.gitignore
-
 bin/
 obj/
-
+.git
+.gitignore
+Dockerfile
+docker-compose.yml
 *.dbmdl
 *.bak
 *.log

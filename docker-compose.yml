@@ -14,7 +14,7 @@ services:
 
   gmhelper-api:
     build:
-      context: ./
+      context: .
       dockerfile: Dockerfile
     environment:
       ConnectionStrings__DefaultConnection: ${ConnectionStrings__DefaultConnection}
@@ -30,8 +30,8 @@ services:
     ports:
       - "7057:7057"
     volumes:
-      - .:/app
-      - ~/.nuget/packages:/root/.nuget/packages
+      - .:/src
+      - ~/.nuget/packages:/root/.nuget/packages:cached
       - ./data-protection-keys:/root/.aspnet/DataProtection-Keys
     depends_on:
       - postgres
