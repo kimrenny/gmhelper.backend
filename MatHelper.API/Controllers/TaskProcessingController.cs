@@ -31,7 +31,7 @@ namespace MatHelper.API.Controllers
             if (string.IsNullOrEmpty(ip))
             {
                 _logger.LogWarning("Failed to determine IP address.");
-                BadRequest(ApiResponse<string>.Fail("Unable to determine IP address."));
+                return BadRequest(ApiResponse<string>.Fail("Unable to determine IP address."));
             }
 
             var token = Request.Headers["Authorization"].ToString().Split(" ").Last();
@@ -46,13 +46,13 @@ namespace MatHelper.API.Controllers
                 _logger.LogInformation("Processing task from IP: {Ip}, UserId: {UserId}", ip, userId);
             }
 
-            //var (allowed, retryAfter) = await _taskProcessingService.CanProcessRequestAsync(ip, userId);
+            var (allowed, retryAfter) = await _taskProcessingService.CanProcessRequestAsync(ip, userId);
 
-            //if (!allowed)
-            //{
-            //    var minutes = (int)Math.Ceiling(retryAfter?.TotalMinutes ?? 0);
-            //    return BadRequest(ApiResponse<string>.Fail($"Try again after {minutes} minutes."));
-            //}
+            if (!allowed)
+            {
+                var minutes = (int)Math.Ceiling(retryAfter?.TotalMinutes ?? 0);
+                return BadRequest(ApiResponse<string>.Fail($"Try again after {minutes} minutes."));
+            }
 
             var taskId = await _taskProcessingService.ProcessTaskAsync(taskData, ip, userId);
 
@@ -75,6 +75,7 @@ namespace MatHelper.API.Controllers
             }
             catch (Exception ex)
             {
+                _logger.LogError(ex, "An error occurred while processing the request.");
                 return StatusCode(500, ApiResponse<JsonElement>.Fail("An error occured while reading the task."));
             }
         }

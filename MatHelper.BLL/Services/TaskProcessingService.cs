@@ -1,4 +1,4 @@
-using MatHelper.BLL.Interfaces;
+﻿using MatHelper.BLL.Interfaces;
 using MatHelper.CORE.Models;
 using MatHelper.DAL.Models;
 using MatHelper.DAL.Repositories;
@@ -26,6 +26,11 @@ namespace MatHelper.BLL.Services
             if (!string.IsNullOrEmpty(userId))
                 return (true, null);
 
+            if(ip == "::1")
+            {
+                return (true, null);
+            }
+
             var latest = await _taskRequestRepository.GetLastRequestByIpAsync(ip);
 
             if (latest == null)
@@ -51,9 +56,21 @@ namespace MatHelper.BLL.Services
                 _logger.LogInformation("Created task directory at: {FolderPath}", folderPath);
             }
 
-
             string filePath = Path.Combine(folderPath, $"{taskId}.json");
-            await File.WriteAllTextAsync(filePath, JsonSerializer.Serialize(taskData));
+
+            var given = await GenerateGivenSectionAsync(taskData);
+            var solution = await GenerateSolutionAsync(taskData);
+            var answer = await GenerateAnswerAsync(taskData);
+
+            var task = new
+            {
+                task = taskData,
+                given,
+                solution,
+                answer
+            };
+
+            await File.WriteAllTextAsync(filePath, JsonSerializer.Serialize(task));
             _logger.LogInformation("Saved task JSON to file: {FilePath}", filePath);
 
             var log = new TaskRequestLog
@@ -100,7 +117,90 @@ namespace MatHelper.BLL.Services
         public async Task<string?> GetTaskCreatorUserIdAsync(string taskid)
         {
             var requestLog = await _taskRequestRepository.GetRequestByTaskIdAsync(taskid);
-            return requestLog.UserId;
+            return requestLog?.UserId;
+        }
+
+        private Task<string> GenerateGivenSectionAsync(JsonElement taskData)
+        {
+            var result = new List<string>();
+
+            foreach(var figureProp in taskData.EnumerateObject())
+            {
+                string figureId = figureProp.Name;
+                var figure = figureProp.Value;
+
+                var typePrefix = figureId.Split('_')[0].ToLower();
+
+                string figureName = figure.TryGetProperty("points", out var points) && points.ValueKind == JsonValueKind.Array
+                    ? string.Join("", points.EnumerateArray()
+                            .Where(p => p.TryGetProperty("label", out var label) && label.ValueKind == JsonValueKind.String)
+                            .Select(p => p.GetProperty("label").GetString()))
+                    : figureId;
+
+                string figureType = typePrefix switch
+                {
+                    "rectangle" when AllSidesEqual(figure) => "square",
+                    _ => typePrefix
+                };
+
+                result.Add($"{figureName} – {figureType}");
+
+                if (figure.TryGetProperty("lines", out var lines) && lines.ValueKind == JsonValueKind.Object)
+                {
+                    var groupedLines = lines.EnumerateObject()
+                        .Where(l => l.Value.ValueKind == JsonValueKind.Number)
+                        .GroupBy(l => l.Value.GetDouble())
+                        .OrderByDescending(g => g.Count());
+
+                    foreach(var group in groupedLines)
+                    {
+                        var names = string.Join(" = ", group.Select(g => g.Name));
+                        var value = group.Key;
+                        result.Add($"{names} = {value}");
+                    }
+                }
+
+                if (figure.TryGetProperty("angles", out var angles) && angles.ValueKind == JsonValueKind.Object && angles.EnumerateObject().Any())
+                {
+                    var groupedAngles = angles.EnumerateObject()
+                        .GroupBy(a => a.Value.GetDouble())
+                        .OrderByDescending(g => g.Count());
+
+                    foreach (var group in groupedAngles)
+                    {
+                        var names = string.Join(" = ", group.Select(g => $"∠{g.Name}"));
+                        var value = group.Key;
+                        result.Add($"{names} = {value}°");
+                    }
+                }
+
+                result.Add("");
+            }
+
+            return Task.FromResult(string.Join("\n", result));
+        }
+
+        private Task<object> GenerateSolutionAsync(JsonElement taskData) 
+        {
+            return Task.FromResult<Object>(new { });
+        }
+
+        private Task<string> GenerateAnswerAsync(JsonElement taskData)
+        {
+            return Task.FromResult("...");
+        }
+
+        private bool AllSidesEqual(JsonElement figure)
+        {
+            if (!figure.TryGetProperty("lines", out var lines) || lines.ValueKind != JsonValueKind.Object)
+                return false;
+
+            var lengths = lines.EnumerateObject()
+                .Where(l => l.Value.ValueKind == JsonValueKind.Number)
+                .Select(p => p.Value.GetDouble())
+                .Distinct()
+                .ToList();
+            return lengths.Count == 1;
         }
     }
 }

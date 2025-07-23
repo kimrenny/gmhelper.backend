@@ -24,4 +24,8 @@
     <ProjectReference Include="..\MatHelper.CORE\MatHelper.CORE.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Folder Include="wwwroot\Tasks\" />
+  </ItemGroup>
+
 </Project>
