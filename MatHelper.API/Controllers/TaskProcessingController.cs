@@ -24,7 +24,7 @@ namespace MatHelper.API.Controllers
         }
 
         [AllowAnonymous]
-        [HttpPost("process")]
+        [HttpPost("geo/process")]
         public async Task<IActionResult> ProcessTask([FromBody] JsonElement taskData)
         {
             var ip = HttpContext.Connection.RemoteIpAddress?.ToString();
@@ -61,7 +61,7 @@ namespace MatHelper.API.Controllers
             return Ok(ApiResponse<string>.Ok(taskId));
         }
 
-        [HttpGet("get/{id}")]
+        [HttpGet("geo/get/{id}")]
         public async Task<IActionResult> GetTask(string id)
         {
             try
@@ -81,7 +81,7 @@ namespace MatHelper.API.Controllers
         }
 
         [Authorize]
-        [HttpPost("rate")]
+        [HttpPost("geo/rate")]
         public async Task<IActionResult> RateTask([FromBody] TaskRatingDto ratingDto)
         {
             if (string.IsNullOrEmpty(ratingDto.TaskId))
