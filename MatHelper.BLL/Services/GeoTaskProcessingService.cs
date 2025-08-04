@@ -8,13 +8,13 @@ using System.Text.Json;
 
 namespace MatHelper.BLL.Services
 {
-    public class TaskProcessingService : ITaskProcessingService
+    public class GeoTaskProcessingService : IGeoTaskProcessingService
     {
         private readonly TaskRequestRepository _taskRequestRepository;
         private readonly TaskRatingRepository _taskRatingRepository;
-        private readonly ILogger<TaskProcessingService> _logger;
+        private readonly ILogger<GeoTaskProcessingService> _logger;
 
-        public TaskProcessingService(TaskRequestRepository taskRequestRepository, TaskRatingRepository taskRatingRepository, ILogger<TaskProcessingService> logger)
+        public GeoTaskProcessingService(TaskRequestRepository taskRequestRepository, TaskRatingRepository taskRatingRepository, ILogger<GeoTaskProcessingService> logger)
         {
             _taskRequestRepository = taskRequestRepository;
             _taskRatingRepository = taskRatingRepository;
@@ -48,7 +48,7 @@ namespace MatHelper.BLL.Services
         public async Task<string> ProcessTaskAsync(JsonElement taskData, string ip, string? userId)
         {
             string taskId = Guid.NewGuid().ToString();
-            string folderPath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "Tasks");
+            string folderPath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "Tasks", "Geo");
 
             if (!Directory.Exists(folderPath))
             {
@@ -91,7 +91,7 @@ namespace MatHelper.BLL.Services
 
         public async Task<JsonElement> GetTaskAsync(string id)
         {
-            var filePath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "Tasks", $"{id}.json");
+            var filePath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "Tasks", "Geo", $"{id}.json");
 
             if (!File.Exists(filePath))
                 throw new FileNotFoundException();
@@ -119,7 +119,6 @@ namespace MatHelper.BLL.Services
             var requestLog = await _taskRequestRepository.GetRequestByTaskIdAsync(taskid);
             return requestLog?.UserId;
         }
-
         private Task<string> GenerateGivenSectionAsync(JsonElement taskData)
         {
             var result = new List<string>();
