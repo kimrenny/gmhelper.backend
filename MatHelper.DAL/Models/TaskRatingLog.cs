@@ -3,6 +3,7 @@
     public class TaskRating
     {
         public int Id { get; set; }
+        public required string Subject { get; set; }
         public required string TaskId { get; set; }
         public bool IsCorrect { get; set; }
         public string? UserId { get; set; }

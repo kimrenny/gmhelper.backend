@@ -2,6 +2,7 @@ using MatHelper.DAL.Database;
 using MatHelper.CORE.Models;
 using MatHelper.DAL.Models;
 using Microsoft.EntityFrameworkCore;
+using MatHelper.CORE.Enums;
 
 namespace MatHelper.DAL.Repositories
 {
@@ -14,10 +15,10 @@ namespace MatHelper.DAL.Repositories
             _context = context;
         }
 
-        public async Task<TaskRequestLog?> GetLastRequestByIpAsync(string ip)
+        public async Task<TaskRequestLog?> GetLastRequestByIpAsync(string ip, SubjectType subject)
         {
             return await _context.TaskRequestLogs
-                .Where(x => x.IpAddress == ip)
+                .Where(x => x.IpAddress == ip && x.Subject == subject.ToString())
                 .OrderByDescending(x => x.RequestTime)
                 .FirstOrDefaultAsync();
         }

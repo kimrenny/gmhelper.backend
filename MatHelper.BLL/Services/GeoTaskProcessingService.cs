@@ -5,6 +5,7 @@ using MatHelper.DAL.Repositories;
 using Microsoft.Extensions.Logging;
 using System.Net;
 using System.Text.Json;
+using MatHelper.CORE.Enums;
 
 namespace MatHelper.BLL.Services
 {
@@ -31,7 +32,7 @@ namespace MatHelper.BLL.Services
                 return (true, null);
             }
 
-            var latest = await _taskRequestRepository.GetLastRequestByIpAsync(ip);
+            var latest = await _taskRequestRepository.GetLastRequestByIpAsync(ip, SubjectType.Geometry);
 
             if (latest == null)
                 return (true, null);
@@ -76,6 +77,7 @@ namespace MatHelper.BLL.Services
             var log = new TaskRequestLog
             {
                 TaskId = taskId,
+                Subject = SubjectType.Geometry.ToString(),
                 IpAddress = ip,
                 RequestTime = DateTime.UtcNow,
                 UserId = userId
@@ -105,7 +107,8 @@ namespace MatHelper.BLL.Services
         {
             var rating = new TaskRating 
             { 
-                TaskId = taskId, 
+                TaskId = taskId,
+                Subject = SubjectType.Geometry.ToString(),
                 IsCorrect = isCorrect, 
                 UserId = userId, 
                 CreatedAt = DateTime.UtcNow 
