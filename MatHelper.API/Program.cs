@@ -34,11 +34,14 @@ builder.Services.AddControllers(options =>
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
+var corsOrigins = Environment.GetEnvironmentVariable("CORS_ORIGINS")?
+    .Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowFrontend", policy =>
     {
-        policy.WithOrigins("http://localhost:4200")
+        policy.WithOrigins(corsOrigins ?? Array.Empty<string>())
               .AllowAnyMethod()
               .AllowAnyHeader()
               .AllowCredentials();
