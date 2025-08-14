@@ -12,6 +12,7 @@ using System.Threading.Tasks;
 using Microsoft.Extensions.Primitives;
 using Microsoft.Extensions.DependencyInjection;
 using System.Net;
+using MatHelper.BLL.Interfaces;
 
 namespace MatHelper.BLL.Filters
 {
@@ -19,11 +20,13 @@ namespace MatHelper.BLL.Filters
     {
         private readonly RequestLogRepository _logRepository;
         private readonly IHttpContextAccessor _httpContextAccessor;
+        private readonly IClientInfoService _clientInfoService;
 
-        public RequestLoggingFilter(RequestLogRepository logRepository, IHttpContextAccessor httpContextAccessor)
+        public RequestLoggingFilter(RequestLogRepository logRepository, IHttpContextAccessor httpContextAccessor, IClientInfoService clientInfoService)
         {
             _logRepository = logRepository;
             _httpContextAccessor = httpContextAccessor;
+            _clientInfoService = clientInfoService;
         }
 
         public async Task OnActionExecutionAsync(ActionExecutingContext context, ActionExecutionDelegate next)
@@ -78,23 +81,7 @@ namespace MatHelper.BLL.Filters
                     }
                 }
 
-                if (httpContext.Request.Headers.TryGetValue("X-Forwarded-For", out var forwardedFor))
-                {
-                    ipAddress = forwardedFor.ToString().Split(',')[0].Trim();
-                }
-                else if(httpContext.Request.Headers.TryGetValue("X-Real-IP", out var realIp))
-                {
-                    ipAddress = realIp.ToString();
-                }
-
-                if (ipAddress == "::1")
-                {
-                    ipAddress = "127.0.0.1";
-                }
-                else if (IPAddress.TryParse(ipAddress, out var ip) && ip.IsIPv4MappedToIPv6)
-                {
-                    ipAddress = ip.MapToIPv4().ToString();
-                }
+                ipAddress = _clientInfoService.GetClientIp(httpContext);
 
                 try
                 {

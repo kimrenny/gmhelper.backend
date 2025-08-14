@@ -15,13 +15,15 @@ namespace MatHelper.API.Controllers
         private readonly IGeoTaskProcessingService _geoTaskProcessingService;
         private readonly IMathTaskProcessingService _mathTaskProccessingService;
         private readonly ITokenService _tokenService;
+        private readonly IClientInfoService _clientInfoService;
         private readonly ILogger<TaskProcessingController> _logger;
 
-        public TaskProcessingController(IGeoTaskProcessingService geoTaskProcessingService, IMathTaskProcessingService mathTaskProcessingService, ITokenService tokenService, ILogger<TaskProcessingController> logger)
+        public TaskProcessingController(IGeoTaskProcessingService geoTaskProcessingService, IMathTaskProcessingService mathTaskProcessingService, ITokenService tokenService, IClientInfoService clientInfoService, ILogger<TaskProcessingController> logger)
         {
             _geoTaskProcessingService = geoTaskProcessingService;
             _mathTaskProccessingService = mathTaskProcessingService;
             _tokenService = tokenService;
+            _clientInfoService = clientInfoService;
             _logger = logger;
         }
 
@@ -29,7 +31,8 @@ namespace MatHelper.API.Controllers
         [HttpPost("geo/process")]
         public async Task<IActionResult> ProcessGeoTask([FromBody] JsonElement taskData)
         {
-            var ip = HttpContext.Connection.RemoteIpAddress?.ToString();
+            var ip = _clientInfoService.GetClientIp(HttpContext);
+
             if (string.IsNullOrEmpty(ip))
             {
                 _logger.LogWarning("Failed to determine IP address.");
@@ -67,7 +70,8 @@ namespace MatHelper.API.Controllers
         [HttpPost("math/process")]
         public async Task<IActionResult> ProcessMathTask([FromBody] JsonElement taskData)
         {
-            var ip = HttpContext.Connection.RemoteIpAddress?.ToString();
+            var ip = _clientInfoService.GetClientIp(HttpContext);
+
             if (string.IsNullOrEmpty(ip))
             {
                 _logger.LogWarning("Failed to determine IP address.");
@@ -86,7 +90,7 @@ namespace MatHelper.API.Controllers
                 _logger.LogInformation("Processing task from IP: {Ip}, UserId: {UserId}", ip, userId);
             }
 
-            var (allowed, retryAfter) = await _geoTaskProcessingService.CanProcessRequestAsync(ip, userId);
+            var (allowed, retryAfter) = await _mathTaskProccessingService.CanProcessRequestAsync(ip, userId);
 
             if (!allowed)
             {

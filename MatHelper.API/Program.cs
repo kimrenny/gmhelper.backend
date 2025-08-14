@@ -1,20 +1,21 @@
-using Microsoft.AspNetCore.Builder;
-using Microsoft.AspNetCore.Authentication.JwtBearer;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
-using Npgsql.EntityFrameworkCore.PostgreSQL;
-using Microsoft.Extensions.Options;
-using Microsoft.EntityFrameworkCore;
+using DotNetEnv;
+using MatHelper.BLL.Filters;
 using MatHelper.BLL.Interfaces;
+using MatHelper.BLL.Mappers;
+using MatHelper.BLL.Middlewares;
 using MatHelper.BLL.Services;
 using MatHelper.CORE.Options;
 using MatHelper.DAL.Database;
 using MatHelper.DAL.Repositories;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.HttpOverrides;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
-using MatHelper.BLL.Filters;
-using MatHelper.BLL.Middlewares;
-using MatHelper.BLL.Mappers;
-using DotNetEnv;
+using Npgsql.EntityFrameworkCore.PostgreSQL;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -35,14 +36,15 @@ builder.Services.AddSwaggerGen();
 
 builder.Services.AddCors(options =>
 {
-    options.AddPolicy(name: "AllowLocalhost",
-        policy =>
-        {
-            policy.WithOrigins("http://localhost:4200")
-                .AllowAnyHeader()
-                .AllowAnyMethod();
-        });
+    options.AddPolicy("AllowFrontend", policy =>
+    {
+        policy.WithOrigins("http://localhost:4200")
+              .AllowAnyMethod()
+              .AllowAnyHeader()
+              .AllowCredentials();
+    });
 });
+
 builder.Services.Configure<DbOptions>(
     builder.Configuration.GetSection("DbOptions"));
 
@@ -97,6 +99,7 @@ builder.Services.AddScoped<IAdminSettingsService, AdminSettingsService>();
 builder.Services.AddScoped<IMailService, MailService>();
 builder.Services.AddScoped<IGeoTaskProcessingService, GeoTaskProcessingService>();
 builder.Services.AddScoped<IMathTaskProcessingService, MathTaskProcessingService>();
+builder.Services.AddScoped<IClientInfoService, ClientInfoService>();
 builder.Services.AddScoped<IUserMapper, UserMapper>();
 builder.Services.AddScoped<ErrorLogRepository>();
 builder.Services.AddScoped<UserRepository>();
@@ -138,7 +141,18 @@ using (var scope = app.Services.CreateScope())
     db.Database.Migrate();
 }
 
-app.UseCors("AllowLocalhost");
+app.UseCors("AllowFrontend");
+
+app.Use(async (context, next) =>
+{
+    if (context.Request.Method == "OPTIONS")
+    {
+        context.Response.StatusCode = 200;
+        await context.Response.CompleteAsync();
+        return;
+    }
+    await next();
+});
 
 if (app.Environment.IsDevelopment())
 {
@@ -148,24 +162,34 @@ if (app.Environment.IsDevelopment())
 
 app.UseHsts();
 
+app.UseForwardedHeaders(new ForwardedHeadersOptions
+{
+    ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto
+});
+
 app.UseMiddleware<ErrorLoggingMiddleware>();
 
 app.Use(async (context, next) =>
 {
+    context.Request.EnableBuffering();
+    var logger = context.RequestServices.GetRequiredService<ILogger<Program>>();
+
+    var remoteIp = context.Connection.RemoteIpAddress?.ToString();
+
+    if (context.Request.Headers.TryGetValue("X-Forwarded-For", out var forwardedFor))
+    {
+        remoteIp = forwardedFor.FirstOrDefault()?.Split(',').FirstOrDefault()?.Trim() ?? remoteIp;
+    }
+
+    var headers = context.Request.Headers.Select(h => $"{h.Key}: {h.Value}").ToList();
+
     context.Response.Headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains; preload";
     context.Response.Headers["X-Content-Type-Options"] = "nosniff";
     context.Response.Headers["X-Frame-Options"] = "DENY";
     context.Response.Headers["Referrer-Policy"] = "strict-origin-when-cross-origin";
     context.Response.Headers["Permissions-Policy"] = "geolocation=(), microphone=(), camera=()";
     context.Response.Headers["Content-Security-Policy"] = "default-src 'self'; script-src 'self' https://www.google.com https://www.gstatic.com; style-src 'self'; img-src 'self'; font-src 'self'; object-src 'none'; frame-ancestors 'self' https://www.google.com https://www.gstatic.com; base-uri 'self'; form-action 'self'";
-
-    await next();
-});
-
-app.Use(async (context, next) =>
-{
-    context.Request.EnableBuffering();
-    var logger = context.RequestServices.GetRequiredService<ILogger<Program>>();
+    
     var startTime = DateTime.UtcNow;
     logger.LogInformation($"[{DateTime.UtcNow}] Handling request: {context.Request.Method} {context.Request.Path}");
     
