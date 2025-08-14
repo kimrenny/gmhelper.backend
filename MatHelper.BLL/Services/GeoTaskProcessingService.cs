@@ -27,11 +27,6 @@ namespace MatHelper.BLL.Services
             if (!string.IsNullOrEmpty(userId))
                 return (true, null);
 
-            if(ip == "::1")
-            {
-                return (true, null);
-            }
-
             var latest = await _taskRequestRepository.GetLastRequestByIpAsync(ip, SubjectType.Geometry);
 
             if (latest == null)
@@ -132,6 +127,11 @@ namespace MatHelper.BLL.Services
                 var figure = figureProp.Value;
 
                 var typePrefix = figureId.Split('_')[0].ToLower();
+
+                if(typePrefix == "pencil") 
+                {
+                    continue; 
+                }
 
                 string figureName = figure.TryGetProperty("points", out var points) && points.ValueKind == JsonValueKind.Array
                     ? string.Join("", points.EnumerateArray()
