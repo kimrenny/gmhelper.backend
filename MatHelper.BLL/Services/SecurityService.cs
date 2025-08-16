@@ -45,9 +45,10 @@ namespace MatHelper.BLL.Services
 
         public bool VerifyPassword(string password, string hash, string salt)
         {
-            var hashedPassword = HashPassword(password, salt);
+            var hashedPasswordBytes = Convert.FromBase64String(HashPassword(password, salt));
+            var hashBytes = Convert.FromBase64String(hash);
 
-            return hashedPassword == hash;
+            return CryptographicOperations.FixedTimeEquals(hashedPasswordBytes, hashBytes);
         }
 
         public string GenerateSalt()
