@@ -1,13 +1,7 @@
 ﻿using MatHelper.DAL.Database;
 using Microsoft.EntityFrameworkCore;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using MatHelper.DAL.Models;
 using MatHelper.CORE.Models;
-using System.Security.Claims;
 using MatHelper.CORE.Enums;
 
 namespace MatHelper.DAL.Repositories

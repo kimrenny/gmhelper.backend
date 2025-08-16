@@ -1,9 +1,7 @@
 using MatHelper.CORE.Enums;
 using MatHelper.CORE.Models;
 using MatHelper.DAL.Database;
-using MatHelper.DAL.Models;
 using Microsoft.EntityFrameworkCore;
-using System.Diagnostics;
 using System.Linq.Expressions;
 
 namespace MatHelper.DAL.Repositories

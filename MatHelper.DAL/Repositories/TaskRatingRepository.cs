@@ -1,7 +1,5 @@
 using MatHelper.DAL.Database;
-using MatHelper.CORE.Models;
 using MatHelper.DAL.Models;
-using Microsoft.EntityFrameworkCore;
 
 namespace MatHelper.DAL.Repositories
 {

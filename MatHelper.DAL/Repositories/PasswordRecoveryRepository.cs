@@ -1,13 +1,7 @@
 ﻿using MatHelper.DAL.Database;
 using Microsoft.EntityFrameworkCore;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using MatHelper.DAL.Models;
 using MatHelper.CORE.Models;
-using System.Security.Claims;
 using MatHelper.CORE.Enums;
 
 namespace MatHelper.DAL.Repositories
@@ -29,13 +23,9 @@ namespace MatHelper.DAL.Repositories
 
         public async Task<(RecoverPasswordResult Result, User? User)> GetUserByRecoveryToken(string token)
         {
-            //var sw = Stopwatch.StartNew();
-
             var recoveryToken = await _context.PasswordRecoveryTokens
                 .Include(t => t.User)
                 .FirstOrDefaultAsync(t => t.Token == token);
-
-            //sw.Stop();
 
             if (recoveryToken == null)
             {
