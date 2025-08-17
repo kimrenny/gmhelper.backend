@@ -160,6 +160,12 @@ namespace MatHelper.API.Controllers
 
                 var result = await _authenticationService.LoginUserAsync(loginDto, deviceInfo, ipAddress);
 
+                if(result == null)
+                {
+                    _logger.LogInformation("Authorization from a new location for the user: {Email}", loginDto.Email);
+                    return Unauthorized(ApiResponse<string>.Fail("Confirm IP by email code"));
+                }
+
                 if (result.AccessToken == null || result.RefreshToken == null)
                 {
                     _logger.LogWarning("Login failed for user: {Email}.", loginDto.Email);
@@ -196,35 +202,21 @@ namespace MatHelper.API.Controllers
         [HttpPatch("password")]
         public async Task<IActionResult> RecoverPassword([FromBody] PasswordRecoveryDto recoveryDto)
         {
-            //var sw = Stopwatch.StartNew();
-            //_logger.LogInformation("RecoverPassword started.");
-
             if (!await _captchaValidationService.ValidateCaptchaAsync(recoveryDto.CaptchaToken))
             {
                 _logger.LogWarning("Invalid CAPTCHA token for recovery token: {Token}", recoveryDto.RecoveryToken);
-                //sw.Stop();
-                //_logger.LogInformation("RecoverPassword finished in {Time}ms (CAPTCHA failed).", sw.ElapsedMilliseconds);
                 return BadRequest(ApiResponse<string>.Fail("Invalid CAPTCHA token."));
             }
-
-            //_logger.LogInformation("CAPTCHA validated successfully after {Time}ms.", sw.ElapsedMilliseconds);
 
             if (recoveryDto.Password == null || recoveryDto.RecoveryToken == null)
             {
                 _logger.LogWarning("Password or token was null.");
-                //sw.Stop();
-                //_logger.LogInformation("RecoverPassword finished in {Time}ms (null input).", sw.ElapsedMilliseconds);
                 return BadRequest(ApiResponse<string>.Fail("Password and recovery token cannot be null."));
             }
 
             try
             {
-                //_logger.LogInformation("Calling RecoverPassword service method...");
                 var result = await _authenticationService.RecoverPassword(recoveryDto.RecoveryToken, recoveryDto.Password);
-                //_logger.LogInformation("RecoverPassword service call finished after {Time}ms.", sw.ElapsedMilliseconds);
-
-                //sw.Stop();
-                //_logger.LogInformation("RecoverPassword finished in {Time}ms. Result: {Result}", sw.ElapsedMilliseconds, result);
 
                 return result switch
                 {
@@ -239,16 +231,12 @@ namespace MatHelper.API.Controllers
             }
             catch (InvalidDataException ex)
             {
-                //sw.Stop();
                 _logger.LogWarning("Invalid or expired token: {Message}", ex.Message);
-                //_logger.LogInformation("RecoverPassword finished in {Time}ms (InvalidDataException).", sw.ElapsedMilliseconds);
                 return BadRequest(ApiResponse<string>.Fail("Invalid or expired token."));
             }
             catch(Exception ex)
             {
-                //sw.Stop();
                 _logger.LogError("Unexpected error: {Message}", ex.Message);
-                //_logger.LogInformation("RecoverPassword finished in {Time}ms (Exception).", sw.ElapsedMilliseconds);
                 return StatusCode(500, ApiResponse<string>.Fail("An unexpected error occured."));
             }
         }

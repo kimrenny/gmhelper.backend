@@ -182,6 +182,78 @@ namespace MatHelper.BLL.Services
                 throw;
             }
         }
+
+        public async Task SendIpConfirmationCodeEmailAsync(string toEmail, string code)
+        {
+            var smtpHost = Environment.GetEnvironmentVariable("SMTP__Host");
+            var smtpPortString = Environment.GetEnvironmentVariable("SMTP_Port");
+            var smtpUsername = Environment.GetEnvironmentVariable("SMTP__Username");
+            var smtpPassword = Environment.GetEnvironmentVariable("SMTP__Password");
+            var smtpFrom = Environment.GetEnvironmentVariable("SMTP__From");
+
+            if (string.IsNullOrWhiteSpace(smtpHost) || string.IsNullOrWhiteSpace(smtpUsername) || string.IsNullOrWhiteSpace(smtpPassword) || string.IsNullOrWhiteSpace(smtpFrom))
+            {
+                throw new InvalidOperationException("SMTP configuration is missing in the environment variables.");
+            }
+
+            if (!int.TryParse(smtpPortString, out var smtpPort))
+            {
+                throw new InvalidOperationException("Invalid SMTP port value.");
+            }
+
+            _logger.LogInformation($"Attempting to send IP confirmation code email to {toEmail} using SMTP server {smtpHost} on port {smtpPort}.");
+
+            try
+            {
+                var fromAddress = new MailAddress(smtpFrom, "GMHelper");
+                var toAddress = new MailAddress(toEmail);
+                var subject = "New Device Login Confirmation";
+
+                var clientBaseUrl = _configuration["ClientApp:BaseUrl"];
+                if (string.IsNullOrWhiteSpace(clientBaseUrl))
+                {
+                    throw new InvalidOperationException("Client application base URL is not configured.");
+                }
+
+                var mainLink = $"{clientBaseUrl.TrimEnd('/')}/";
+
+                var body = $@"
+        <div style='background-color:#000; color:#fff; font-family:Arial, sans-serif; max-width:600px; margin:auto; padding:20px; border-radius:10px;'>
+            <h2 style='text-align:center;'>
+                <a href='{mainLink}' style='text-decoration:none; font-size:28px;'>
+                    <span style='color:#C444FF;'>GM</span><span style='color:#FFFFFF;'>Helper</span>
+                </a>
+            </h2>
+            <p style='color:#fff;'>Hello,</p>
+            <p style='color:#fff;'>We detected a login attempt from a new device or IP address. To confirm this login, please enter the code below:</p>
+            <p style='text-align:center; font-size:24px; font-weight:bold; color:#C444FF;'>{code}</p>
+            <p style='color:#fff;'>This code will expire in 15 minutes. If you did not attempt to log in, please ignore this email.</p>
+            <hr style='border-color:#444;'/>
+            <footer style='text-align:center; font-size:12px; color:#666;'>&copy; {DateTime.Now.Year} GMHelper. All rights reserved.</footer>
+        </div>";
+
+                using (var smtpClient = new SmtpClient(smtpHost, smtpPort))
+                {
+                    smtpClient.Credentials = new NetworkCredential(smtpUsername, smtpPassword);
+                    smtpClient.EnableSsl = true;
+
+                    var mailMessage = new MailMessage(fromAddress, toAddress)
+                    {
+                        Subject = subject,
+                        Body = body,
+                        IsBodyHtml = true
+                    };
+
+                    await smtpClient.SendMailAsync(mailMessage);
+                    _logger.LogInformation($"IP confirmation code email successfully sent to {toEmail}.");
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"Failed to send IP confirmation code email to {toEmail}.");
+                throw;
+            }
+        }
     }
     
 }

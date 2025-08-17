@@ -20,6 +20,7 @@ namespace MatHelper.BLL.Services
         private readonly UserRepository _userRepository;
         private readonly ITokenGeneratorService _tokenGeneratorService;
         private readonly EmailConfirmationRepository _emailConfirmationRepository;
+        private readonly EmailLoginCodeRepository _emailLoginCodeRepository;
         private readonly PasswordRecoveryRepository _passwordRecoveryRepository;
         private readonly AuthLogRepository _authLogRepository;
         private readonly IMailService _mailService;
@@ -28,11 +29,12 @@ namespace MatHelper.BLL.Services
         private readonly ITokenService _tokenService;
         private readonly ILogger _logger;
 
-        public AuthenticationService(UserRepository userRepository, ITokenGeneratorService tokenGeneratorService, EmailConfirmationRepository emailConfirmationRepository, PasswordRecoveryRepository passwordRecoveryRepository, AuthLogRepository authLogRepository, IMailService mailService, JwtOptions jwtOptions, ISecurityService securityService, ITokenService tokenService, ILogger<AuthenticationService> logger)
+        public AuthenticationService(UserRepository userRepository, ITokenGeneratorService tokenGeneratorService, EmailConfirmationRepository emailConfirmationRepository, EmailLoginCodeRepository emailLoginCodeRepository, PasswordRecoveryRepository passwordRecoveryRepository, AuthLogRepository authLogRepository, IMailService mailService, JwtOptions jwtOptions, ISecurityService securityService, ITokenService tokenService, ILogger<AuthenticationService> logger)
         {
             _userRepository = userRepository;
             _tokenGeneratorService = tokenGeneratorService;
             _emailConfirmationRepository = emailConfirmationRepository;
+            _emailLoginCodeRepository = emailLoginCodeRepository;
             _passwordRecoveryRepository = passwordRecoveryRepository;
             _authLogRepository = authLogRepository;
             _mailService = mailService;
@@ -222,30 +224,18 @@ namespace MatHelper.BLL.Services
             }
         }
 
-        public async Task<LoginResponse> LoginUserAsync(LoginDto loginDto, DeviceInfo deviceInfo, string ipAddress)
+        public async Task<LoginResponse?> LoginUserAsync(LoginDto loginDto, DeviceInfo deviceInfo, string ipAddress)
         {
             var user = await _userRepository.GetUserByEmailAsync(loginDto.Email);
-            if (user == null)
-            {
-                throw new InvalidOperationException("User not found.");
-            }
+            if (user == null) throw new InvalidOperationException("User not found.");
 
-            if (!user.IsActive)
-            {
-                throw new UnauthorizedAccessException("Please activate your account by following the link sent to your email.");
-            }
+            if (!user.IsActive) throw new UnauthorizedAccessException("Please activate your account by following the link sent to your email.");
 
             try
             {
-                if (user.IsBlocked)
-                {
-                    throw new UnauthorizedAccessException("User is banned.");
-                }
+                if (user.IsBlocked) throw new UnauthorizedAccessException("User is banned.");
 
-                if (!_securityService.VerifyPassword(loginDto.Password, user.PasswordHash, user.PasswordSalt))
-                {
-                    throw new UnauthorizedAccessException("Invalid password.");
-                }
+                if (!_securityService.VerifyPassword(loginDto.Password, user.PasswordHash, user.PasswordSalt)) throw new UnauthorizedAccessException("Invalid password.");
 
                 if (deviceInfo.UserAgent == null || deviceInfo.Platform == null)
                 {
@@ -280,6 +270,35 @@ namespace MatHelper.BLL.Services
                     {
                         oldestToken.IsActive = false;
                     }
+                }
+
+                var lastToken = user.LoginTokens?.OrderByDescending(t => t.Expiration).FirstOrDefault();
+                if (lastToken == null || lastToken.IpAddress != ipAddress)
+                {
+                    int codeInt;
+                    using (var rng = RandomNumberGenerator.Create())
+                    {
+                        byte[] bytes = new byte[4];
+                        rng.GetBytes(bytes);
+                        codeInt = BitConverter.ToInt32(bytes, 0) & 0x7FFFFFFF;
+                        codeInt = 100000 + (codeInt % 900000);
+                    }
+
+                    var code = codeInt.ToString();
+
+                    var emailCode = new EmailLoginCode
+                    {
+                        UserId = user.Id,
+                        Code = code,
+                        Expiration = DateTime.UtcNow.AddMinutes(15),
+                        IsUsed = false
+                    };
+
+                    await _emailLoginCodeRepository.AddCodeAsync(emailCode);
+
+                    await _mailService.SendIpConfirmationCodeEmailAsync(user.Email, code);
+
+                    return null;
                 }
 
                 var refreshTokenExpiration = loginDto.Remember == true ? DateTime.UtcNow.AddDays(28) : DateTime.UtcNow.AddHours(6);

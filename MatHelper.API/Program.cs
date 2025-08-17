@@ -107,6 +107,7 @@ builder.Services.AddScoped<IUserMapper, UserMapper>();
 builder.Services.AddScoped<ErrorLogRepository>();
 builder.Services.AddScoped<UserRepository>();
 builder.Services.AddScoped<EmailConfirmationRepository>();
+builder.Services.AddScoped<EmailLoginCodeRepository>();
 builder.Services.AddScoped<LoginTokenRepository>();
 builder.Services.AddScoped<PasswordRecoveryRepository>();
 builder.Services.AddScoped<RequestLogRepository>();

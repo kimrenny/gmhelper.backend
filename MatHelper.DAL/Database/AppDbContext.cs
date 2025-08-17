@@ -20,6 +20,7 @@ namespace MatHelper.DAL.Database
         public DbSet<AdminSwitch> AdminSwitches { get; set; }
         public DbSet<TaskRequestLog> TaskRequestLogs { get; set; }
         public DbSet<TaskRating> TaskRatings { get; set; }
+        public DbSet<EmailLoginCode> EmailLoginCodes { get; set; }
 
         public AppDbContext(DbContextOptions<AppDbContext> options) : base(options) { }
 

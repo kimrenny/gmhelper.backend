@@ -7,5 +7,6 @@ namespace MatHelper.BLL.Interfaces
     {
         Task SendConfirmationEmailAsync(string toEmail, string token);
         Task SendPasswordRecoveryEmailAsync(string toEmail, string token);
+        Task SendIpConfirmationCodeEmailAsync(string toEmail, string code);
     }
 }
