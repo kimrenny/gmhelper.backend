@@ -160,10 +160,10 @@ namespace MatHelper.API.Controllers
 
                 var result = await _authenticationService.LoginUserAsync(loginDto, deviceInfo, ipAddress);
 
-                if(result == null)
+                if(result.AccessToken == null && result.RefreshToken == null && result.Message != null && result.SessionKey != null)
                 {
                     _logger.LogInformation("Authorization from a new location for the user: {Email}", loginDto.Email);
-                    return Unauthorized(ApiResponse<string>.Fail("Confirm IP by email code"));
+                    return Ok(ApiResponse<LoginResponse>.Ok(result));
                 }
 
                 if (result.AccessToken == null || result.RefreshToken == null)
@@ -195,6 +195,26 @@ namespace MatHelper.API.Controllers
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error during login for user: {Email}", loginDto.Email);
+                return StatusCode(500, ApiResponse<string>.Fail("An unexpected error occured."));
+            }
+        }
+
+        [HttpPost("confirm-email-code")]
+        public async Task<IActionResult> ConfirmEmailCode([FromBody] ConfirmCodeDto dto)
+        {
+            try
+            {
+                var result = await _authenticationService.ConfirmEmailCodeAsync(dto.Code, dto.SessionKey);
+                return Ok(ApiResponse<LoginResponse>.Ok(result));
+            }
+            catch(UnauthorizedAccessException ex)
+            {
+                _logger.LogWarning("Email code confirmation failed: {Message}", ex.Message);
+                return Unauthorized(ApiResponse<string>.Fail(ex.Message));
+            }
+            catch(Exception ex)
+            {
+                _logger.LogError(ex, "Unexpected error during email code confirmation");
                 return StatusCode(500, ApiResponse<string>.Fail("An unexpected error occured."));
             }
         }

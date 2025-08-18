@@ -8,7 +8,8 @@ namespace MatHelper.BLL.Interfaces
     {
         Task<bool> RegisterUserAsync(UserDto userDto, DeviceInfo deviceInfo, string ipAddress);
         Task<ConfirmTokenResult> ConfirmEmailAsync(string token);
-        Task<LoginResponse?> LoginUserAsync(LoginDto loginDto, DeviceInfo deviceInfo, string ipAddress);
+        Task<LoginResponse> LoginUserAsync(LoginDto loginDto, DeviceInfo deviceInfo, string ipAddress);
+        Task<LoginResponse> ConfirmEmailCodeAsync(string code, string sessionKey);
         Task<bool> SendRecoverPasswordLinkAsync(string email);
         Task<RecoverPasswordResult> RecoverPassword(string token, string password);
     }

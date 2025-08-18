@@ -224,7 +224,7 @@ namespace MatHelper.BLL.Services
             }
         }
 
-        public async Task<LoginResponse?> LoginUserAsync(LoginDto loginDto, DeviceInfo deviceInfo, string ipAddress)
+        public async Task<LoginResponse> LoginUserAsync(LoginDto loginDto, DeviceInfo deviceInfo, string ipAddress)
         {
             var user = await _userRepository.GetUserByEmailAsync(loginDto.Email);
             if (user == null) throw new InvalidOperationException("User not found.");
@@ -272,8 +272,15 @@ namespace MatHelper.BLL.Services
                     }
                 }
 
-                var lastToken = user.LoginTokens?.OrderByDescending(t => t.Expiration).FirstOrDefault();
-                if (lastToken == null || lastToken.IpAddress != ipAddress)
+                var lastTokenForIp = user.LoginTokens?
+                    .Where(t => t.IpAddress == ipAddress)
+                    .OrderByDescending(t => t.Expiration)
+                    .FirstOrDefault();
+
+                bool isUnfamiliarLocation = lastTokenForIp == null
+                    || (DateTime.UtcNow - lastTokenForIp.Expiration).TotalDays > 14;
+
+                if (isUnfamiliarLocation)
                 {
                     int codeInt;
                     using (var rng = RandomNumberGenerator.Create())
@@ -286,10 +293,17 @@ namespace MatHelper.BLL.Services
 
                     var code = codeInt.ToString();
 
+                    var sessionKey = Convert.ToBase64String(RandomNumberGenerator.GetBytes(16));
+
                     var emailCode = new EmailLoginCode
                     {
                         UserId = user.Id,
                         Code = code,
+                        SessionKey = sessionKey,
+                        IpAddress = ipAddress,
+                        UserAgent = deviceInfo.UserAgent,
+                        Platform = deviceInfo.Platform,
+                        Remember = loginDto.Remember,
                         Expiration = DateTime.UtcNow.AddMinutes(15),
                         IsUsed = false
                     };
@@ -298,7 +312,13 @@ namespace MatHelper.BLL.Services
 
                     await _mailService.SendIpConfirmationCodeEmailAsync(user.Email, code);
 
-                    return null;
+                    await _authLogRepository.LogAuthAsync(user.Id.ToString(), ipAddress, deviceInfo.UserAgent, "Sent confirmation code");
+
+                    return new LoginResponse
+                    {
+                        Message = "Check your email for the code",
+                        SessionKey = sessionKey
+                    };
                 }
 
                 var refreshTokenExpiration = loginDto.Remember == true ? DateTime.UtcNow.AddDays(28) : DateTime.UtcNow.AddHours(6);
@@ -358,6 +378,56 @@ namespace MatHelper.BLL.Services
                 );
                 throw new Exception("Unknown error occurred during request", ex);
             }
+        }
+
+        public async Task<LoginResponse> ConfirmEmailCodeAsync(string code, string sessionKey)
+        {
+            var emailCode = await _emailLoginCodeRepository.GetBySessionKeyAsync(sessionKey);
+            if (emailCode == null) throw new UnauthorizedAccessException("Invalid or expired session key.");
+
+            if (emailCode.Code != code) throw new UnauthorizedAccessException("Invalid confirmation code.");
+
+            var user = await _userRepository.GetUserByIdAsync(emailCode.UserId);
+            if (user == null) throw new UnauthorizedAccessException("User not found.");
+            if (user.IsBlocked) throw new UnauthorizedAccessException("User is banned.");
+
+            emailCode.IsUsed = true;
+            await _emailLoginCodeRepository.SaveChangesAsync();
+
+            var deviceInfo = new DeviceInfo
+            {
+                UserAgent = emailCode.UserAgent,
+                Platform = emailCode.Platform
+            };
+            var ipAddress = emailCode.IpAddress;
+
+            var accessToken = _tokenGeneratorService.GenerateJwtToken(user, deviceInfo);
+            var refreshToken = _tokenGeneratorService.GenerateRefreshToken();
+
+            var refreshTokenExpiration = emailCode.Remember == true ? DateTime.UtcNow.AddDays(28) : DateTime.UtcNow.AddHours(6);
+
+            var loginToken = new LoginToken
+            {
+                Token = accessToken,
+                RefreshToken = refreshToken,
+                Expiration = DateTime.UtcNow.AddMinutes(30),
+                RefreshTokenExpiration = refreshTokenExpiration,
+                UserId = user.Id,
+                DeviceInfo = deviceInfo,
+                IpAddress = ipAddress,
+                IsActive = true
+            };
+
+            user.LoginTokens!.Add(loginToken);
+            await _userRepository.SaveChangesAsync();
+
+            await _authLogRepository.LogAuthAsync(user.Id.ToString(), ipAddress, deviceInfo.UserAgent, "Success via email confirmation");
+
+            return new LoginResponse
+            {
+                AccessToken = accessToken,
+                RefreshToken = refreshToken
+            };
         }
 
         public async Task<bool> SendRecoverPasswordLinkAsync(string email)

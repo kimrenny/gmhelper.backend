@@ -26,6 +26,13 @@ namespace MatHelper.DAL.Repositories
                 .FirstOrDefaultAsync();
         }
 
+        public async Task<EmailLoginCode?> GetBySessionKeyAsync(string sessionKey)
+        {
+            return await _context.EmailLoginCodes
+                .Where(c => c.SessionKey == sessionKey && !c.IsUsed && c.Expiration > DateTime.UtcNow)
+                .FirstOrDefaultAsync();
+        }
+
         public async Task SaveChangesAsync()
         {
             await _context.SaveChangesAsync();
