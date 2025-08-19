@@ -69,7 +69,6 @@ namespace MatHelper.BLL.Services
             };
 
             await _taskRequestRepository.AddRequestAsync(log);
-            await _taskRequestRepository.SaveChangesAsync();
 
             _logger.LogInformation("Task log saved. TaskId: {TaskId}, IP: {Ip}, UserId: {UserId}", taskId, ip, userId ?? "Anonymous");
 

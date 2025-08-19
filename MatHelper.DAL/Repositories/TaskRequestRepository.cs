@@ -34,6 +34,7 @@ namespace MatHelper.DAL.Repositories
         public async Task AddRequestAsync(TaskRequestLog request)
         {
             await _context.TaskRequestLogs.AddAsync(request);
+            await _context.SaveChangesAsync();
         }
 
         public async Task SaveChangesAsync()

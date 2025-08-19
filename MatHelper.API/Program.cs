@@ -103,6 +103,7 @@ builder.Services.AddScoped<IMailService, MailService>();
 builder.Services.AddScoped<IGeoTaskProcessingService, GeoTaskProcessingService>();
 builder.Services.AddScoped<IMathTaskProcessingService, MathTaskProcessingService>();
 builder.Services.AddScoped<IClientInfoService, ClientInfoService>();
+builder.Services.AddScoped<ITwoFactorService, TwoFactorService>();
 builder.Services.AddScoped<IUserMapper, UserMapper>();
 builder.Services.AddScoped<ErrorLogRepository>();
 builder.Services.AddScoped<UserRepository>();
@@ -116,6 +117,8 @@ builder.Services.AddScoped<AdminSettingsRepository>();
 builder.Services.AddScoped<CaptchaValidationService>();
 builder.Services.AddScoped<TaskRequestRepository>();
 builder.Services.AddScoped<TaskRatingRepository>();
+builder.Services.AddScoped<TwoFactorRepository>();
+builder.Services.AddScoped<AppTwoFactorSessionRepository>();
 
 builder.Services.AddAuthentication(options =>
 {

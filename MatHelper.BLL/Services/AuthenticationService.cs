@@ -12,13 +12,16 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Threading.Tasks;
 using System.Diagnostics;
+using Microsoft.AspNetCore.Mvc;
 
 namespace MatHelper.BLL.Services
 {
     public class AuthenticationService: IAuthenticationService
     {
         private readonly UserRepository _userRepository;
+        private readonly AppTwoFactorSessionRepository _twoFactorSessionRepository;
         private readonly ITokenGeneratorService _tokenGeneratorService;
+        private readonly ITwoFactorService _twoFactorService;
         private readonly EmailConfirmationRepository _emailConfirmationRepository;
         private readonly EmailLoginCodeRepository _emailLoginCodeRepository;
         private readonly PasswordRecoveryRepository _passwordRecoveryRepository;
@@ -29,10 +32,12 @@ namespace MatHelper.BLL.Services
         private readonly ITokenService _tokenService;
         private readonly ILogger _logger;
 
-        public AuthenticationService(UserRepository userRepository, ITokenGeneratorService tokenGeneratorService, EmailConfirmationRepository emailConfirmationRepository, EmailLoginCodeRepository emailLoginCodeRepository, PasswordRecoveryRepository passwordRecoveryRepository, AuthLogRepository authLogRepository, IMailService mailService, JwtOptions jwtOptions, ISecurityService securityService, ITokenService tokenService, ILogger<AuthenticationService> logger)
+        public AuthenticationService(UserRepository userRepository, AppTwoFactorSessionRepository appTwoFactorSessionRepository, ITokenGeneratorService tokenGeneratorService, ITwoFactorService twoFactorService, EmailConfirmationRepository emailConfirmationRepository, EmailLoginCodeRepository emailLoginCodeRepository, PasswordRecoveryRepository passwordRecoveryRepository, AuthLogRepository authLogRepository, IMailService mailService, JwtOptions jwtOptions, ISecurityService securityService, ITokenService tokenService, ILogger<AuthenticationService> logger)
         {
             _userRepository = userRepository;
+            _twoFactorSessionRepository = appTwoFactorSessionRepository;
             _tokenGeneratorService = tokenGeneratorService;
+            _twoFactorService = twoFactorService;
             _emailConfirmationRepository = emailConfirmationRepository;
             _emailLoginCodeRepository = emailLoginCodeRepository;
             _passwordRecoveryRepository = passwordRecoveryRepository;
@@ -272,6 +277,31 @@ namespace MatHelper.BLL.Services
                     }
                 }
 
+                var activeTwoFactor = await _twoFactorService.GetTwoFactorAsync(user.Id, "totp");
+                if (activeTwoFactor != null && activeTwoFactor.IsEnabled && activeTwoFactor.AlwaysAsk) 
+                {
+                    var sessionKey = Convert.ToBase64String(RandomNumberGenerator.GetBytes(16));
+                    var appTwoFactorSession = new AppTwoFactorSession
+                    {
+                        UserId = user.Id,
+                        SessionKey = sessionKey,
+                        Expiration = DateTime.UtcNow.AddMinutes(10),
+                        IpAddress = ipAddress,
+                        UserAgent = deviceInfo.UserAgent,
+                        Platform = deviceInfo.Platform,
+                        Remember = loginDto.Remember,
+                        IsUsed = false
+                    };
+
+                    await _twoFactorSessionRepository.AddSessionAsync(appTwoFactorSession);
+
+                    return new LoginResponse
+                    {
+                        Message = "Enter the 2FA code from your app",
+                        SessionKey = sessionKey
+                    };
+                }
+
                 var lastTokenForIp = user.LoginTokens?
                     .Where(t => t.IpAddress == ipAddress)
                     .OrderByDescending(t => t.Expiration)
@@ -404,7 +434,7 @@ namespace MatHelper.BLL.Services
             var accessToken = _tokenGeneratorService.GenerateJwtToken(user, deviceInfo);
             var refreshToken = _tokenGeneratorService.GenerateRefreshToken();
 
-            var refreshTokenExpiration = emailCode.Remember == true ? DateTime.UtcNow.AddDays(28) : DateTime.UtcNow.AddHours(6);
+            var refreshTokenExpiration = emailCode.Remember ? DateTime.UtcNow.AddDays(28) : DateTime.UtcNow.AddHours(6);
 
             var loginToken = new LoginToken
             {
@@ -427,6 +457,66 @@ namespace MatHelper.BLL.Services
             {
                 AccessToken = accessToken,
                 RefreshToken = refreshToken
+            };
+        }
+
+        public async Task<LoginResponse> ConfirmTwoFactorCodeAsync(string code, string sessionKey)
+        {
+            var sessions = await _twoFactorSessionRepository.GetAllSessionKeysAsync();
+            foreach(var s in sessions)
+            {
+                _logger.LogInformation($"{s} - {sessionKey}");
+            }
+            
+            var session = await _twoFactorSessionRepository.GetBySessionKeyAsync(sessionKey);
+            if (session == null) throw new UnauthorizedAccessException("Invalid or expired session key.");
+
+            var user = await _userRepository.GetUserByIdAsync(session.UserId);
+            if (user == null) throw new UnauthorizedAccessException("User not found.");
+            if (user.IsBlocked) throw new UnauthorizedAccessException("User is banned.");
+
+            var twoFactor = await _twoFactorService.GetTwoFactorAsync(user.Id, "totp");
+            if (twoFactor == null || !twoFactor.IsEnabled) throw new UnauthorizedAccessException("Two-factor authentication is not enabled.");
+
+            if (twoFactor.Secret == null) throw new UnauthorizedAccessException("Invalid key");
+            var isValid = _twoFactorService.VerifyTotp(twoFactor.Secret, code);
+            if (!isValid) throw new UnauthorizedAccessException("Invalid 2FA code.");
+
+            session.IsUsed = true;
+            await _twoFactorSessionRepository.SaveChangesAsync();
+
+            var deviceInfo = new DeviceInfo
+            {
+                UserAgent = session.UserAgent,
+                Platform = session.Platform
+            };
+            var ipAddress = session.IpAddress;
+
+            var accessToken = _tokenGeneratorService.GenerateJwtToken(user, deviceInfo);
+            var refreshToken = _tokenGeneratorService.GenerateRefreshToken();
+
+            var refreshTokenExpiration = session.Remember ? DateTime.UtcNow.AddDays(28) : DateTime.UtcNow.AddHours(6);
+            var loginToken = new LoginToken
+            {
+                Token = accessToken,
+                RefreshToken = refreshToken,
+                Expiration = DateTime.UtcNow.AddMinutes(30),
+                RefreshTokenExpiration = refreshTokenExpiration,
+                UserId = user.Id,
+                DeviceInfo = deviceInfo,
+                IpAddress = ipAddress,
+                IsActive = true
+            };
+
+            user.LoginTokens!.Add(loginToken);
+            await _userRepository.SaveChangesAsync();
+
+            await _authLogRepository.LogAuthAsync(user.Id.ToString(), ipAddress, deviceInfo.UserAgent, "Success via 2FA");
+
+            return new LoginResponse
+            {
+                AccessToken = accessToken,
+                RefreshToken = refreshToken,
             };
         }
 

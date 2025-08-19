@@ -79,7 +79,6 @@ namespace MatHelper.BLL.Services
             };
 
             await _taskRequestRepository.AddRequestAsync(log);
-            await _taskRequestRepository.SaveChangesAsync();
 
             _logger.LogInformation("Task log saved. TaskId: {TaskId}, IP: {Ip}, UserId: {UserId}", taskId, ip, userId ?? "Anonymous");
 
@@ -145,7 +144,15 @@ namespace MatHelper.BLL.Services
                     _ => typePrefix
                 };
 
-                result.Add($"{figureName} – {figureType}");
+                if (!String.IsNullOrWhiteSpace(figureName))
+                {
+                    result.Add($"{figureName} – {figureType}");
+                }
+                else
+                {
+                    result.Add(char.ToUpper(figureType[0]) + figureType.Substring(1));
+
+                }
 
                 if (figure.TryGetProperty("lines", out var lines) && lines.ValueKind == JsonValueKind.Object)
                 {
@@ -154,7 +161,7 @@ namespace MatHelper.BLL.Services
                         .GroupBy(l => l.Value.GetDouble())
                         .OrderByDescending(g => g.Count());
 
-                    foreach(var group in groupedLines)
+                    foreach (var group in groupedLines)
                     {
                         var names = string.Join(" = ", group.Select(g => g.Name));
                         var value = group.Key;

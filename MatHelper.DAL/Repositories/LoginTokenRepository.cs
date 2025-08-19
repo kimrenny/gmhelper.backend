@@ -114,6 +114,20 @@ namespace MatHelper.DAL.Repositories
                 .ToListAsync();
         }
 
+        public async Task<Guid?> GetUserIdByAuthTokenAsync(string authToken)
+        {
+            if (string.IsNullOrWhiteSpace(authToken))
+            {
+                throw new InvalidDataException("Token is null or empty");
+            }
+
+            var token = await _context.LoginTokens
+                .Include(t => t.User)
+                .FirstOrDefaultAsync(t => t.Token == authToken && t.IsActive);
+
+            return token?.User?.Id;
+        }
+
         public async Task SaveChangesAsync()
         {
             await _context.SaveChangesAsync();

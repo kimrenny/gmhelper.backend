@@ -219,6 +219,26 @@ namespace MatHelper.API.Controllers
             }
         }
 
+        [HttpPost("confirm-2fa-code")]
+        public async Task<IActionResult> ConfirmTwoFactorCode([FromBody] ConfirmCodeDto dto)
+        {
+            try
+            {
+                var result = await _authenticationService.ConfirmTwoFactorCodeAsync(dto.Code, dto.SessionKey);
+                return Ok(ApiResponse<LoginResponse>.Ok(result));
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                _logger.LogWarning("2FA code confirmation failed: {Message}", ex.Message);
+                return Unauthorized(ApiResponse<string>.Fail(ex.Message));
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Unexpected error during 2FA code confirmation");
+                return StatusCode(500, ApiResponse<string>.Fail("An unexpected error occured."));
+            }
+        }
+
         [HttpPatch("password")]
         public async Task<IActionResult> RecoverPassword([FromBody] PasswordRecoveryDto recoveryDto)
         {
