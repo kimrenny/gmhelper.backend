@@ -17,13 +17,15 @@ namespace MatHelper.BLL.Services
     public class UserManagementService : IUserManagementService
     {
         private readonly UserRepository _userRepository;
+        private readonly ITwoFactorService _twoFactorService;
         private readonly JwtOptions _jwtOptions;
         private readonly ISecurityService _securityService;
         private readonly ILogger _logger;
 
-        public UserManagementService(UserRepository userRepository, JwtOptions jwtOptions, ISecurityService securityService, ILogger<UserManagementService> logger)
+        public UserManagementService(UserRepository userRepository, ITwoFactorService twoFactorService, JwtOptions jwtOptions, ISecurityService securityService, ILogger<UserManagementService> logger)
         {
             _userRepository = userRepository;
+            _twoFactorService = twoFactorService;
             _jwtOptions = jwtOptions;
             _securityService = securityService;
             _logger = logger;
@@ -33,12 +35,14 @@ namespace MatHelper.BLL.Services
         {
             var user = await _userRepository.GetUserByIdAsync(userId);
             if (user == null) throw new InvalidDataException("User not found.");
+            var twoFactor = await _twoFactorService.GetTwoFactorAsync(user.Id, "totp");
 
             return new UserDetails
             {
                 Avatar = user.Avatar != null ? user.Avatar : null,
                 Nickname = user.Username,
-                Language = user.Language.ToString()
+                Language = user.Language.ToString(),
+                TwoFactorEnabled = twoFactor != null ? twoFactor.IsEnabled : false
             };
         }
 

@@ -27,7 +27,7 @@ namespace MatHelper.API.Controllers
 
         [HttpPost("2fa/generate")]
         [Authorize]
-        public async Task<IActionResult> GenerateTwoFactorKey([FromBody] string type)
+        public async Task<IActionResult> GenerateTwoFactorKey([FromBody] TwoFactorType type)
         {
             var authorizationHeader = Request.Headers["Authorization"].ToString();
             if (string.IsNullOrEmpty(authorizationHeader) || !authorizationHeader.StartsWith("Bearer "))
@@ -43,7 +43,7 @@ namespace MatHelper.API.Controllers
                 var user = await _userRepository.GetUserByIdAsync(userId.Value);
                 if (user == null) return Unauthorized(ApiResponse<string>.Fail("User not found"));
 
-                var twoFactor = await _twoFactorService.GenerateTwoFAKeyAsync(userId.Value, type);
+                var twoFactor = await _twoFactorService.GenerateTwoFAKeyAsync(userId.Value, type.Type);
                 if (twoFactor == null || twoFactor.Secret == null) return BadRequest(ApiResponse<string>.Fail(""));
 
                 var qrCode = _twoFactorService.GenerateQrCode(twoFactor.Secret, user.Email);
