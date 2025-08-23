@@ -5,6 +5,6 @@ namespace MatHelper.CORE.Models
         public byte[]? Avatar { get; set; }
         public required string Nickname { get; set; }
         public required string Language { get; set; } = "EN";
-        public required Boolean TwoFactorEnabled { get; set; }
+        public required Boolean TwoFactor { get; set; }
     }
 }
