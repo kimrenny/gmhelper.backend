@@ -42,7 +42,8 @@ namespace MatHelper.BLL.Services
                 Avatar = user.Avatar != null ? user.Avatar : null,
                 Nickname = user.Username,
                 Language = user.Language.ToString(),
-                TwoFactor = twoFactor != null ? twoFactor.IsEnabled : false
+                TwoFactor = twoFactor != null ? twoFactor.IsEnabled : false,
+                AlwaysAsk = twoFactor != null ? twoFactor.AlwaysAsk : false
             };
         }
 

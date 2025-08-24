@@ -25,6 +25,21 @@ namespace MatHelper.DAL.Repositories
                                  .FirstOrDefaultAsync(u => u.UserId == userId && u.Type == type);
         }
 
+        public async Task UpdateTwoFactorModeAsync(Guid userId, string type, bool alwaysAsk)
+        {
+            var twoFactor = await GetTwoFactorAsync(userId, type);
+
+            if (twoFactor == null) throw new InvalidOperationException("Two-factor authentication not found for this user.");
+
+            if (!twoFactor.IsEnabled)
+                throw new InvalidOperationException("Two-factor authentication is not enabled.");
+
+            twoFactor.AlwaysAsk = alwaysAsk;
+            twoFactor.UpdatedAt = DateTime.UtcNow;
+
+            await SaveChangesAsync();
+        }
+
         public void Remove(UserTwoFactor twoFactor)
         {
             _context.UserTwoFactors.Remove(twoFactor);

@@ -461,13 +461,7 @@ namespace MatHelper.BLL.Services
         }
 
         public async Task<LoginResponse> ConfirmTwoFactorCodeAsync(string code, string sessionKey)
-        {
-            var sessions = await _twoFactorSessionRepository.GetAllSessionKeysAsync();
-            foreach(var s in sessions)
-            {
-                _logger.LogInformation($"{s} - {sessionKey}");
-            }
-            
+        {   
             var session = await _twoFactorSessionRepository.GetBySessionKeyAsync(sessionKey);
             if (session == null) throw new UnauthorizedAccessException("Invalid or expired session key.");
 

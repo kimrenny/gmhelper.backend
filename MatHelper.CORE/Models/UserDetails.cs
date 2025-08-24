@@ -6,5 +6,6 @@ namespace MatHelper.CORE.Models
         public required string Nickname { get; set; }
         public required string Language { get; set; } = "EN";
         public required Boolean TwoFactor { get; set; }
+        public required Boolean AlwaysAsk { get; set; }
     }
 }

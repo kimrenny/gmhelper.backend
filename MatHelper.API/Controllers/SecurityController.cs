@@ -100,6 +100,42 @@ namespace MatHelper.API.Controllers
             }
         }
 
+        [HttpPost("2fa/change-mode")]
+        [Authorize]
+        public async Task<IActionResult> ChangeTwoFactorMode([FromBody] TwoFactorModeRequest request)
+        {
+            var authorizationHeader = Request.Headers["Authorization"].ToString();
+            if (string.IsNullOrEmpty(authorizationHeader) || !authorizationHeader.StartsWith("Bearer "))
+                return Unauthorized(ApiResponse<string>.Fail("Authorization header is missing or invalid"));
+
+            var token = authorizationHeader.Substring("Bearer ".Length).Trim();
+
+            try
+            {
+                var userId = await _loginTokenRepository.GetUserIdByAuthTokenAsync(token);
+                if (userId == null) return Unauthorized(ApiResponse<string>.Fail("User not found"));
+
+                var twoFactor = await _twoFactorService.GetTwoFactorAsync(userId.Value, request.Type);
+                if (twoFactor == null || !twoFactor.IsEnabled) return BadRequest(ApiResponse<string>.Fail("Two-factor authentication is not enabled"));
+
+                var isValid = _twoFactorService.VerifyTotp(twoFactor.Secret!, request.Code);
+                if (!isValid) return BadRequest(ApiResponse<string>.Fail("Invalid 2FA code"));
+
+                await _twoFactorService.ChangeTwoFactorModeAsync(userId.Value, request.Type, request.AlwaysAsk);
+
+                return Ok(ApiResponse<string>.Ok("Two-factor authentication mode updated successfully"));
+;           }
+            catch(InvalidOperationException ex)
+            {
+                return BadRequest(ApiResponse<string>.Fail(ex.Message));
+            }
+            catch(Exception ex)
+            {
+                _logger.LogError(ex, "Error while changing 2FA mode for user");
+                return StatusCode(500, ApiResponse<string>.Fail("An unexpected error occurred"));
+            }
+        }
+
         [HttpPost("2fa/remove")]
         [Authorize]
         public async Task<IActionResult> RemoveTwoFactor([FromBody] TwoFactorRequest request)

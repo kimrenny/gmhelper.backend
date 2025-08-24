@@ -84,6 +84,11 @@ namespace MatHelper.BLL.Services
             return isValid;
         }
 
+        public async Task ChangeTwoFactorModeAsync(Guid userId, string type, bool alwaysAsk)
+        {
+            await _twoFactorRepository.UpdateTwoFactorModeAsync(userId, type, alwaysAsk);
+        }
+
         public string GenerateQrCode(string secret, string userEmail)
         {
             string issuer = "MatHelper";
