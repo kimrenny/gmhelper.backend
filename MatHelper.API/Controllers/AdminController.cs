@@ -1,13 +1,8 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using MatHelper.BLL.Interfaces;
-using MatHelper.BLL.Services;
 using MatHelper.CORE.Models;
-using System.Threading.Tasks;
 using System.Security.Claims;
-using Microsoft.OpenApi.Validations;
 using Microsoft.AspNetCore.Authorization;
-using System.Collections.Concurrent;
-using MatHelper.DAL.Repositories;
 using TokenValidationResult = MatHelper.CORE.Enums.TokenValidationResult;
 using MatHelper.API.Common;
 
@@ -21,17 +16,14 @@ namespace MatHelper.API.Controllers
         private readonly IAdminService _adminService;
         private readonly IAdminSettingsService _adminSettingsService;
         private readonly ITokenService _tokenService;
-        private readonly ISecurityService _securityService;
         private readonly ILogger<UserController> _logger;
-        private static readonly ConcurrentDictionary<string, bool> ProcessingTokens = new();
         private readonly IRequestLogService _logService;
 
-        public AdminController(IAdminService adminService, IAdminSettingsService AdminSettingsService, ITokenService tokenService, ISecurityService securityService, ILogger<UserController> logger, IRequestLogService logService)
+        public AdminController(IAdminService adminService, IAdminSettingsService AdminSettingsService, ITokenService tokenService, ILogger<UserController> logger, IRequestLogService logService)
         {
             _adminService = adminService;
             _adminSettingsService = AdminSettingsService;
             _tokenService = tokenService;
-            _securityService = securityService;
             _logger = logger;
             _logService = logService;
         }

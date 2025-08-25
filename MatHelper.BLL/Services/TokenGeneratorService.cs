@@ -1,28 +1,21 @@
-using Azure.Core;
 using MatHelper.BLL.Interfaces;
 using MatHelper.CORE.Models;
 using MatHelper.CORE.Options;
-using MatHelper.DAL.Repositories;
 using Microsoft.Extensions.Logging;
 using Microsoft.IdentityModel.Tokens;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Security.Cryptography;
-using Microsoft.AspNetCore.Http;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace MatHelper.BLL.Services
 {
     public class TokenGeneratorService : ITokenGeneratorService
     {
-        private readonly ISecurityService _securityService;
         private readonly JwtOptions _jwtOptions;
         private readonly ILogger _logger;
 
-        public TokenGeneratorService(ISecurityService secutiryService, JwtOptions jwtOptions, ILogger<TokenService> logger)
+        public TokenGeneratorService(JwtOptions jwtOptions, ILogger<TokenService> logger)
         {
-            _securityService = secutiryService;
             _jwtOptions = jwtOptions;
             _logger = logger;
         }

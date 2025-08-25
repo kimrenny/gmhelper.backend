@@ -2,6 +2,7 @@
 using Microsoft.EntityFrameworkCore;
 using MatHelper.DAL.Models;
 using MatHelper.CORE.Models;
+using Npgsql;
 
 namespace MatHelper.DAL.Repositories
 {
@@ -43,39 +44,74 @@ namespace MatHelper.DAL.Repositories
         private async Task LogAdminRequestAsync()
         {
             var today = DateOnly.FromDateTime(DateTime.UtcNow);
-            var log = await _context.AdminRequests.FirstOrDefaultAsync(x => x.Date == today);
 
-            if (log == null)
+            try
             {
-                log = new AdminRequestLog { Date = today, Count = 1 };
-                await _context.AdminRequests.AddAsync(log);
-            }
-            else
-            {
-                log.Count++;
-                _context.AdminRequests.Update(log);
-            }
+                var log = await _context.AdminRequests.FirstOrDefaultAsync(x => x.Date == today);
 
-            await _context.SaveChangesAsync();
+                if (log == null)
+                {
+                    log = new AdminRequestLog { Date = today, Count = 1 };
+                    await _context.AdminRequests.AddAsync(log);
+                }
+                else
+                {
+                    log.Count++;
+                    _context.AdminRequests.Update(log);
+                }
+
+                await _context.SaveChangesAsync();
+            }
+            catch(DbUpdateException ex)
+            {
+                if(ex.InnerException is PostgresException pg && pg.SqlState == PostgresErrorCodes.UniqueViolation)
+                {
+                    var log = await _context.AdminRequests.FirstAsync(x => x.Date == today);
+                    log.Count++;
+                    _context.AdminRequests.Update(log);
+                    await _context.SaveChangesAsync();
+                }
+                else
+                {
+                    throw;
+                }
+            }
         }
 
         private async Task LogRegularRequestAsync()
         {
             var today = DateOnly.FromDateTime(DateTime.UtcNow);
-            var log = await _context.RequestLogs.FirstOrDefaultAsync(x => x.Date == today);
-
-            if (log == null)
+            try
             {
-                log = new RequestLog { Date = today, Count = 1 };
-                await _context.RequestLogs.AddAsync(log);
-            }
-            else
-            {
-                log.Count++;
-                _context.RequestLogs.Update(log);
-            }
+                var log = await _context.RequestLogs.FirstOrDefaultAsync(x => x.Date == today);
 
-            await _context.SaveChangesAsync();
+                if (log == null)
+                {
+                    log = new RequestLog { Date = today, Count = 1 };
+                    await _context.RequestLogs.AddAsync(log);
+                }
+                else
+                {
+                    log.Count++;
+                    _context.RequestLogs.Update(log);
+                }
+
+                await _context.SaveChangesAsync();
+            }
+            catch (DbUpdateException ex)
+            {
+                if (ex.InnerException is PostgresException pg && pg.SqlState == PostgresErrorCodes.UniqueViolation)
+                {
+                    var log = await _context.RequestLogs.FirstAsync(x => x.Date == today);
+                    log.Count++;
+                    _context.RequestLogs.Update(log);
+                    await _context.SaveChangesAsync();
+                }
+                else
+                {
+                    throw;
+                }
+            }
         }
 
         private async Task LogRequestDetailsAsync(string method, string path, string userId, string requestBody, int statusCode, string startTime, string endTime, double elapsedTime, string ipAddress, string userAgent, string status, string requestType)

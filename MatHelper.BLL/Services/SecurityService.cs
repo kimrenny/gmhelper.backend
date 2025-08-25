@@ -1,15 +1,9 @@
 using MatHelper.BLL.Interfaces;
-using MatHelper.CORE.Models;
-using MatHelper.CORE.Options;
 using MatHelper.DAL.Repositories;
 using Microsoft.Extensions.Logging;
-using Microsoft.IdentityModel.Tokens;
 using Newtonsoft.Json.Linq;
-using System.IdentityModel.Tokens.Jwt;
-using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Text;
-using System.Threading.Tasks;
 
 namespace MatHelper.BLL.Services
 {
@@ -17,14 +11,12 @@ namespace MatHelper.BLL.Services
     {
         private readonly UserRepository _userRepository;
         private readonly LoginTokenRepository _loginTokenRepository;
-        private readonly JwtOptions _jwtOptions;
         private readonly ILogger _logger;
 
-        public SecurityService(UserRepository userRepository, LoginTokenRepository loginTokenRepository, JwtOptions jwtOptions, ILogger<SecurityService> logger)
+        public SecurityService(UserRepository userRepository, LoginTokenRepository loginTokenRepository, ILogger<SecurityService> logger)
         {
             _userRepository = userRepository;
             _loginTokenRepository = loginTokenRepository;
-            _jwtOptions = jwtOptions;
             _logger = logger;
         }
 

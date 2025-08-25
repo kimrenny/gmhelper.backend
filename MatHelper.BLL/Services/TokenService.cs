@@ -1,16 +1,9 @@
-using Azure.Core;
 using MatHelper.BLL.Interfaces;
-using MatHelper.CORE.Models;
 using MatHelper.CORE.Options;
 using MatHelper.DAL.Repositories;
 using Microsoft.Extensions.Logging;
-using Microsoft.IdentityModel.Tokens;
-using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
-using System.Security.Cryptography;
 using Microsoft.AspNetCore.Http;
-using System.Text;
-using System.Threading.Tasks;
 using TokenValidationResult = MatHelper.CORE.Enums.TokenValidationResult;
 
 namespace MatHelper.BLL.Services
@@ -21,16 +14,14 @@ namespace MatHelper.BLL.Services
         private readonly ITokenGeneratorService _tokenGeneratorService;
         private readonly UserRepository _userRepository;
         private readonly LoginTokenRepository _loginTokenRepository;
-        private readonly JwtOptions _jwtOptions;
         private readonly ILogger _logger;
 
-        public TokenService(ISecurityService secutiryService, ITokenGeneratorService tokenGeneratorService, UserRepository userRepository, LoginTokenRepository loginTokenRepository, JwtOptions jwtOptions, ILogger<TokenService> logger)
+        public TokenService(ISecurityService secutiryService, ITokenGeneratorService tokenGeneratorService, UserRepository userRepository, LoginTokenRepository loginTokenRepository, ILogger<TokenService> logger)
         {
             _securityService = secutiryService;
             _tokenGeneratorService = tokenGeneratorService;
             _userRepository = userRepository;
             _loginTokenRepository = loginTokenRepository;
-            _jwtOptions = jwtOptions;
             _logger = logger;
         }
 
@@ -91,7 +82,7 @@ namespace MatHelper.BLL.Services
                 return TokenValidationResult.InactiveToken;
             }
 
-            var userId = GetUserIdFromTokenAsync(user);
+            var userId = await GetUserIdFromTokenAsync(token);
             if (userId == null)
             {
                 _logger.LogWarning("Invalid UserId.");
@@ -118,15 +109,9 @@ namespace MatHelper.BLL.Services
             return authorizationHeader.Substring("Bearer ".Length).Trim();
         }
 
-        public Guid? GetUserIdFromTokenAsync(ClaimsPrincipal user)
+        public async Task<Guid?> GetUserIdFromTokenAsync(string authToken)
         {
-            var userIdClaim = user.FindFirst(ClaimTypes.Name);
-            if(userIdClaim == null || !Guid.TryParse(userIdClaim.Value, out var userId))
-            {
-                _logger.LogWarning("User ID is not available in the token.");
-                return null;
-            }
-            return userId;
+            return await _loginTokenRepository.GetUserIdByAuthTokenAsync(authToken);
         }
 
         public async Task<bool> HasAdminPermissionsAsync(Guid userId)

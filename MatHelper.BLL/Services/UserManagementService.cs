@@ -3,13 +3,6 @@ using MatHelper.CORE.Models;
 using MatHelper.CORE.Options;
 using MatHelper.DAL.Repositories;
 using Microsoft.Extensions.Logging;
-using Microsoft.IdentityModel.Tokens;
-using Microsoft.AspNetCore.Mvc;
-using System.IdentityModel.Tokens.Jwt;
-using System.Security.Claims;
-using System.Security.Cryptography;
-using System.Text;
-using System.Threading.Tasks;
 using MatHelper.CORE.Enums;
 
 namespace MatHelper.BLL.Services
@@ -18,15 +11,13 @@ namespace MatHelper.BLL.Services
     {
         private readonly UserRepository _userRepository;
         private readonly ITwoFactorService _twoFactorService;
-        private readonly JwtOptions _jwtOptions;
         private readonly ISecurityService _securityService;
         private readonly ILogger _logger;
 
-        public UserManagementService(UserRepository userRepository, ITwoFactorService twoFactorService, JwtOptions jwtOptions, ISecurityService securityService, ILogger<UserManagementService> logger)
+        public UserManagementService(UserRepository userRepository, ITwoFactorService twoFactorService, ISecurityService securityService, ILogger<UserManagementService> logger)
         {
             _userRepository = userRepository;
             _twoFactorService = twoFactorService;
-            _jwtOptions = jwtOptions;
             _securityService = securityService;
             _logger = logger;
         }
@@ -58,9 +49,9 @@ namespace MatHelper.BLL.Services
             return user!.Avatar;
         }
 
-        public async Task SaveUserAvatarAsync(string userId, byte[] avatarBytes)
+        public async Task SaveUserAvatarAsync(Guid userId, byte[] avatarBytes)
         {
-            var user = await _userRepository.GetUserByIdAsync(Guid.Parse(userId));
+            var user = await _userRepository.GetUserByIdAsync(userId);
             if (user == null) throw new Exception("User not found.");
 
             user.Avatar = avatarBytes;

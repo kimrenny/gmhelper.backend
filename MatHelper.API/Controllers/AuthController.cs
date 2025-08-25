@@ -2,15 +2,9 @@ using Microsoft.AspNetCore.Mvc;
 using MatHelper.BLL.Interfaces;
 using MatHelper.BLL.Services;
 using MatHelper.CORE.Models;
-using System.Threading.Tasks;
-using System.Security.Claims;
-using Microsoft.OpenApi.Validations;
-using Microsoft.AspNetCore.Authorization;
 using System.Collections.Concurrent;
-using Microsoft.AspNetCore.Http;
 using MatHelper.CORE.Enums;
 using MatHelper.API.Common;
-using System.Diagnostics;
 
 namespace MatHelper.API.Controllers
 {
@@ -20,21 +14,15 @@ namespace MatHelper.API.Controllers
     {
         private readonly IAuthenticationService _authenticationService;
         private readonly ITokenService _tokenService;
-        private readonly IUserManagementService _userManagementService;
-        private readonly IDeviceManagementService _deviceManagementService;
-        private readonly IMailService _mailService;
         private readonly ILogger<UserController> _logger;
         private readonly IProcessRequestService _processRequestService;
         private readonly CaptchaValidationService _captchaValidationService;
         private static readonly ConcurrentDictionary<string, bool> ProcessingTokens = new();
 
-        public AuthController(IAuthenticationService authenticationService, ITokenService tokenService, IUserManagementService userManagementService, IDeviceManagementService deviceManagementService, IMailService mailService, ILogger<UserController> logger, IProcessRequestService processRequestService, CaptchaValidationService captchaValidationService)
+        public AuthController(IAuthenticationService authenticationService, ITokenService tokenService, ILogger<UserController> logger, IProcessRequestService processRequestService, CaptchaValidationService captchaValidationService)
         {
             _authenticationService = authenticationService;
             _tokenService = tokenService;
-            _userManagementService = userManagementService;
-            _deviceManagementService = deviceManagementService;
-            _mailService = mailService;
             _logger = logger;
             _processRequestService = processRequestService;
             _captchaValidationService = captchaValidationService;
@@ -300,7 +288,7 @@ namespace MatHelper.API.Controllers
             {
                 var tokens = await _tokenService.RefreshAccessTokenAsync(request.RefreshToken);
 
-                return Ok(new 
+                return Ok(new LoginResponse
                 { 
                     AccessToken = tokens.AccessToken,
                     RefreshToken = tokens.RefreshToken

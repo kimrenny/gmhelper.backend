@@ -12,8 +12,7 @@ namespace MatHelper.BLL.Interfaces
         Task<bool> IsTokenDisabled(string token);
         Task<TokenValidationResult> ValidateAdminAccessAsync(HttpRequest request, ClaimsPrincipal user);
         string? ExtractTokenAsync(HttpRequest request);
-        Guid? GetUserIdFromTokenAsync(ClaimsPrincipal user);
+        Task<Guid?> GetUserIdFromTokenAsync(string authToken);
         Task<bool> HasAdminPermissionsAsync(Guid userId);
-
     }
 }

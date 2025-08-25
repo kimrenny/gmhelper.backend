@@ -1,6 +1,4 @@
-﻿using MatHelper.CORE.Models;
-
-namespace MatHelper.DAL.Models
+﻿namespace MatHelper.DAL.Models
 {
     public class AppTwoFactorSession
     {

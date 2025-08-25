@@ -1,13 +1,8 @@
 using MatHelper.BLL.Interfaces;
 using MatHelper.DAL.Models;
-using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
-using System.Net;
 using OtpNet;
 using MatHelper.DAL.Repositories;
-using System.Drawing;
-using System.Drawing.Imaging;
-using System.IO;
 
 namespace MatHelper.BLL.Services
 {

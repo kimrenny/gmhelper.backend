@@ -3,7 +3,6 @@ using MatHelper.CORE.Models;
 using MatHelper.DAL.Models;
 using MatHelper.DAL.Repositories;
 using Microsoft.Extensions.Logging;
-using System.Net;
 using System.Text.Json;
 using MatHelper.CORE.Enums;
 
@@ -22,9 +21,9 @@ namespace MatHelper.BLL.Services
             _logger = logger;
         }
 
-        public async Task<(bool Allowed, TimeSpan? RetryAfter)> CanProcessRequestAsync(string ip, string? userId)
+        public async Task<(bool Allowed, TimeSpan? RetryAfter)> CanProcessRequestAsync(string ip, Guid? userId)
         {
-            if (!string.IsNullOrEmpty(userId))
+            if (userId != null)
                 return (true, null);
 
             var latest = await _taskRequestRepository.GetLastRequestByIpAsync(ip, SubjectType.Geometry);
@@ -41,7 +40,7 @@ namespace MatHelper.BLL.Services
             return (false, TimeSpan.FromHours(24) - diff);
         }
 
-        public async Task<string> ProcessTaskAsync(JsonElement taskData, string ip, string? userId)
+        public async Task<string> ProcessTaskAsync(JsonElement taskData, string ip, Guid? userId)
         {
             string taskId = Guid.NewGuid().ToString();
             string folderPath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "Tasks", "Geo");
@@ -75,12 +74,12 @@ namespace MatHelper.BLL.Services
                 Subject = SubjectType.Geometry.ToString(),
                 IpAddress = ip,
                 RequestTime = DateTime.UtcNow,
-                UserId = userId
+                UserId = userId.ToString()
             };
 
             await _taskRequestRepository.AddRequestAsync(log);
 
-            _logger.LogInformation("Task log saved. TaskId: {TaskId}, IP: {Ip}, UserId: {UserId}", taskId, ip, userId ?? "Anonymous");
+            _logger.LogInformation("Task log saved. TaskId: {TaskId}, IP: {Ip}, UserId: {UserId}", taskId, ip, userId.ToString() ?? "Anonymous");
 
             return taskId;
         }
@@ -97,14 +96,14 @@ namespace MatHelper.BLL.Services
             return doc.RootElement.Clone();
         }
 
-        public async Task RateTaskAsync(string taskId, bool isCorrect, string? userId)
+        public async Task RateTaskAsync(string taskId, bool isCorrect, Guid? userId)
         {
             var rating = new TaskRating 
             { 
                 TaskId = taskId,
                 Subject = SubjectType.Geometry.ToString(),
                 IsCorrect = isCorrect, 
-                UserId = userId, 
+                UserId = userId.ToString(), 
                 CreatedAt = DateTime.UtcNow 
             };
 

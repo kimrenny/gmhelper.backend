@@ -1,6 +1,4 @@
-﻿using MatHelper.CORE.Enums;
-
-namespace MatHelper.CORE.Models
+﻿namespace MatHelper.CORE.Models
 {
     public class UpdateLanguageRequest
     {

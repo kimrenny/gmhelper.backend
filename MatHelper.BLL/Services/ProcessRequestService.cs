@@ -1,9 +1,4 @@
-﻿using System;
-using System.Net.Http;
-using System.Threading.Tasks;
-using System.Collections.Generic;
-using Microsoft.Extensions.Logging;
-using System.Text.Json;
+﻿using Microsoft.Extensions.Logging;
 using MatHelper.CORE.Models;
 using Microsoft.AspNetCore.Http;
 using MatHelper.BLL.Interfaces;

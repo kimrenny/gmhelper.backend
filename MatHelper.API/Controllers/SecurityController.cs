@@ -4,7 +4,6 @@ using MatHelper.CORE.Models;
 using MatHelper.DAL.Repositories;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using System.Security.Claims;
 
 namespace MatHelper.API.Controllers
 {
@@ -13,15 +12,15 @@ namespace MatHelper.API.Controllers
     public class SecurityController : ControllerBase
     {
         private readonly ITwoFactorService _twoFactorService;
+        private readonly ITokenService _tokenService;
         private readonly UserRepository _userRepository;
-        private readonly LoginTokenRepository _loginTokenRepository;
         private readonly ILogger<SecurityController> _logger;
 
-        public SecurityController(ITwoFactorService twoFactorService, UserRepository userRepository, LoginTokenRepository loginTokenRepository, ILogger<SecurityController> logger)
+        public SecurityController(ITwoFactorService twoFactorService, ITokenService tokenService, UserRepository userRepository, ILogger<SecurityController> logger)
         {
             _twoFactorService = twoFactorService;
+            _tokenService = tokenService;
             _userRepository = userRepository;
-            _loginTokenRepository = loginTokenRepository;
             _logger = logger;
         }
 
@@ -29,22 +28,23 @@ namespace MatHelper.API.Controllers
         [Authorize]
         public async Task<IActionResult> GenerateTwoFactorKey([FromBody] TwoFactorType type)
         {
-            var authorizationHeader = Request.Headers["Authorization"].ToString();
-            if (string.IsNullOrEmpty(authorizationHeader) || !authorizationHeader.StartsWith("Bearer "))
-                return Unauthorized(new { message = "Authorization header is missing or invalid" });
+            var token = _tokenService.ExtractTokenAsync(Request);
 
-            var token = authorizationHeader.Substring("Bearer ".Length).Trim();
+            if (token == null || await _tokenService.IsTokenDisabled(token))
+            {
+                return Unauthorized(ApiResponse<string>.Fail("User token is not active."));
+            }
 
             try
             {
-                var userId = await _loginTokenRepository.GetUserIdByAuthTokenAsync(token);
+                var userId = await _tokenService.GetUserIdFromTokenAsync(token);
                 if (userId == null) return Unauthorized(ApiResponse<string>.Fail("User not found"));
 
                 var user = await _userRepository.GetUserByIdAsync(userId.Value);
                 if (user == null) return Unauthorized(ApiResponse<string>.Fail("User not found"));
 
                 var twoFactor = await _twoFactorService.GenerateTwoFAKeyAsync(userId.Value, type.Type);
-                if (twoFactor == null || twoFactor.Secret == null) return BadRequest(ApiResponse<string>.Fail(""));
+                if (twoFactor == null || twoFactor.Secret == null) return BadRequest(ApiResponse<string>.Fail("User not found"));
 
                 var qrCode = _twoFactorService.GenerateQrCode(twoFactor.Secret, user.Email);
 
@@ -73,15 +73,16 @@ namespace MatHelper.API.Controllers
         [Authorize]
         public async Task<IActionResult> VerifyTwoFactor([FromBody] TwoFactorRequest request)
         {
-            var authorizationHeader = Request.Headers["Authorization"].ToString();
-            if (string.IsNullOrEmpty(authorizationHeader) || !authorizationHeader.StartsWith("Bearer "))
-                return Unauthorized(ApiResponse<string>.Fail("Authorization header is missing or invalid"));
+            var token = _tokenService.ExtractTokenAsync(Request);
 
-            var token = authorizationHeader.Substring("Bearer ".Length).Trim();
+            if (token == null || await _tokenService.IsTokenDisabled(token))
+            {
+                return Unauthorized(ApiResponse<string>.Fail("User token is not active."));
+            }
 
             try
             {
-                var userId = await _loginTokenRepository.GetUserIdByAuthTokenAsync(token);
+                var userId = await _tokenService.GetUserIdFromTokenAsync(token);
                 if (userId == null) return Unauthorized(ApiResponse<string>.Fail("User not found"));
 
                 var isValid = await _twoFactorService.VerifyTwoFACodeAsync(userId.Value, request.Type, request.Code);
@@ -104,15 +105,16 @@ namespace MatHelper.API.Controllers
         [Authorize]
         public async Task<IActionResult> ChangeTwoFactorMode([FromBody] TwoFactorModeRequest request)
         {
-            var authorizationHeader = Request.Headers["Authorization"].ToString();
-            if (string.IsNullOrEmpty(authorizationHeader) || !authorizationHeader.StartsWith("Bearer "))
-                return Unauthorized(ApiResponse<string>.Fail("Authorization header is missing or invalid"));
+            var token = _tokenService.ExtractTokenAsync(Request);
 
-            var token = authorizationHeader.Substring("Bearer ".Length).Trim();
+            if (token == null || await _tokenService.IsTokenDisabled(token))
+            {
+                return Unauthorized(ApiResponse<string>.Fail("User token is not active."));
+            }
 
             try
             {
-                var userId = await _loginTokenRepository.GetUserIdByAuthTokenAsync(token);
+                var userId = await _tokenService.GetUserIdFromTokenAsync(token);
                 if (userId == null) return Unauthorized(ApiResponse<string>.Fail("User not found"));
 
                 var twoFactor = await _twoFactorService.GetTwoFactorAsync(userId.Value, request.Type);
@@ -140,15 +142,16 @@ namespace MatHelper.API.Controllers
         [Authorize]
         public async Task<IActionResult> RemoveTwoFactor([FromBody] TwoFactorRequest request)
         {
-            var authorizationHeader = Request.Headers["Authorization"].ToString();
-            if (string.IsNullOrEmpty(authorizationHeader) || !authorizationHeader.StartsWith("Bearer "))
-                return Unauthorized(ApiResponse<string>.Fail("Authorization header is missing or invalid"));
+            var token = _tokenService.ExtractTokenAsync(Request);
 
-            var token = authorizationHeader.Substring("Bearer ".Length).Trim();
+            if (token == null || await _tokenService.IsTokenDisabled(token))
+            {
+                return Unauthorized(ApiResponse<string>.Fail("User token is not active."));
+            }
 
             try
             {
-                var userId = await _loginTokenRepository.GetUserIdByAuthTokenAsync(token);
+                var userId = await _tokenService.GetUserIdFromTokenAsync(token);
                 if (userId == null) return Unauthorized(ApiResponse<string>.Fail("User not found"));
 
                 var twoFactor = await _twoFactorService.GetTwoFactorAsync(userId.Value, request.Type);

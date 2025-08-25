@@ -1,13 +1,7 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using MatHelper.BLL.Interfaces;
-using MatHelper.BLL.Services;
 using MatHelper.CORE.Models;
-using System.Threading.Tasks;
-using System.Security.Claims;
-using Microsoft.OpenApi.Validations;
 using Microsoft.AspNetCore.Authorization;
-using System.Collections.Concurrent;
-using MatHelper.DAL.Repositories;
 using TokenValidationResult = MatHelper.CORE.Enums.TokenValidationResult;
 using MatHelper.API.Common;
 using MatHelper.DAL.Models;

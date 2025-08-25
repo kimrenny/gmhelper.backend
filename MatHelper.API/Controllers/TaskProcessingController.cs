@@ -31,78 +31,113 @@ namespace MatHelper.API.Controllers
         [HttpPost("geo/process")]
         public async Task<IActionResult> ProcessGeoTask([FromBody] JsonElement taskData)
         {
-            var ip = _clientInfoService.GetClientIp(HttpContext);
-
-            if (string.IsNullOrEmpty(ip))
+            try
             {
-                _logger.LogWarning("Failed to determine IP address.");
-                return BadRequest(ApiResponse<string>.Fail("Unable to determine IP address."));
+                var ip = _clientInfoService.GetClientIp(HttpContext);
+
+                if (string.IsNullOrEmpty(ip))
+                {
+                    _logger.LogWarning("Failed to determine IP address.");
+                    return BadRequest(ApiResponse<string>.Fail("Unable to determine IP address."));
+                }
+
+                var token = _tokenService.ExtractTokenAsync(Request);
+                Guid? userId = null;
+
+                if(!string.IsNullOrEmpty(token))
+                {
+                    userId = await _tokenService.GetUserIdFromTokenAsync(token);
+
+                    if (userId == null || await _tokenService.IsTokenDisabled(token))
+                    {
+                        _logger.LogInformation("Processing task from IP: {Ip}, UserId: Anonymous", ip);
+                    }
+                    else
+                    {
+                        _logger.LogInformation("Processing task from IP: {Ip}, UserId: {UserId}", ip, userId);
+                    }
+                }
+                else
+                {
+                    _logger.LogInformation("Processing task from IP: {Ip}, UserId: {UserId}", ip, userId);
+                }
+
+                var (allowed, retryAfter) = await _geoTaskProcessingService.CanProcessRequestAsync(ip, userId);
+
+                if (!allowed)
+                {
+                    var minutes = (int)Math.Ceiling(retryAfter?.TotalMinutes ?? 0);
+                    return BadRequest(ApiResponse<string>.Fail($"Try again after {minutes} minutes."));
+                }
+
+                var taskId = await _geoTaskProcessingService.ProcessTaskAsync(taskData, ip, userId);
+
+                _logger.LogInformation("Task processed successfully. TaskId: {TaskId}", taskId);
+
+                return Ok(ApiResponse<string>.Ok(taskId));
             }
-
-            var token = Request.Headers["Authorization"].ToString().Split(" ").Last();
-            var userId = User.Identity?.Name;
-
-            if (string.IsNullOrEmpty(userId))
+            catch (Exception ex)
             {
-                _logger.LogInformation("Processing task from IP: {Ip}, UserId: Anonymous", ip);
+                _logger.LogError(ex, "An error occurred while processing the request.");
+                return StatusCode(500, ApiResponse<string>.Fail("An error occured while processing the task."));
             }
-            else
-            {
-                _logger.LogInformation("Processing task from IP: {Ip}, UserId: {UserId}", ip, userId);
-            }
-
-            var (allowed, retryAfter) = await _geoTaskProcessingService.CanProcessRequestAsync(ip, userId);
-
-            if (!allowed)
-            {
-                var minutes = (int)Math.Ceiling(retryAfter?.TotalMinutes ?? 0);
-                return BadRequest(ApiResponse<string>.Fail($"Try again after {minutes} minutes."));
-            }
-
-            var taskId = await _geoTaskProcessingService.ProcessTaskAsync(taskData, ip, userId);
-
-            _logger.LogInformation("Task processed successfully. TaskId: {TaskId}", taskId);
-
-            return Ok(ApiResponse<string>.Ok(taskId));
         }
 
         [AllowAnonymous]
         [HttpPost("math/process")]
         public async Task<IActionResult> ProcessMathTask([FromBody] JsonElement taskData)
         {
-            var ip = _clientInfoService.GetClientIp(HttpContext);
-
-            if (string.IsNullOrEmpty(ip))
+            try
             {
-                _logger.LogWarning("Failed to determine IP address.");
-                return BadRequest(ApiResponse<string>.Fail("Unable to determine IP address."));
+                var ip = _clientInfoService.GetClientIp(HttpContext);
+
+                if (string.IsNullOrEmpty(ip))
+                {
+                    _logger.LogWarning("Failed to determine IP address.");
+                    return BadRequest(ApiResponse<string>.Fail("Unable to determine IP address."));
+                }
+
+                var token = _tokenService.ExtractTokenAsync(Request);
+                Guid? userId = null;
+
+                if (!string.IsNullOrEmpty(token))
+                {
+                    userId = await _tokenService.GetUserIdFromTokenAsync(token);
+
+                    if (userId == null || await _tokenService.IsTokenDisabled(token))
+                    {
+                        _logger.LogInformation("Processing task from IP: {Ip}, UserId: Anonymous", ip);
+                    }
+                    else
+                    {
+                        _logger.LogInformation("Processing task from IP: {Ip}, UserId: {UserId}", ip, userId);
+                    }
+                }
+                else
+                {
+                    _logger.LogInformation("Processing task from IP: {Ip}, UserId: {UserId}", ip, userId);
+                }
+
+                var (allowed, retryAfter) = await _mathTaskProccessingService.CanProcessRequestAsync(ip, userId);
+
+                if (!allowed)
+                {
+                    var minutes = (int)Math.Ceiling(retryAfter?.TotalMinutes ?? 0);
+                    return BadRequest(ApiResponse<string>.Fail($"Try again after {minutes} minutes."));
+                }
+
+                var taskId = await _mathTaskProccessingService.ProcessTaskAsync(taskData, ip, userId);
+
+                _logger.LogInformation("Task processed successfully. TaskId: {TaskId}", taskId);
+
+                return Ok(ApiResponse<string>.Ok(taskId));
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "An error occurred while processing the request.");
+                return StatusCode(500, ApiResponse<string>.Fail("An error occured while processing the task."));
             }
 
-            var token = Request.Headers["Authorization"].ToString().Split(" ").Last();
-            var userId = User.Identity?.Name;
-
-            if (string.IsNullOrEmpty(userId))
-            {
-                _logger.LogInformation("Processing task from IP: {Ip}, UserId: Anonymous", ip);
-            }
-            else
-            {
-                _logger.LogInformation("Processing task from IP: {Ip}, UserId: {UserId}", ip, userId);
-            }
-
-            var (allowed, retryAfter) = await _mathTaskProccessingService.CanProcessRequestAsync(ip, userId);
-
-            if (!allowed)
-            {
-                var minutes = (int)Math.Ceiling(retryAfter?.TotalMinutes ?? 0);
-                return BadRequest(ApiResponse<string>.Fail($"Try again after {minutes} minutes."));
-            }
-
-            var taskId = await _mathTaskProccessingService.ProcessTaskAsync(taskData, ip, userId);
-
-            _logger.LogInformation("Task processed successfully. TaskId: {TaskId}", taskId);
-
-            return Ok(ApiResponse<string>.Ok(taskId));
         }
 
         [HttpGet("geo/get/{id}")]
@@ -115,12 +150,12 @@ namespace MatHelper.API.Controllers
             }
             catch (FileNotFoundException)
             {
-                return NotFound(ApiResponse<JsonElement>.Fail("Task not found."));
+                return NotFound(ApiResponse<string>.Fail("Task not found."));
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "An error occurred while processing the request.");
-                return StatusCode(500, ApiResponse<JsonElement>.Fail("An error occured while reading the task."));
+                return StatusCode(500, ApiResponse<string>.Fail("An error occured while reading the task."));
             }
         }
 
@@ -134,12 +169,12 @@ namespace MatHelper.API.Controllers
             }
             catch (FileNotFoundException)
             {
-                return NotFound(ApiResponse<JsonElement>.Fail("Task not found."));
+                return NotFound(ApiResponse<string>.Fail("Task not found."));
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "An error occurred while processing the request.");
-                return StatusCode(500, ApiResponse<JsonElement>.Fail("An error occured while reading the task."));
+                return StatusCode(500, ApiResponse<string>.Fail("An error occured while reading the task."));
             }
         }
 
@@ -147,76 +182,80 @@ namespace MatHelper.API.Controllers
         [HttpPost("geo/rate")]
         public async Task<IActionResult> RateGeoTask([FromBody] TaskRatingDto ratingDto)
         {
-            if (string.IsNullOrEmpty(ratingDto.TaskId))
-                return BadRequest(ApiResponse<string>.Fail("TaskId is required."));
-
-            var token = Request.Headers["Authorization"].ToString().Split(" ").Last();
-
-            if (string.IsNullOrEmpty(token))
-                return Unauthorized(ApiResponse<string>.Fail("User is not authorized."));
-
-            if (await _tokenService.IsTokenDisabled(token))
-                return Unauthorized(ApiResponse<string>.Fail("User token is not active."));
-
-            var userId = User.Identity?.Name;
-
-            if (string.IsNullOrEmpty(userId))
+            try
             {
-                _logger.LogWarning("User ID is missing in the token.");
-                return Unauthorized(ApiResponse<string>.Fail("User is not authenticated."));
+                if (string.IsNullOrEmpty(ratingDto.TaskId))
+                    return BadRequest(ApiResponse<string>.Fail("TaskId is required."));
+
+                var token = _tokenService.ExtractTokenAsync(Request);
+
+                if (token == null || await _tokenService.IsTokenDisabled(token))
+                {
+                    return Unauthorized(ApiResponse<string>.Fail("User is not autorized."));
+                }
+
+                if (await _tokenService.IsTokenDisabled(token))
+                    return Unauthorized(ApiResponse<string>.Fail("User token is not active."));
+
+                var userId = await _tokenService.GetUserIdFromTokenAsync(token);
+                if (userId == null) return Unauthorized(ApiResponse<string>.Fail("User is not authenticated."));
+
+                var taskOwnerId = await _geoTaskProcessingService.GetTaskCreatorUserIdAsync(ratingDto.TaskId);
+
+                if (!string.IsNullOrEmpty(taskOwnerId))
+                {
+                    if (userId.ToString() != taskOwnerId)
+                        return Unauthorized(ApiResponse<string>.Fail("Only the task creator can rate this task."));
+                }
+
+                await _geoTaskProcessingService.RateTaskAsync(ratingDto.TaskId, ratingDto.IsCorrect, userId);
+                return Ok(ApiResponse<string>.Ok("Rating saved."));
             }
-
-            var taskOwnerId = await _geoTaskProcessingService.GetTaskCreatorUserIdAsync(ratingDto.TaskId);
-
-            if (!string.IsNullOrEmpty(taskOwnerId))
+            catch (Exception ex)
             {
-                if (string.IsNullOrEmpty(userId))
-                    return Unauthorized(ApiResponse<string>.Fail("Only the task creator can rate this task."));
-
-                if (userId != taskOwnerId)
-                    return Unauthorized(ApiResponse<string>.Fail("Only the task creator can rate this task."));
+                _logger.LogError(ex, "An error occurred while processing the request.");
+                return StatusCode(500, ApiResponse<string>.Fail("An error occured while rating the task."));
             }
-
-            await _geoTaskProcessingService.RateTaskAsync(ratingDto.TaskId, ratingDto.IsCorrect, userId);
-            return Ok(ApiResponse<string>.Ok("Rating saved."));
         }
 
         [Authorize]
         [HttpPost("math/rate")]
         public async Task<IActionResult> RateMathTask([FromBody] TaskRatingDto ratingDto)
         {
-            if (string.IsNullOrEmpty(ratingDto.TaskId))
-                return BadRequest(ApiResponse<string>.Fail("TaskId is required."));
-
-            var token = Request.Headers["Authorization"].ToString().Split(" ").Last();
-
-            if (string.IsNullOrEmpty(token))
-                return Unauthorized(ApiResponse<string>.Fail("User is not authorized."));
-
-            if (await _tokenService.IsTokenDisabled(token))
-                return Unauthorized(ApiResponse<string>.Fail("User token is not active."));
-
-            var userId = User.Identity?.Name;
-
-            if (string.IsNullOrEmpty(userId))
+            try
             {
-                _logger.LogWarning("User ID is missing in the token.");
-                return Unauthorized(ApiResponse<string>.Fail("User is not authenticated."));
+                if (string.IsNullOrEmpty(ratingDto.TaskId))
+                    return BadRequest(ApiResponse<string>.Fail("TaskId is required."));
+
+                var token = _tokenService.ExtractTokenAsync(Request);
+
+                if (token == null || await _tokenService.IsTokenDisabled(token))
+                {
+                    return Unauthorized(ApiResponse<string>.Fail("User is not autorized."));
+                }
+
+                if (await _tokenService.IsTokenDisabled(token))
+                    return Unauthorized(ApiResponse<string>.Fail("User token is not active."));
+
+                var userId = await _tokenService.GetUserIdFromTokenAsync(token);
+                if (userId == null) return Unauthorized(ApiResponse<string>.Fail("User is not authenticated."));
+
+                var taskOwnerId = await _mathTaskProccessingService.GetTaskCreatorUserIdAsync(ratingDto.TaskId);
+
+                if (!string.IsNullOrEmpty(taskOwnerId))
+                {
+                    if (userId.ToString() != taskOwnerId)
+                        return Unauthorized(ApiResponse<string>.Fail("Only the task creator can rate this task."));
+                }
+
+                await _geoTaskProcessingService.RateTaskAsync(ratingDto.TaskId, ratingDto.IsCorrect, userId);
+                return Ok(ApiResponse<string>.Ok("Rating saved."));
             }
-
-            var taskOwnerId = await _mathTaskProccessingService.GetTaskCreatorUserIdAsync(ratingDto.TaskId);
-
-            if (!string.IsNullOrEmpty(taskOwnerId))
+            catch (Exception ex)
             {
-                if (string.IsNullOrEmpty(userId))
-                    return Unauthorized(ApiResponse<string>.Fail("Only the task creator can rate this task."));
-
-                if (userId != taskOwnerId)
-                    return Unauthorized(ApiResponse<string>.Fail("Only the task creator can rate this task."));
+                _logger.LogError(ex, "An error occurred while processing the request.");
+                return StatusCode(500, ApiResponse<string>.Fail("An error occured while rating the task."));
             }
-
-            await _geoTaskProcessingService.RateTaskAsync(ratingDto.TaskId, ratingDto.IsCorrect, userId);
-            return Ok(ApiResponse<string>.Ok("Rating saved."));
         }
     }
 }

@@ -1,12 +1,6 @@
 ﻿using MatHelper.BLL.Interfaces;
 using MatHelper.DAL.Repositories;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using MatHelper.DAL.Models;
-using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.Extensions.Logging;
 
 namespace MatHelper.BLL.Services

@@ -1,5 +1,3 @@
-using System;
-
 namespace MatHelper.CORE.Models
 {
     public class LoginResponse

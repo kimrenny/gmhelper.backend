@@ -1,18 +1,10 @@
 using MatHelper.BLL.Interfaces;
 using MatHelper.CORE.Models;
-using MatHelper.CORE.Options;
 using MatHelper.CORE.Enums;
 using MatHelper.DAL.Models;
 using MatHelper.DAL.Repositories;
 using Microsoft.Extensions.Logging;
-using Microsoft.IdentityModel.Tokens;
-using System.IdentityModel.Tokens.Jwt;
-using System.Security.Claims;
 using System.Security.Cryptography;
-using System.Text;
-using System.Threading.Tasks;
-using System.Diagnostics;
-using Microsoft.AspNetCore.Mvc;
 
 namespace MatHelper.BLL.Services
 {
@@ -27,12 +19,10 @@ namespace MatHelper.BLL.Services
         private readonly PasswordRecoveryRepository _passwordRecoveryRepository;
         private readonly AuthLogRepository _authLogRepository;
         private readonly IMailService _mailService;
-        private readonly JwtOptions _jwtOptions;
         private readonly ISecurityService _securityService;
-        private readonly ITokenService _tokenService;
         private readonly ILogger _logger;
 
-        public AuthenticationService(UserRepository userRepository, AppTwoFactorSessionRepository appTwoFactorSessionRepository, ITokenGeneratorService tokenGeneratorService, ITwoFactorService twoFactorService, EmailConfirmationRepository emailConfirmationRepository, EmailLoginCodeRepository emailLoginCodeRepository, PasswordRecoveryRepository passwordRecoveryRepository, AuthLogRepository authLogRepository, IMailService mailService, JwtOptions jwtOptions, ISecurityService securityService, ITokenService tokenService, ILogger<AuthenticationService> logger)
+        public AuthenticationService(UserRepository userRepository, AppTwoFactorSessionRepository appTwoFactorSessionRepository, ITokenGeneratorService tokenGeneratorService, ITwoFactorService twoFactorService, EmailConfirmationRepository emailConfirmationRepository, EmailLoginCodeRepository emailLoginCodeRepository, PasswordRecoveryRepository passwordRecoveryRepository, AuthLogRepository authLogRepository, IMailService mailService, ISecurityService securityService, ILogger<AuthenticationService> logger)
         {
             _userRepository = userRepository;
             _twoFactorSessionRepository = appTwoFactorSessionRepository;
@@ -43,9 +33,7 @@ namespace MatHelper.BLL.Services
             _passwordRecoveryRepository = passwordRecoveryRepository;
             _authLogRepository = authLogRepository;
             _mailService = mailService;
-            _jwtOptions = jwtOptions;
             _securityService = securityService;
-            _tokenService = tokenService;
             _logger = logger;
         }
 
