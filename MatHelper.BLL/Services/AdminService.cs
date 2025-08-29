@@ -16,7 +16,7 @@ namespace MatHelper.BLL.Services
         private readonly IUserMapper _userMapper;
         private readonly ILogger _logger;
 
-        public AdminService(ISecurityService securityService, UserRepository userRepository, LoginTokenRepository loginTokenRepository, IUserMapper userMapper, ILogger<SecurityService> logger)
+        public AdminService(ISecurityService securityService, UserRepository userRepository, LoginTokenRepository loginTokenRepository, IUserMapper userMapper, ILogger<AdminService> logger)
         {
             _securityService = securityService;
             _userRepository = userRepository;
@@ -140,8 +140,6 @@ namespace MatHelper.BLL.Services
                     return new List<CountryStatsDto>();
                 }
 
-                _logger.LogInformation($"Total users: {userIpList.Count}");
-
                 var countryCounts = new ConcurrentDictionary<string, ushort>();
                 var ipCache = new ConcurrentDictionary<string, string>();
 
@@ -185,12 +183,8 @@ namespace MatHelper.BLL.Services
 
                 var userRoleStats = new Dictionary<string, int>();
 
-                _logger.LogInformation($"Total users: {users.Count}");
-
                 foreach (var user in users)
                 {
-                    _logger.LogInformation($"Processing user: {user.Username}");
-
                     var role = user.Role;
 
                     if (userRoleStats.ContainsKey(role))
