@@ -100,18 +100,27 @@ namespace MatHelper.DAL.Repositories
 
         public async Task<List<UserIp>> GetUsersWithLastIpAsync()
         {
-            return await _context.Users
-                .Where(u => u.LoginTokens != null && u.LoginTokens.Any())
-                .Select(u => new UserIp
-                {
-                    Id = u.Id,
-                    IpAddress = u.LoginTokens!
-                        .OrderByDescending(t => t.Expiration)
-                        .Select(t => t.IpAddress)
-                        .FirstOrDefault() ?? "Unknown"
-                })
+            var users = await _context.Users
+                .Include(u => u.LoginTokens)
                 .AsNoTracking()
                 .ToListAsync();
+
+            var result = users
+                .Where(u => u.LoginTokens != null && u.LoginTokens.Any())
+                .Select(u => {
+                    var tokens = u.LoginTokens!;
+                    return new UserIp
+                    {
+                        Id = u.Id,
+                        IpAddress = tokens
+                            .OrderByDescending(t => t.Expiration)
+                            .Select(t => t.IpAddress)
+                            .FirstOrDefault() ?? "Unknown"
+                    };
+                })
+                .ToList();
+
+            return result;
         }
 
         public async Task<Guid?> GetUserIdByAuthTokenAsync(string authToken)
