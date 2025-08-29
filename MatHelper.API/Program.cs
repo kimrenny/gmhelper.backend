@@ -67,7 +67,10 @@ builder.Services.AddDbContext<AppDbContext>((provider, ctx) =>
         connectionString = Environment.GetEnvironmentVariable("ConnectionStrings__DefaultConnection");
     }
 
-    ctx.UseNpgsql(connectionString);
+    ctx.UseNpgsql(connectionString, npgsqlOptions =>
+    {
+        npgsqlOptions.UseQuerySplittingBehavior(QuerySplittingBehavior.SplitQuery);
+    });
 });
 
 var secretKey = Environment.GetEnvironmentVariable("JWT_SECRET_KEY") ?? builder.Configuration["Jwt:SecretKey"];

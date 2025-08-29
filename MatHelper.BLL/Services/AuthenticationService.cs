@@ -242,6 +242,31 @@ namespace MatHelper.BLL.Services
                     expiredToken.IsActive = false;
                     //user.LoginTokens!.Remove(expiredToken);
                 }
+
+                var duplicateGroups = user.LoginTokens!
+                    .Where(t => t.IsActive)
+                    .GroupBy(t => new { t.DeviceInfo.UserAgent, t.DeviceInfo.Platform, t.IpAddress });
+
+                foreach (var group in duplicateGroups)
+                {
+                    var latestToken = group.OrderByDescending(t => t.Expiration).FirstOrDefault();
+                    foreach (var token in group)
+                    {
+                        if (token != latestToken)
+                            token.IsActive = false;
+                    }
+                }
+
+                var currentDeviceTokens = user.LoginTokens!
+                    .Where(t => t.IsActive
+                        && t.DeviceInfo.UserAgent == deviceInfo.UserAgent
+                        && t.DeviceInfo.Platform == deviceInfo.Platform
+                        && t.IpAddress == ipAddress)
+                    .ToList();
+
+                foreach (var token in currentDeviceTokens)
+                    token.IsActive = false;
+
                 await _userRepository.SaveChangesAsync();
 
                 var activeTokens = user.LoginTokens!.Where(t => t.DeviceInfo.UserAgent == deviceInfo.UserAgent && t.DeviceInfo.Platform == deviceInfo.Platform && t.IpAddress == ipAddress && t.IsActive).ToList();
