@@ -1,10 +1,11 @@
-﻿using Microsoft.Extensions.Logging;
+﻿using MatHelper.BLL.Interfaces;
+using Microsoft.Extensions.Logging;
 using System.Text.Json;
 using MatHelper.CORE.Models;
 
 namespace MatHelper.BLL.Services
 {
-    public class CaptchaValidationService
+    public class CaptchaValidationService : ICaptchaValidationService
     {
         private readonly ILogger<CaptchaValidationService> _logger;
         private const string CaptchaVerifyUrl = "https://www.google.com/recaptcha/api/siteverify";

@@ -15,16 +15,16 @@ namespace MatHelper.API.Controllers
         private readonly IAuthenticationService _authenticationService;
         private readonly ITokenService _tokenService;
         private readonly ILogger<UserController> _logger;
-        private readonly IProcessRequestService _processRequestService;
-        private readonly CaptchaValidationService _captchaValidationService;
+        private readonly IClientInfoService _infoService;
+        private readonly ICaptchaValidationService _captchaValidationService;
         private static readonly ConcurrentDictionary<string, bool> ProcessingTokens = new();
 
-        public AuthController(IAuthenticationService authenticationService, ITokenService tokenService, ILogger<UserController> logger, IProcessRequestService processRequestService, CaptchaValidationService captchaValidationService)
+        public AuthController(IAuthenticationService authenticationService, ITokenService tokenService, ILogger<UserController> logger, IClientInfoService infoService, ICaptchaValidationService captchaValidationService)
         {
             _authenticationService = authenticationService;
             _tokenService = tokenService;
             _logger = logger;
-            _processRequestService = processRequestService;
+            _infoService = infoService;
             _captchaValidationService = captchaValidationService;
         }
 
@@ -53,7 +53,7 @@ namespace MatHelper.API.Controllers
 
             try
             {
-                var (deviceInfo, ipAddress) = _processRequestService.GetRequestInfo();
+                var (deviceInfo, ipAddress) = _infoService.GetRequestInfo(HttpContext);
 
                 if(ipAddress == null)
                 {
@@ -139,7 +139,7 @@ namespace MatHelper.API.Controllers
 
             try
             {
-                var (deviceInfo, ipAddress) = _processRequestService.GetRequestInfo();
+                var (deviceInfo, ipAddress) = _infoService.GetRequestInfo(HttpContext);
                 if (ipAddress == null)
                 {
                     _logger.LogWarning("Failed to retrieve IP address for user: {Email}", loginDto.Email);

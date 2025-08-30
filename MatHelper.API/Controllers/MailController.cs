@@ -24,11 +24,10 @@ namespace MatHelper.API.Controllers
         private readonly IDeviceManagementService _deviceManagementService;
         private readonly IMailService _mailService;
         private readonly ILogger<UserController> _logger;
-        private readonly IProcessRequestService _processRequestService;
-        private readonly CaptchaValidationService _captchaValidationService;
+        private readonly ICaptchaValidationService _captchaValidationService;
         private static readonly ConcurrentDictionary<string, bool> ProcessingTokens = new();
 
-        public MailController(IAuthenticationService authenticationService, ITokenService tokenService, IUserManagementService userManagementService, IDeviceManagementService deviceManagementService, IMailService mailService, ILogger<UserController> logger, IProcessRequestService processRequestService, CaptchaValidationService captchaValidationService)
+        public MailController(IAuthenticationService authenticationService, ITokenService tokenService, IUserManagementService userManagementService, IDeviceManagementService deviceManagementService, IMailService mailService, ILogger<UserController> logger, ICaptchaValidationService captchaValidationService)
         {
             _authenticationService = authenticationService;
             _tokenService = tokenService;
@@ -36,7 +35,6 @@ namespace MatHelper.API.Controllers
             _deviceManagementService = deviceManagementService;
             _mailService = mailService;
             _logger = logger;
-            _processRequestService = processRequestService;
             _captchaValidationService = captchaValidationService;
         }
 

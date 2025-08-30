@@ -100,7 +100,6 @@ builder.Services.AddScoped<IAdminService, AdminService>();
 builder.Services.AddScoped<IUserManagementService, UserManagementService>();
 builder.Services.AddScoped<IDeviceManagementService, DeviceManagementService>();
 builder.Services.AddScoped<IRequestLogService, RequestLogService>();
-builder.Services.AddScoped<IProcessRequestService, ProcessRequestService>();
 builder.Services.AddScoped<IAdminSettingsService, AdminSettingsService>();
 builder.Services.AddScoped<IMailService, MailService>();
 builder.Services.AddScoped<IGeoTaskProcessingService, GeoTaskProcessingService>();
@@ -108,6 +107,7 @@ builder.Services.AddScoped<IMathTaskProcessingService, MathTaskProcessingService
 builder.Services.AddScoped<IClientInfoService, ClientInfoService>();
 builder.Services.AddScoped<ITwoFactorService, TwoFactorService>();
 builder.Services.AddScoped<IUserMapper, UserMapper>();
+builder.Services.AddScoped<ICaptchaValidationService, CaptchaValidationService>();
 builder.Services.AddScoped<ErrorLogRepository>();
 builder.Services.AddScoped<UserRepository>();
 builder.Services.AddScoped<EmailConfirmationRepository>();
@@ -117,7 +117,6 @@ builder.Services.AddScoped<PasswordRecoveryRepository>();
 builder.Services.AddScoped<RequestLogRepository>();
 builder.Services.AddScoped<AuthLogRepository>();
 builder.Services.AddScoped<AdminSettingsRepository>();
-builder.Services.AddScoped<CaptchaValidationService>();
 builder.Services.AddScoped<TaskRequestRepository>();
 builder.Services.AddScoped<TaskRatingRepository>();
 builder.Services.AddScoped<TwoFactorRepository>();
@@ -208,6 +207,8 @@ app.Use(async (context, next) =>
     var elapsedTime = DateTime.UtcNow - startTime;
     logger.LogInformation($"[{DateTime.UtcNow}] Response status: {context.Response.StatusCode}. Time taken: {elapsedTime}. [{context.Request.Method} {context.Request.Path}]");
 });
+
+app.UseDuplicateRequestMiddleware();
 
 app.UseAuthentication();
 app.UseAuthorization();
