@@ -1,4 +1,5 @@
 using MatHelper.BLL.Interfaces;
+using MatHelper.CORE.Models;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 using System.Net;
@@ -41,6 +42,26 @@ namespace MatHelper.BLL.Services
             }
 
             return ipAddress;
+        }
+
+        public DeviceInfo GetDeviceInfo(HttpContext context)
+        {
+            var userAgent = context.Request.Headers["User-Agent"].FirstOrDefault() ?? "unknown";
+            var platform = context.Request.Headers["Platform"].FirstOrDefault() ?? "unknown";
+
+            return new DeviceInfo
+            {
+                UserAgent = userAgent,
+                Platform = platform,
+            };
+        }
+
+        public (DeviceInfo, string?) GetRequestInfo(HttpContext context)
+        {
+            var deviceInfo = GetDeviceInfo(context);
+            var ipAddress = GetClientIp(context);
+
+            return (deviceInfo, ipAddress);
         }
     }
 }
