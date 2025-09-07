@@ -122,7 +122,15 @@ namespace MatHelper.BLL.Services
         {
             try
             {
-                return await _adminSettingsRepository.UpdateSwitchAsync(userId, sectionTitle, switchLabel, newValue);
+                string FormatName(string name) =>
+                    string.IsNullOrWhiteSpace(name)
+                        ? name
+                        : char.ToUpper(name[0]) + name.Substring(1).ToLower();
+
+                var formattedSection = FormatName(sectionTitle);
+                var formattedLabel = FormatName(switchLabel);
+
+                return await _adminSettingsRepository.UpdateSwitchAsync(userId, formattedSection, formattedLabel, newValue);
             }
             catch (Exception ex) 
             {

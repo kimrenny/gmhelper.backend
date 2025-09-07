@@ -272,15 +272,13 @@ namespace MatHelper.API.Controllers
             }
         }
 
-        [HttpPatch("settings")]
-        public async Task<IActionResult> UpdateSwitch([FromBody] SwitchUpdateRequest request)
+        [HttpPatch("settings/{section}/{label}")]
+        public async Task<IActionResult> UpdateSwitch(string section, string label, [FromBody] SwitchUpdateRequest request)
         {
             var userId = User.FindFirstValue(ClaimTypes.Name);
+
             if (string.IsNullOrWhiteSpace(userId))
-            {
-                _logger.LogWarning("User ID is missing in the token.");
                 return Unauthorized(ApiResponse<string>.Fail("User ID is not available in the token."));
-            }
 
             try
             {
@@ -288,18 +286,14 @@ namespace MatHelper.API.Controllers
                 if (adminValidation != null) return adminValidation;
 
                 if (!Guid.TryParse(userId, out var parsedUserId))
-                {
-                    _logger.LogError("Failed to parse User ID: {UserId}", userId);
                     return BadRequest(ApiResponse<string>.Fail("Invalid User ID format."));
-                }
 
-                var result = await _adminSettingsService.UpdateSwitchAsync(parsedUserId, request.SectionTitle, request.SwitchLabel, request.NewValue);
+                var result = await _adminSettingsService.UpdateSwitchAsync(parsedUserId, section, label, request.NewValue);
 
-                if (result)
-                {
-                    return Ok(ApiResponse<string>.Ok("Switch updated successfully."));
-                }
-                return BadRequest(ApiResponse<string>.Fail("Failed to update switch."));
+                if (!result)
+                    return BadRequest(ApiResponse<string>.Fail("Failed to update switch."));
+
+                return Ok(ApiResponse<string>.Ok("Switch updated successfully."));
             }
             catch (Exception ex)
             {
