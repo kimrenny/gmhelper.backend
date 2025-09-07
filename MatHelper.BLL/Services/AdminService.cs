@@ -1,8 +1,10 @@
+using Azure.Core;
 using MatHelper.BLL.Interfaces;
 using MatHelper.CORE.Enums;
 using MatHelper.CORE.Models;
 using MatHelper.CORE.Options;
 using MatHelper.DAL.Repositories;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using System.Collections.Concurrent;
 
@@ -11,14 +13,16 @@ namespace MatHelper.BLL.Services
     public class AdminService : IAdminService
     {
         private readonly ISecurityService _securityService;
+        private readonly ITokenService _tokenService;
         private readonly UserRepository _userRepository;
         private readonly LoginTokenRepository _loginTokenRepository;
         private readonly IUserMapper _userMapper;
         private readonly ILogger _logger;
 
-        public AdminService(ISecurityService securityService, UserRepository userRepository, LoginTokenRepository loginTokenRepository, IUserMapper userMapper, ILogger<AdminService> logger)
+        public AdminService(ISecurityService securityService, ITokenService tokenService, UserRepository userRepository, LoginTokenRepository loginTokenRepository, IUserMapper userMapper, ILogger<AdminService> logger)
         {
             _securityService = securityService;
+            _tokenService = tokenService;
             _userRepository = userRepository;
             _loginTokenRepository = loginTokenRepository;
             _userMapper = userMapper;

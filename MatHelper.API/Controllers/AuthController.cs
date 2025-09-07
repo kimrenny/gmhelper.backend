@@ -9,17 +9,17 @@ using MatHelper.API.Common;
 namespace MatHelper.API.Controllers
 {
     [ApiController]
-    [Route("api/[controller]")]
+    [Route("api/v1/[controller]")]
     public class AuthController : ControllerBase
     {
         private readonly IAuthenticationService _authenticationService;
         private readonly ITokenService _tokenService;
-        private readonly ILogger<UserController> _logger;
+        private readonly ILogger<AuthController> _logger;
         private readonly IClientInfoService _infoService;
         private readonly ICaptchaValidationService _captchaValidationService;
         private static readonly ConcurrentDictionary<string, bool> ProcessingTokens = new();
 
-        public AuthController(IAuthenticationService authenticationService, ITokenService tokenService, ILogger<UserController> logger, IClientInfoService infoService, ICaptchaValidationService captchaValidationService)
+        public AuthController(IAuthenticationService authenticationService, ITokenService tokenService, ILogger<AuthController> logger, IClientInfoService infoService, ICaptchaValidationService captchaValidationService)
         {
             _authenticationService = authenticationService;
             _tokenService = tokenService;
@@ -94,7 +94,7 @@ namespace MatHelper.API.Controllers
             return BadRequest(ApiResponse<string>.Fail("Unknown error occured during registration."));
         }
 
-        [HttpPost("confirm")]
+        [HttpPost("email/confirm")]
         public async Task<IActionResult> ConfirmEmail([FromBody] ConfirmEmailDto dto)
         {
             if (!await _captchaValidationService.ValidateCaptchaAsync(dto.CaptchaToken))
@@ -187,7 +187,7 @@ namespace MatHelper.API.Controllers
             }
         }
 
-        [HttpPost("confirm-email-code")]
+        [HttpPost("email/confirm/code")]
         public async Task<IActionResult> ConfirmEmailCode([FromBody] ConfirmCodeDto dto)
         {
             try
@@ -207,7 +207,7 @@ namespace MatHelper.API.Controllers
             }
         }
 
-        [HttpPost("confirm-2fa-code")]
+        [HttpPost("2fa/confirm")]
         public async Task<IActionResult> ConfirmTwoFactorCode([FromBody] ConfirmCodeDto dto)
         {
             try
@@ -227,7 +227,7 @@ namespace MatHelper.API.Controllers
             }
         }
 
-        [HttpPatch("password")]
+        [HttpPost("password/recover")]
         public async Task<IActionResult> RecoverPassword([FromBody] PasswordRecoveryDto recoveryDto)
         {
             if (!await _captchaValidationService.ValidateCaptchaAsync(recoveryDto.CaptchaToken))
@@ -269,7 +269,7 @@ namespace MatHelper.API.Controllers
             }
         }
 
-        [HttpPost("refresh-token")]
+        [HttpPost("token/refresh")]
         public async Task<IActionResult> RefreshToken([FromBody] RefreshTokenRequest request)
         {
             if (string.IsNullOrEmpty(request.RefreshToken))

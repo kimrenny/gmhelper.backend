@@ -8,7 +8,7 @@ using Microsoft.AspNetCore.Mvc;
 namespace MatHelper.API.Controllers
 {
     [ApiController]
-    [Route("api/[controller]")]
+    [Route("api/v1/[controller]")]
     public class SecurityController : ControllerBase
     {
         private readonly ITwoFactorService _twoFactorService;
@@ -24,7 +24,7 @@ namespace MatHelper.API.Controllers
             _logger = logger;
         }
 
-        [HttpPost("2fa/generate")]
+        [HttpPost("2fa")]
         [Authorize]
         public async Task<IActionResult> GenerateTwoFactorKey([FromBody] TwoFactorType type)
         {
@@ -101,7 +101,7 @@ namespace MatHelper.API.Controllers
             }
         }
 
-        [HttpPost("2fa/change-mode")]
+        [HttpPatch("2fa")]
         [Authorize]
         public async Task<IActionResult> ChangeTwoFactorMode([FromBody] TwoFactorModeRequest request)
         {
@@ -138,7 +138,7 @@ namespace MatHelper.API.Controllers
             }
         }
 
-        [HttpPost("2fa/remove")]
+        [HttpDelete("2fa")]
         [Authorize]
         public async Task<IActionResult> RemoveTwoFactor([FromBody] TwoFactorRequest request)
         {

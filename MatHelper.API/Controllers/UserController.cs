@@ -9,7 +9,7 @@ using System.Collections.Concurrent;
 namespace MatHelper.API.Controllers
 {
     [ApiController]
-    [Route("api/[controller]")]
+    [Route("api/v1/[controller]")]
     public class UserController : ControllerBase
     {
         private readonly ITokenService _tokenService;
@@ -26,7 +26,7 @@ namespace MatHelper.API.Controllers
             _logger = logger;
         }
 
-        [HttpPost("upload-avatar")]
+        [HttpPost("avatar")]
         [Authorize]
         public async Task<IActionResult> UploadAvatar([FromForm] IFormFile avatar)
         {
@@ -156,7 +156,7 @@ namespace MatHelper.API.Controllers
             return Ok(devices);
         }
 
-        [HttpPatch("update-user")]
+        [HttpPatch("profile")]
         [Authorize]
         public async Task<IActionResult> UpdateUser([FromForm] UpdateUserRequest request)
         {
@@ -185,7 +185,7 @@ namespace MatHelper.API.Controllers
             }
         }
 
-        [HttpPatch("update-language")]
+        [HttpPatch("profile/language")]
         [Authorize]
         public async Task<IActionResult> UpdateLanguage([FromBody] UpdateLanguageRequest request)
         {

@@ -15,30 +15,22 @@ using System.Diagnostics;
 namespace MatHelper.API.Controllers
 {
     [ApiController]
-    [Route("api/[controller]")]
+    [Route("api/v1/[controller]")]
     public class MailController : ControllerBase
     {
         private readonly IAuthenticationService _authenticationService;
-        private readonly ITokenService _tokenService;
-        private readonly IUserManagementService _userManagementService;
-        private readonly IDeviceManagementService _deviceManagementService;
-        private readonly IMailService _mailService;
-        private readonly ILogger<UserController> _logger;
+        private readonly ILogger<MailController> _logger;
         private readonly ICaptchaValidationService _captchaValidationService;
         private static readonly ConcurrentDictionary<string, bool> ProcessingTokens = new();
 
-        public MailController(IAuthenticationService authenticationService, ITokenService tokenService, IUserManagementService userManagementService, IDeviceManagementService deviceManagementService, IMailService mailService, ILogger<UserController> logger, ICaptchaValidationService captchaValidationService)
+        public MailController(IAuthenticationService authenticationService, ILogger<MailController> logger, ICaptchaValidationService captchaValidationService)
         {
             _authenticationService = authenticationService;
-            _tokenService = tokenService;
-            _userManagementService = userManagementService;
-            _deviceManagementService = deviceManagementService;
-            _mailService = mailService;
             _logger = logger;
             _captchaValidationService = captchaValidationService;
         }
 
-        [HttpPost("password-recovery")]
+        [HttpPost("password/recover")]
         public async Task<IActionResult> SendRecoveryPasswordEmail([FromBody] PasswordRecoveryEmailDto recoveryDto)
         {
             if (!await _captchaValidationService.ValidateCaptchaAsync(recoveryDto.CaptchaToken))

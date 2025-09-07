@@ -2,7 +2,6 @@
 using MatHelper.BLL.Interfaces;
 using MatHelper.CORE.Models;
 using Microsoft.AspNetCore.Authorization;
-using TokenValidationResult = MatHelper.CORE.Enums.TokenValidationResult;
 using MatHelper.API.Common;
 using MatHelper.DAL.Models;
 
@@ -10,7 +9,7 @@ namespace MatHelper.API.Controllers
 {
     [Authorize(Roles = "Admin, Owner")]
     [ApiController]
-    [Route("api/admin/[controller]")]
+    [Route("api/v1/admin/[controller]")]
     public class LogsController : Controller
     {
         private readonly IRequestLogService _logService;
@@ -24,24 +23,13 @@ namespace MatHelper.API.Controllers
             _tokenService = tokenService;
         }
 
-        [HttpGet("requests")]
-        public async Task<IActionResult> GetRequestStats()
+        [HttpGet("stats")]
+        public async Task<IActionResult> GetLogsStats()
         {
             try
             {
-                var validationResult = await _tokenService.ValidateAdminAccessAsync(Request, User);
-                if (validationResult != TokenValidationResult.Valid)
-                {
-                    return validationResult switch
-                    {
-                        TokenValidationResult.MissingToken => Unauthorized(ApiResponse<string>.Fail("Authorization header is missing or invalid")),
-                        TokenValidationResult.InactiveToken => Unauthorized(ApiResponse<string>.Fail("User token is not active.")),
-                        TokenValidationResult.InvalidUserId => Unauthorized(ApiResponse<string>.Fail("User ID is not available in the token.")),
-                        TokenValidationResult.NoAdminPermissions => Forbid(ApiResponse<string>.Fail("User does not have permissions.").Message ?? "No admin permissions."),
-                        _ => new ObjectResult(ApiResponse<string>.Fail("Unexpected error occured.")) { StatusCode = 500 }
-                    };
-
-                }
+                var adminValidation = await AdminValidation.ValidateAdminAsync(this, _tokenService);
+                if (adminValidation != null) return adminValidation;
 
                 var stats = await _logService.GetRequestStats();
                 if(stats == null)
@@ -52,29 +40,18 @@ namespace MatHelper.API.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "An error occurred while processing the request.");
+                _logger.LogError(ex, "Error retrieving logs stats.");
                 return StatusCode(500, ApiResponse<string>.Fail("Internal server error."));
             }
         }
 
-        [HttpGet("all")]
-        public async Task<IActionResult> GetAllRequests()
+        [HttpGet]
+        public async Task<IActionResult> GetLogs()
         {
             try
             {
-                var validationResult = await _tokenService.ValidateAdminAccessAsync(Request, User);
-                if (validationResult != TokenValidationResult.Valid)
-                {
-                    return validationResult switch
-                    {
-                        TokenValidationResult.MissingToken => Unauthorized(ApiResponse<string>.Fail("Authorization header is missing or invalid")),
-                        TokenValidationResult.InactiveToken => Unauthorized(ApiResponse<string>.Fail("User token is not active.")),
-                        TokenValidationResult.InvalidUserId => Unauthorized(ApiResponse<string>.Fail("User ID is not available in the token.")),
-                        TokenValidationResult.NoAdminPermissions => Forbid(ApiResponse<string>.Fail("User does not have permissions.").Message ?? "No admin permissions."),
-                        _ => new ObjectResult(ApiResponse<string>.Fail("Unexpected error occured.")) { StatusCode = 500 }
-                    };
-
-                }
+                var adminValidation = await AdminValidation.ValidateAdminAsync(this, _tokenService);
+                if (adminValidation != null) return adminValidation;
 
                 var requests = await _logService.GetRequestLogs();
                 if (requests == null || !requests.Any())
@@ -92,24 +69,13 @@ namespace MatHelper.API.Controllers
             }
         }
 
-        [HttpGet("auth/all")]
-        public async Task<IActionResult> GetAllAuthLogs()
+        [HttpGet("auth")]
+        public async Task<IActionResult> GetAuthLogs()
         {
             try
             {
-                var validationResult = await _tokenService.ValidateAdminAccessAsync(Request, User);
-                if (validationResult != TokenValidationResult.Valid)
-                {
-                    return validationResult switch
-                    {
-                        TokenValidationResult.MissingToken => Unauthorized(ApiResponse<string>.Fail("Authorization header is missing or invalid")),
-                        TokenValidationResult.InactiveToken => Unauthorized(ApiResponse<string>.Fail("User token is not active.")),
-                        TokenValidationResult.InvalidUserId => Unauthorized(ApiResponse<string>.Fail("User ID is not available in the token.")),
-                        TokenValidationResult.NoAdminPermissions => Forbid(ApiResponse<string>.Fail("User does not have permissions.").Message ?? "No admin permissions."),
-                        _ => new ObjectResult(ApiResponse<string>.Fail("Unexpected error occured.")) { StatusCode = 500 }
-                    };
-
-                }
+                var adminValidation = await AdminValidation.ValidateAdminAsync(this, _tokenService);
+                if (adminValidation != null) return adminValidation;
 
                 var logs = await _logService.GetAuthLogs();
                 if (logs == null || !logs.Any())
@@ -127,24 +93,13 @@ namespace MatHelper.API.Controllers
             }
         }
 
-        [HttpGet("errors/all")]
-        public async Task<IActionResult> GetAllErrorLogs()
+        [HttpGet("errors")]
+        public async Task<IActionResult> GetErrorLogs()
         {
             try
             {
-                var validationResult = await _tokenService.ValidateAdminAccessAsync(Request, User);
-                if (validationResult != TokenValidationResult.Valid)
-                {
-                    return validationResult switch
-                    {
-                        TokenValidationResult.MissingToken => Unauthorized(ApiResponse<string>.Fail("Authorization header is missing or invalid")),
-                        TokenValidationResult.InactiveToken => Unauthorized(ApiResponse<string>.Fail("User token is not active.")),
-                        TokenValidationResult.InvalidUserId => Unauthorized(ApiResponse<string>.Fail("User ID is not available in the token.")),
-                        TokenValidationResult.NoAdminPermissions => Forbid(ApiResponse<string>.Fail("User does not have permissions.").Message ?? "No admin permissions."),
-                        _ => new ObjectResult(ApiResponse<string>.Fail("Unexpected error occured.")) { StatusCode = 500 }
-                    };
-
-                }
+                var adminValidation = await AdminValidation.ValidateAdminAsync(this, _tokenService);
+                if (adminValidation != null) return adminValidation;
 
                 var logs = await _logService.GetErrorLogs();
                 if (logs == null || !logs.Any())
