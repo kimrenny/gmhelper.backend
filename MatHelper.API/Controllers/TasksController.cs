@@ -87,7 +87,7 @@ namespace MatHelper.API.Controllers
         {
             try
             {
-                _logger.LogInformation("Get [TaskType} task request: {TaskId}", id);
+                _logger.LogInformation("Get {TaskType} task request: {TaskId}", taskType, id);
 
                 var taskJson = taskType.ToLower() switch
                 {
