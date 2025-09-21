@@ -70,44 +70,44 @@ namespace MatHelper.BLL.Services
 
                         return new List<AdminSwitch>
                         {
-                            new AdminSwitch { Label = "Requests", Value = true, AdminSection = section },
-                            new AdminSwitch { Label = "Tokens", Value = true, AdminSection = section },
-                            new AdminSwitch { Label = "Banned", Value = true, AdminSection = section },
-                            new AdminSwitch { Label = "Roles", Value = true, AdminSection = section },
-                            new AdminSwitch { Label = "Country", Value = true, AdminSection = section }
+                            new AdminSwitch { Label = "requests", Value = true, AdminSection = section },
+                            new AdminSwitch { Label = "tokens", Value = true, AdminSection = section },
+                            new AdminSwitch { Label = "banned", Value = true, AdminSection = section },
+                            new AdminSwitch { Label = "roles", Value = true, AdminSection = section },
+                            new AdminSwitch { Label = "country", Value = true, AdminSection = section }
                         };
                     }
                 case "Users":
                     {
                         return new List<AdminSwitch>
                         {
-                            new AdminSwitch { Label = "Username", Value = true, AdminSection = section },
-                            new AdminSwitch { Label = "Email", Value = true, AdminSection = section },
-                            new AdminSwitch { Label = "Registration", Value = true, AdminSection = section },
-                            new AdminSwitch { Label = "Modal", Value = true, AdminSection = section },
-                            new AdminSwitch { Label = "Modal: Token", Value = true, AdminSection = section }
+                            new AdminSwitch { Label = "username", Value = true, AdminSection = section },
+                            new AdminSwitch { Label = "email", Value = true, AdminSection = section },
+                            new AdminSwitch { Label = "registration", Value = true, AdminSection = section },
+                            new AdminSwitch { Label = "modal", Value = true, AdminSection = section },
+                            new AdminSwitch { Label = "modaltoken", Value = true, AdminSection = section }
                         };
                     }
                 case "Tokens":
                     {
                         return new List<AdminSwitch>
                         {
-                            new AdminSwitch { Label = "Token", Value = true, AdminSection = section },
-                            new AdminSwitch { Label = "Expirations", Value = true, AdminSection = section },
-                            new AdminSwitch { Label = "User ID", Value = true, AdminSection = section },
-                            new AdminSwitch { Label = "Modal", Value = true, AdminSection = section },
-                            new AdminSwitch { Label = "Actions", Value = true, AdminSection = section }
+                            new AdminSwitch { Label = "token", Value = true, AdminSection = section },
+                            new AdminSwitch { Label = "expirations", Value = true, AdminSection = section },
+                            new AdminSwitch { Label = "userid", Value = true, AdminSection = section },
+                            new AdminSwitch { Label = "modal", Value = true, AdminSection = section },
+                            new AdminSwitch { Label = "actions", Value = true, AdminSection = section }
                         };
                     }
                 case "Logs":
                     {
                         return new List<AdminSwitch>
                         {
-                            new AdminSwitch { Label = "Timestamp", Value = true, AdminSection = section },
-                            new AdminSwitch { Label = "Duration", Value = true, AdminSection = section },
-                            new AdminSwitch { Label = "Request", Value = true, AdminSection = section },
-                            new AdminSwitch { Label = "User ID", Value = true, AdminSection = section },
-                            new AdminSwitch { Label = "Modal", Value = true, AdminSection = section }
+                            new AdminSwitch { Label = "timestamp", Value = true, AdminSection = section },
+                            new AdminSwitch { Label = "duration", Value = true, AdminSection = section },
+                            new AdminSwitch { Label = "request", Value = true, AdminSection = section },
+                            new AdminSwitch { Label = "userid", Value = true, AdminSection = section },
+                            new AdminSwitch { Label = "modal", Value = true, AdminSection = section }
                         };
                     }
                 default:
@@ -122,13 +122,8 @@ namespace MatHelper.BLL.Services
         {
             try
             {
-                string FormatName(string name) =>
-                    string.IsNullOrWhiteSpace(name)
-                        ? name
-                        : char.ToUpper(name[0]) + name.Substring(1).ToLower();
-
-                var formattedSection = FormatName(sectionTitle);
-                var formattedLabel = FormatName(switchLabel);
+                var formattedSection = sectionTitle.ToLowerInvariant();
+                var formattedLabel =switchLabel.ToLowerInvariant();
 
                 return await _adminSettingsRepository.UpdateSwitchAsync(userId, formattedSection, formattedLabel, newValue);
             }

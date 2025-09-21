@@ -39,13 +39,13 @@ namespace MatHelper.DAL.Repositories
                 return false;
             }
 
-            var section = adminSettings.Sections.FirstOrDefault(s => s.Title == sectionTitle);
+            var section = adminSettings.Sections.FirstOrDefault(s => s.Title.Equals(sectionTitle, StringComparison.OrdinalIgnoreCase));
             if(section == null)
             {
                 return false;
             }
 
-            var switchToUpdate = section.Switches.FirstOrDefault(sw => sw.Label == switchLabel);
+            var switchToUpdate = section.Switches.FirstOrDefault(sw => sw.Label.Equals(switchLabel, StringComparison.OrdinalIgnoreCase));
             if (switchToUpdate == null)
             {
                 return false;
