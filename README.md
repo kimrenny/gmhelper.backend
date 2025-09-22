@@ -19,6 +19,38 @@ The backend provides all API endpoints for the GMHelper application, including u
 - Swagger for API documentation
 - Docker for containerized deployment
 
+## Environment Variables
+
+For the application to work correctly, create a `.env` file in the root folder of the backend repository with the following content:
+```bash
+SMTP__Host=
+SMTP_Port=
+SMTP__Username=
+SMTP__Password=
+SMTP__From=
+CAPTCHA_SecretKey=
+ConnectionStrings__DefaultConnection=
+ConnectionStrings__DevConnection=
+
+#Development/Production mode
+ASPNETCORE_ENVIRONMENT=
+
+# PostgreSQL
+POSTGRES_USER=
+POSTGRES_PASSWORD=
+POSTGRES_DB=
+
+# JWT
+JWT_SECRET_KEY=
+JWT_ISSUER=
+JWT_AUDIENCE=
+
+#CORS
+CORS_ORIGINS=
+```
+
+> Fill in the values according to your environment. This is required for the backend to run correctly.
+
 ## Getting Started
 
 ### Running with Docker
