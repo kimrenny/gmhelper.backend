@@ -1,15 +1,15 @@
-﻿using MatHelper.DAL.Repositories;
-using MatHelper.BLL.Interfaces;
+﻿using MatHelper.DAL.Interfaces;
 using Microsoft.Extensions.Logging;
+using MatHelper.BLL.Interfaces;
 
 namespace MatHelper.BLL.Services
 {
     public class DeviceManagementService : IDeviceManagementService
     {
-        private readonly UserRepository _userRepository;
+        private readonly IUserRepository _userRepository;
         private readonly ILogger _logger;
 
-        public DeviceManagementService(UserRepository userRepository, ILogger<DeviceManagementService> logger)
+        public DeviceManagementService(IUserRepository userRepository, ILogger<DeviceManagementService> logger)
         {
             _userRepository = userRepository;
             _logger = logger;

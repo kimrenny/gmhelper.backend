@@ -1,10 +1,9 @@
-using MatHelper.BLL.Interfaces;
-using MatHelper.CORE.Options;
-using MatHelper.DAL.Repositories;
+using MatHelper.DAL.Interfaces;
 using Microsoft.Extensions.Logging;
 using System.Security.Claims;
 using Microsoft.AspNetCore.Http;
 using TokenValidationResult = MatHelper.CORE.Enums.TokenValidationResult;
+using MatHelper.BLL.Interfaces;
 
 namespace MatHelper.BLL.Services
 {
@@ -12,11 +11,11 @@ namespace MatHelper.BLL.Services
     {
         private readonly ISecurityService _securityService;
         private readonly ITokenGeneratorService _tokenGeneratorService;
-        private readonly UserRepository _userRepository;
-        private readonly LoginTokenRepository _loginTokenRepository;
+        private readonly IUserRepository _userRepository;
+        private readonly ILoginTokenRepository _loginTokenRepository;
         private readonly ILogger _logger;
 
-        public TokenService(ISecurityService secutiryService, ITokenGeneratorService tokenGeneratorService, UserRepository userRepository, LoginTokenRepository loginTokenRepository, ILogger<TokenService> logger)
+        public TokenService(ISecurityService secutiryService, ITokenGeneratorService tokenGeneratorService, IUserRepository userRepository, ILoginTokenRepository loginTokenRepository, ILogger<TokenService> logger)
         {
             _securityService = secutiryService;
             _tokenGeneratorService = tokenGeneratorService;

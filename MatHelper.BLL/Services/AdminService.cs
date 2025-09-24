@@ -3,7 +3,7 @@ using MatHelper.BLL.Interfaces;
 using MatHelper.CORE.Enums;
 using MatHelper.CORE.Models;
 using MatHelper.CORE.Options;
-using MatHelper.DAL.Repositories;
+using MatHelper.DAL.Interfaces;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using System.Collections.Concurrent;
@@ -14,12 +14,12 @@ namespace MatHelper.BLL.Services
     {
         private readonly ISecurityService _securityService;
         private readonly ITokenService _tokenService;
-        private readonly UserRepository _userRepository;
-        private readonly LoginTokenRepository _loginTokenRepository;
+        private readonly IUserRepository _userRepository;
+        private readonly ILoginTokenRepository _loginTokenRepository;
         private readonly IUserMapper _userMapper;
         private readonly ILogger _logger;
 
-        public AdminService(ISecurityService securityService, ITokenService tokenService, UserRepository userRepository, LoginTokenRepository loginTokenRepository, IUserMapper userMapper, ILogger<AdminService> logger)
+        public AdminService(ISecurityService securityService, ITokenService tokenService, IUserRepository userRepository, ILoginTokenRepository loginTokenRepository, IUserMapper userMapper, ILogger<AdminService> logger)
         {
             _securityService = securityService;
             _tokenService = tokenService;

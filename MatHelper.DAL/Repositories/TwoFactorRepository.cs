@@ -1,10 +1,11 @@
 using MatHelper.DAL.Database;
 using MatHelper.DAL.Models;
 using Microsoft.EntityFrameworkCore;
+using MatHelper.DAL.Interfaces;
 
 namespace MatHelper.DAL.Repositories
 {
-    public class TwoFactorRepository
+    public class TwoFactorRepository : ITwoFactorRepository
     {
         private readonly AppDbContext _context;
 

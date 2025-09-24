@@ -1,20 +1,20 @@
-using MatHelper.BLL.Interfaces;
 using MatHelper.CORE.Models;
 using MatHelper.CORE.Options;
-using MatHelper.DAL.Repositories;
+using MatHelper.DAL.Interfaces;
 using Microsoft.Extensions.Logging;
 using MatHelper.CORE.Enums;
+using MatHelper.BLL.Interfaces;
 
 namespace MatHelper.BLL.Services
 {
     public class UserManagementService : IUserManagementService
     {
-        private readonly UserRepository _userRepository;
+        private readonly IUserRepository _userRepository;
         private readonly ITwoFactorService _twoFactorService;
         private readonly ISecurityService _securityService;
         private readonly ILogger _logger;
 
-        public UserManagementService(UserRepository userRepository, ITwoFactorService twoFactorService, ISecurityService securityService, ILogger<UserManagementService> logger)
+        public UserManagementService(IUserRepository userRepository, ITwoFactorService twoFactorService, ISecurityService securityService, ILogger<UserManagementService> logger)
         {
             _userRepository = userRepository;
             _twoFactorService = twoFactorService;

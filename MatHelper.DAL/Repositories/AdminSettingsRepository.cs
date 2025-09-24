@@ -1,10 +1,11 @@
 ﻿using MatHelper.DAL.Database;
 using Microsoft.EntityFrameworkCore;
 using MatHelper.DAL.Models;
+using MatHelper.DAL.Interfaces;
 
 namespace MatHelper.DAL.Repositories
 {
-    public class AdminSettingsRepository
+    public class AdminSettingsRepository : IAdminSettingsRepository
     {
         private readonly AppDbContext _context;
 

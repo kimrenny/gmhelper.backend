@@ -3,10 +3,11 @@ using Microsoft.EntityFrameworkCore;
 using MatHelper.DAL.Models;
 using MatHelper.CORE.Models;
 using MatHelper.CORE.Enums;
+using MatHelper.DAL.Interfaces;
 
 namespace MatHelper.DAL.Repositories
 {
-    public class PasswordRecoveryRepository
+    public class PasswordRecoveryRepository : IPasswordRecoveryRepository
     {
         private readonly AppDbContext _context;
 

@@ -1,7 +1,7 @@
 ﻿using MatHelper.BLL.Interfaces;
 using MatHelper.CORE.Models;
 using MatHelper.DAL.Models;
-using MatHelper.DAL.Repositories;
+using MatHelper.DAL.Interfaces;
 using Microsoft.Extensions.Logging;
 using System.Text.Json;
 using MatHelper.CORE.Enums;
@@ -10,11 +10,11 @@ namespace MatHelper.BLL.Services
 {
     public class GeoTaskProcessingService : IGeoTaskProcessingService
     {
-        private readonly TaskRequestRepository _taskRequestRepository;
-        private readonly TaskRatingRepository _taskRatingRepository;
+        private readonly ITaskRequestRepository _taskRequestRepository;
+        private readonly ITaskRatingRepository _taskRatingRepository;
         private readonly ILogger<GeoTaskProcessingService> _logger;
 
-        public GeoTaskProcessingService(TaskRequestRepository taskRequestRepository, TaskRatingRepository taskRatingRepository, ILogger<GeoTaskProcessingService> logger)
+        public GeoTaskProcessingService(ITaskRequestRepository taskRequestRepository, ITaskRatingRepository taskRatingRepository, ILogger<GeoTaskProcessingService> logger)
         {
             _taskRequestRepository = taskRequestRepository;
             _taskRatingRepository = taskRatingRepository;
@@ -78,6 +78,8 @@ namespace MatHelper.BLL.Services
             };
 
             await _taskRequestRepository.AddRequestAsync(log);
+
+            // await Task.Delay(3000);
 
             _logger.LogInformation("Task log saved. TaskId: {TaskId}, IP: {Ip}, UserId: {UserId}", taskId, ip, userId.ToString() ?? "Anonymous");
 

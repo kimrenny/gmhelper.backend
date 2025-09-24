@@ -1,10 +1,11 @@
 ﻿using MatHelper.DAL.Database;
 using Microsoft.EntityFrameworkCore;
 using MatHelper.DAL.Models;
+using MatHelper.DAL.Interfaces;
 
 namespace MatHelper.DAL.Repositories
 {
-    public class ErrorLogRepository
+    public class ErrorLogRepository : IErrorLogRepository
     {
         private readonly AppDbContext _context;
 

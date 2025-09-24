@@ -2,11 +2,11 @@
 using Microsoft.EntityFrameworkCore;
 using MatHelper.DAL.Models;
 using MatHelper.CORE.Models;
-using Npgsql;
+using MatHelper.DAL.Interfaces;
 
 namespace MatHelper.DAL.Repositories
 {
-    public class RequestLogRepository
+    public class RequestLogRepository : IRequestLogRepository
     {
         private readonly AppDbContext _context;
 

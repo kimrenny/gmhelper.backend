@@ -1,9 +1,10 @@
 using MatHelper.DAL.Database;
 using MatHelper.DAL.Models;
+using MatHelper.DAL.Interfaces;
 
 namespace MatHelper.DAL.Repositories
 {
-    public class TaskRatingRepository
+    public class TaskRatingRepository : ITaskRatingRepository
     {
         private readonly AppDbContext _context;
 

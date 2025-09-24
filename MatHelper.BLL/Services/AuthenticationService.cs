@@ -2,7 +2,7 @@ using MatHelper.BLL.Interfaces;
 using MatHelper.CORE.Models;
 using MatHelper.CORE.Enums;
 using MatHelper.DAL.Models;
-using MatHelper.DAL.Repositories;
+using MatHelper.DAL.Interfaces;
 using Microsoft.Extensions.Logging;
 using System.Security.Cryptography;
 
@@ -10,19 +10,19 @@ namespace MatHelper.BLL.Services
 {
     public class AuthenticationService: IAuthenticationService
     {
-        private readonly UserRepository _userRepository;
-        private readonly AppTwoFactorSessionRepository _twoFactorSessionRepository;
+        private readonly IUserRepository _userRepository;
+        private readonly IAppTwoFactorSessionRepository _twoFactorSessionRepository;
         private readonly ITokenGeneratorService _tokenGeneratorService;
         private readonly ITwoFactorService _twoFactorService;
-        private readonly EmailConfirmationRepository _emailConfirmationRepository;
-        private readonly EmailLoginCodeRepository _emailLoginCodeRepository;
-        private readonly PasswordRecoveryRepository _passwordRecoveryRepository;
-        private readonly AuthLogRepository _authLogRepository;
+        private readonly IEmailConfirmationRepository _emailConfirmationRepository;
+        private readonly IEmailLoginCodeRepository _emailLoginCodeRepository;
+        private readonly IPasswordRecoveryRepository _passwordRecoveryRepository;
+        private readonly IAuthLogRepository _authLogRepository;
         private readonly IMailService _mailService;
         private readonly ISecurityService _securityService;
         private readonly ILogger _logger;
 
-        public AuthenticationService(UserRepository userRepository, AppTwoFactorSessionRepository appTwoFactorSessionRepository, ITokenGeneratorService tokenGeneratorService, ITwoFactorService twoFactorService, EmailConfirmationRepository emailConfirmationRepository, EmailLoginCodeRepository emailLoginCodeRepository, PasswordRecoveryRepository passwordRecoveryRepository, AuthLogRepository authLogRepository, IMailService mailService, ISecurityService securityService, ILogger<AuthenticationService> logger)
+        public AuthenticationService(IUserRepository userRepository, IAppTwoFactorSessionRepository appTwoFactorSessionRepository, ITokenGeneratorService tokenGeneratorService, ITwoFactorService twoFactorService, IEmailConfirmationRepository emailConfirmationRepository, IEmailLoginCodeRepository emailLoginCodeRepository, IPasswordRecoveryRepository passwordRecoveryRepository, IAuthLogRepository authLogRepository, IMailService mailService, ISecurityService securityService, ILogger<AuthenticationService> logger)
         {
             _userRepository = userRepository;
             _twoFactorSessionRepository = appTwoFactorSessionRepository;
@@ -101,7 +101,7 @@ namespace MatHelper.BLL.Services
 
                 foreach (var blockedUser in usersToBlock)
                 {
-                    if (blockedUser != null)
+                    if (blockedUser != null && blockedUser.Role != "Owner")
                     {
                         blockedUser.IsBlocked = true;
                         if (blockedUser.LoginTokens != null)

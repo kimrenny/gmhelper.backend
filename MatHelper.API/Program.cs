@@ -6,16 +6,13 @@ using MatHelper.BLL.Middlewares;
 using MatHelper.BLL.Services;
 using MatHelper.CORE.Options;
 using MatHelper.DAL.Database;
+using MatHelper.DAL.Interfaces;
 using MatHelper.DAL.Repositories;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
-using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
-using Npgsql.EntityFrameworkCore.PostgreSQL;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -58,7 +55,7 @@ builder.Services.AddDbContext<AppDbContext>((provider, ctx) =>
 
     var env = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") ?? "Production";
 
-    if(env == "Development")
+    if (env == "Development")
     {
         connectionString = Environment.GetEnvironmentVariable("ConnectionStrings__DevConnection");
     }
@@ -66,6 +63,8 @@ builder.Services.AddDbContext<AppDbContext>((provider, ctx) =>
     {
         connectionString = Environment.GetEnvironmentVariable("ConnectionStrings__DefaultConnection");
     }
+
+    //connectionString = Environment.GetEnvironmentVariable("ConnectionStrings__DefaultConnection");
 
     ctx.UseNpgsql(connectionString, npgsqlOptions =>
     {
@@ -108,19 +107,19 @@ builder.Services.AddScoped<IClientInfoService, ClientInfoService>();
 builder.Services.AddScoped<ITwoFactorService, TwoFactorService>();
 builder.Services.AddScoped<IUserMapper, UserMapper>();
 builder.Services.AddScoped<ICaptchaValidationService, CaptchaValidationService>();
-builder.Services.AddScoped<ErrorLogRepository>();
-builder.Services.AddScoped<UserRepository>();
-builder.Services.AddScoped<EmailConfirmationRepository>();
-builder.Services.AddScoped<EmailLoginCodeRepository>();
-builder.Services.AddScoped<LoginTokenRepository>();
-builder.Services.AddScoped<PasswordRecoveryRepository>();
-builder.Services.AddScoped<RequestLogRepository>();
-builder.Services.AddScoped<AuthLogRepository>();
-builder.Services.AddScoped<AdminSettingsRepository>();
-builder.Services.AddScoped<TaskRequestRepository>();
-builder.Services.AddScoped<TaskRatingRepository>();
-builder.Services.AddScoped<TwoFactorRepository>();
-builder.Services.AddScoped<AppTwoFactorSessionRepository>();
+builder.Services.AddScoped<IErrorLogRepository, ErrorLogRepository>();
+builder.Services.AddScoped<IUserRepository, UserRepository>();
+builder.Services.AddScoped<IEmailConfirmationRepository, EmailConfirmationRepository>();
+builder.Services.AddScoped<IEmailLoginCodeRepository, EmailLoginCodeRepository>();
+builder.Services.AddScoped<ILoginTokenRepository, LoginTokenRepository>();
+builder.Services.AddScoped<IPasswordRecoveryRepository, PasswordRecoveryRepository>();
+builder.Services.AddScoped<IRequestLogRepository, RequestLogRepository>();
+builder.Services.AddScoped<IAuthLogRepository, AuthLogRepository>();
+builder.Services.AddScoped<IAdminSettingsRepository, AdminSettingsRepository>();
+builder.Services.AddScoped<ITaskRequestRepository, TaskRequestRepository>();
+builder.Services.AddScoped<ITaskRatingRepository, TaskRatingRepository>();
+builder.Services.AddScoped<ITwoFactorRepository, TwoFactorRepository>();
+builder.Services.AddScoped<IAppTwoFactorSessionRepository, AppTwoFactorSessionRepository>();
 
 builder.Services.AddAuthentication(options =>
 {

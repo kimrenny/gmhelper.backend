@@ -1,12 +1,12 @@
 using MatHelper.DAL.Database;
-using MatHelper.CORE.Models;
 using MatHelper.DAL.Models;
 using Microsoft.EntityFrameworkCore;
 using MatHelper.CORE.Enums;
+using MatHelper.DAL.Interfaces;
 
 namespace MatHelper.DAL.Repositories
 {
-    public class TaskRequestRepository
+    public class TaskRequestRepository : ITaskRequestRepository
     {
         private readonly AppDbContext _context;
 

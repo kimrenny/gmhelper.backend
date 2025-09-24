@@ -1,5 +1,5 @@
 using MatHelper.BLL.Interfaces;
-using MatHelper.DAL.Repositories;
+using MatHelper.DAL.Interfaces;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json.Linq;
 using System.Security.Cryptography;
@@ -9,11 +9,11 @@ namespace MatHelper.BLL.Services
 {
     public class SecurityService : ISecurityService
     {
-        private readonly UserRepository _userRepository;
-        private readonly LoginTokenRepository _loginTokenRepository;
+        private readonly IUserRepository _userRepository;
+        private readonly ILoginTokenRepository _loginTokenRepository;
         private readonly ILogger _logger;
 
-        public SecurityService(UserRepository userRepository, LoginTokenRepository loginTokenRepository, ILogger<SecurityService> logger)
+        public SecurityService(IUserRepository userRepository, ILoginTokenRepository loginTokenRepository, ILogger<SecurityService> logger)
         {
             _userRepository = userRepository;
             _loginTokenRepository = loginTokenRepository;

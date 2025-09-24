@@ -3,10 +3,11 @@ using MatHelper.CORE.Models;
 using MatHelper.DAL.Database;
 using Microsoft.EntityFrameworkCore;
 using System.Linq.Expressions;
+using MatHelper.DAL.Interfaces;
 
 namespace MatHelper.DAL.Repositories
 {
-    public class UserRepository
+    public class UserRepository : IUserRepository
     {
         private readonly AppDbContext _context;
 

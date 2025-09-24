@@ -1,19 +1,19 @@
-﻿using MatHelper.BLL.Interfaces;
-using MatHelper.DAL.Models;
-using MatHelper.DAL.Repositories;
+﻿using MatHelper.DAL.Models;
+using MatHelper.DAL.Interfaces;
 using Microsoft.Extensions.Logging;
 using System.Text.Json;
 using MatHelper.CORE.Enums;
+using MatHelper.BLL.Interfaces;
 
 namespace MatHelper.BLL.Services
 {
     public class MathTaskProcessingService : IMathTaskProcessingService
     {
-        private readonly TaskRequestRepository _taskRequestRepository;
-        private readonly TaskRatingRepository _taskRatingRepository;
+        private readonly ITaskRequestRepository _taskRequestRepository;
+        private readonly ITaskRatingRepository _taskRatingRepository;
         private readonly ILogger<MathTaskProcessingService> _logger;
 
-        public MathTaskProcessingService(TaskRequestRepository taskRequestRepository, TaskRatingRepository taskRatingRepository, ILogger<MathTaskProcessingService> logger)
+        public MathTaskProcessingService(ITaskRequestRepository taskRequestRepository, ITaskRatingRepository taskRatingRepository, ILogger<MathTaskProcessingService> logger)
         {
             _taskRequestRepository = taskRequestRepository;
             _taskRatingRepository = taskRatingRepository;

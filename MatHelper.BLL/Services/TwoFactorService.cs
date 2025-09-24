@@ -1,17 +1,17 @@
-using MatHelper.BLL.Interfaces;
 using MatHelper.DAL.Models;
 using Microsoft.Extensions.Logging;
 using OtpNet;
-using MatHelper.DAL.Repositories;
+using MatHelper.DAL.Interfaces;
+using MatHelper.BLL.Interfaces;
 
 namespace MatHelper.BLL.Services
 {
     public class TwoFactorService : ITwoFactorService
     {
-        private readonly TwoFactorRepository _twoFactorRepository;
+        private readonly ITwoFactorRepository _twoFactorRepository;
         private readonly ILogger _logger;
 
-        public TwoFactorService(TwoFactorRepository twoFactorRepository, ILogger<ITwoFactorService> logger)
+        public TwoFactorService(ITwoFactorRepository twoFactorRepository, ILogger<ITwoFactorService> logger)
         {
             _twoFactorRepository = twoFactorRepository;
             _logger = logger;

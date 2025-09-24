@@ -1,19 +1,19 @@
-﻿using MatHelper.DAL.Repositories;
+﻿using MatHelper.DAL.Interfaces;
 using MatHelper.DAL.Models;
-using MatHelper.BLL.Interfaces;
 using Microsoft.Extensions.Logging;
 using MatHelper.CORE.Models;
+using MatHelper.BLL.Interfaces;
 
 namespace MatHelper.BLL.Services
 {
     public class RequestLogService : IRequestLogService
     {
-        private readonly RequestLogRepository _logRepository;
-        private readonly AuthLogRepository _authLogRepository;
-        private readonly ErrorLogRepository _errorLogRepository;
+        private readonly IRequestLogRepository _logRepository;
+        private readonly IAuthLogRepository _authLogRepository;
+        private readonly IErrorLogRepository _errorLogRepository;
         private readonly ILogger _logger;
 
-        public RequestLogService(RequestLogRepository logRepository, AuthLogRepository authLogRepository, ErrorLogRepository errorLogRepository, ILogger<RequestLogService> logger)
+        public RequestLogService(IRequestLogRepository logRepository, IAuthLogRepository authLogRepository, IErrorLogRepository errorLogRepository, ILogger<RequestLogService> logger)
         {
             _logRepository = logRepository;
             _authLogRepository = authLogRepository;

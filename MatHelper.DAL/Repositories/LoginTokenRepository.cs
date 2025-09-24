@@ -1,10 +1,11 @@
 ﻿using MatHelper.DAL.Database;
 using Microsoft.EntityFrameworkCore;
 using MatHelper.CORE.Models;
+using MatHelper.DAL.Interfaces;
 
 namespace MatHelper.DAL.Repositories
 {
-    public class LoginTokenRepository
+    public class LoginTokenRepository : ILoginTokenRepository
     {
         private readonly AppDbContext _context;
 

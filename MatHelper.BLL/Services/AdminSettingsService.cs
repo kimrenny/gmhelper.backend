@@ -1,5 +1,5 @@
 ﻿using MatHelper.BLL.Interfaces;
-using MatHelper.DAL.Repositories;
+using MatHelper.DAL.Interfaces;
 using MatHelper.DAL.Models;
 using Microsoft.Extensions.Logging;
 
@@ -7,11 +7,11 @@ namespace MatHelper.BLL.Services
 {
     public class AdminSettingsService : IAdminSettingsService
     {
-        private readonly AdminSettingsRepository _adminSettingsRepository;
-        private readonly UserRepository _userRepository;
+        private readonly IAdminSettingsRepository _adminSettingsRepository;
+        private readonly IUserRepository _userRepository;
         private readonly ILogger _logger;
 
-        public AdminSettingsService(AdminSettingsRepository adminSettingsRepository, UserRepository userRepository, ILogger<AdminSettingsService> logger)
+        public AdminSettingsService(IAdminSettingsRepository adminSettingsRepository, IUserRepository userRepository, ILogger<AdminSettingsService> logger)
         {
             _adminSettingsRepository = adminSettingsRepository;
             _userRepository = userRepository;
