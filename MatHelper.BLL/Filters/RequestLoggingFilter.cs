@@ -13,16 +13,17 @@ using Microsoft.Extensions.Primitives;
 using Microsoft.Extensions.DependencyInjection;
 using System.Net;
 using MatHelper.BLL.Interfaces;
+using MatHelper.DAL.Interfaces;
 
 namespace MatHelper.BLL.Filters
 {
     public class RequestLoggingFilter : IAsyncActionFilter, IFilterMetadata
     {
-        private readonly RequestLogRepository _logRepository;
+        private readonly IRequestLogRepository _logRepository;
         private readonly IHttpContextAccessor _httpContextAccessor;
         private readonly IClientInfoService _clientInfoService;
 
-        public RequestLoggingFilter(RequestLogRepository logRepository, IHttpContextAccessor httpContextAccessor, IClientInfoService clientInfoService)
+        public RequestLoggingFilter(IRequestLogRepository logRepository, IHttpContextAccessor httpContextAccessor, IClientInfoService clientInfoService)
         {
             _logRepository = logRepository;
             _httpContextAccessor = httpContextAccessor;
@@ -127,7 +128,8 @@ namespace MatHelper.BLL.Filters
                     var endTime = DateTime.UtcNow;
                     var elapsedTime = endTime - startTime;
                     var responseStatusCode = context.HttpContext.Response.StatusCode;
-                    if(responseStatusCode < 400)
+
+                    if (responseStatusCode < 400)
                     {
                         responseStatusCode = 500;
                     }

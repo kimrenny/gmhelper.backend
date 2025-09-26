@@ -14,9 +14,12 @@ EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{35A80F2F-DEA3-4A18-862E-22500F82BBDF}"
 	ProjectSection(SolutionItems) = preProject
 		.env = .env
+		.env.test = .env.test
 	EndProjectSection
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MatHelper.Tests", "MatHelper.Tests\MatHelper.Tests.csproj", "{19AFD72B-1ECB-4F2D-AC88-2845B713DAC7}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MatHelper.IntegrationTests", "MatHelper.IntegrationTests\MatHelper.IntegrationTests.csproj", "{6A681244-381F-4E26-9553-6A1EE57FF5CC}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -88,6 +91,18 @@ Global
 		{19AFD72B-1ECB-4F2D-AC88-2845B713DAC7}.Release|x64.Build.0 = Release|Any CPU
 		{19AFD72B-1ECB-4F2D-AC88-2845B713DAC7}.Release|x86.ActiveCfg = Release|Any CPU
 		{19AFD72B-1ECB-4F2D-AC88-2845B713DAC7}.Release|x86.Build.0 = Release|Any CPU
+		{6A681244-381F-4E26-9553-6A1EE57FF5CC}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{6A681244-381F-4E26-9553-6A1EE57FF5CC}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{6A681244-381F-4E26-9553-6A1EE57FF5CC}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{6A681244-381F-4E26-9553-6A1EE57FF5CC}.Debug|x64.Build.0 = Debug|Any CPU
+		{6A681244-381F-4E26-9553-6A1EE57FF5CC}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{6A681244-381F-4E26-9553-6A1EE57FF5CC}.Debug|x86.Build.0 = Debug|Any CPU
+		{6A681244-381F-4E26-9553-6A1EE57FF5CC}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{6A681244-381F-4E26-9553-6A1EE57FF5CC}.Release|Any CPU.Build.0 = Release|Any CPU
+		{6A681244-381F-4E26-9553-6A1EE57FF5CC}.Release|x64.ActiveCfg = Release|Any CPU
+		{6A681244-381F-4E26-9553-6A1EE57FF5CC}.Release|x64.Build.0 = Release|Any CPU
+		{6A681244-381F-4E26-9553-6A1EE57FF5CC}.Release|x86.ActiveCfg = Release|Any CPU
+		{6A681244-381F-4E26-9553-6A1EE57FF5CC}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

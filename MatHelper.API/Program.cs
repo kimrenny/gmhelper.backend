@@ -120,6 +120,7 @@ builder.Services.AddScoped<ITaskRequestRepository, TaskRequestRepository>();
 builder.Services.AddScoped<ITaskRatingRepository, TaskRatingRepository>();
 builder.Services.AddScoped<ITwoFactorRepository, TwoFactorRepository>();
 builder.Services.AddScoped<IAppTwoFactorSessionRepository, AppTwoFactorSessionRepository>();
+builder.Services.AddScoped<ErrorLoggingMiddleware>();
 
 builder.Services.AddAuthentication(options =>
 {
@@ -214,3 +215,5 @@ app.UseAuthorization();
 app.MapControllers();
 
 app.Run();
+
+public partial class Program { }

@@ -14,46 +14,39 @@ using Microsoft.Extensions.DependencyInjection;
 using System.Net;
 using Microsoft.Extensions.Logging;
 using MatHelper.DAL.Models;
+using MatHelper.DAL.Interfaces;
 
 namespace MatHelper.BLL.Middlewares
 {
-    public class ErrorLoggingMiddleware
+    public class ErrorLoggingMiddleware : IMiddleware
     {
-        private readonly RequestDelegate _next;
         private readonly ILogger<ErrorLoggingMiddleware> _logger;
-        private readonly IServiceScopeFactory _serviceScopeFactory;
+        private readonly IErrorLogRepository _errorLogRepository;
 
-        public ErrorLoggingMiddleware(RequestDelegate next, ILogger<ErrorLoggingMiddleware> logger, IServiceScopeFactory serviceScopeFactory)
+        public ErrorLoggingMiddleware(ILogger<ErrorLoggingMiddleware> logger, IErrorLogRepository errorLogRepository)
         {
-            _next = next;
             _logger = logger;
-            _serviceScopeFactory = serviceScopeFactory;
+            _errorLogRepository = errorLogRepository;
         }
 
-        public async Task InvokeAsync(HttpContext context)
+        public async Task InvokeAsync(HttpContext context, RequestDelegate next)
         {
             try
             {
-                await _next(context);
+                await next(context);
             }
             catch (Exception ex)
             {
-                using (var scope = _serviceScopeFactory.CreateScope())
+                var errorLog = new ErrorLog
                 {
-                    var errorLogRepository = scope.ServiceProvider.GetRequiredService<ErrorLogRepository>();
+                    Timestamp = DateTime.UtcNow,
+                    Message = ex.Message,
+                    StackTrace = ex.StackTrace,
+                    Endpoint = context.Request.Path,
+                    ExceptionDetails = ex.ToString()
+                };
 
-                    var errorLog = new ErrorLog
-                    {
-                        Timestamp = DateTime.UtcNow,
-                        Message = ex.Message,
-                        StackTrace = ex.StackTrace,
-                        Endpoint = context.Request.Path,
-                        ExceptionDetails = ex.ToString()
-                    };
-
-                    await errorLogRepository.LogErrorAsync(errorLog);
-                }
-                
+                await _errorLogRepository.LogErrorAsync(errorLog);
 
                 _logger.LogError(ex, "Unhandled exception occured.");
 
