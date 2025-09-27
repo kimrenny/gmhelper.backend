@@ -395,6 +395,7 @@ namespace MatHelper.BLL.Services
                 {
                     AccessToken = accessToken,
                     RefreshToken = refreshToken,
+                    RefreshTokenExpiration = refreshTokenExpiration
                 };
             }
             catch (Exception ex) when (ex is UnauthorizedAccessException

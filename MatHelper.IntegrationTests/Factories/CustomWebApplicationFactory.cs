@@ -17,6 +17,8 @@ public class CustomWebApplicationFactory<TProgram> : WebApplicationFactory<TProg
     {
         builder.UseEnvironment("IntegrationTest");
 
+        builder.UseSetting("https_port", "5001");
+
         var projectDir = System.IO.Path.GetFullPath("../../../../");
         Env.Load(System.IO.Path.Combine(projectDir, ".env.test"));
 

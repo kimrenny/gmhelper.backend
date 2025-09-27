@@ -88,9 +88,7 @@ namespace MatHelper.Tests.Services
             var result = await _service.RefreshAccessTokenAsync("refreshToken");
 
             Assert.Equal("newAccess", result.AccessToken);
-            Assert.Equal("newRefresh", result.RefreshToken);
             Assert.Equal("newAccess", loginToken.Token);
-            Assert.Equal("newRefresh", loginToken.RefreshToken);
         }
 
         [Fact]

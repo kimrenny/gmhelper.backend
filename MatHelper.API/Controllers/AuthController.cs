@@ -1,10 +1,12 @@
-using Microsoft.AspNetCore.Mvc;
+using MatHelper.API.Common;
 using MatHelper.BLL.Interfaces;
 using MatHelper.BLL.Services;
-using MatHelper.CORE.Models;
-using System.Collections.Concurrent;
 using MatHelper.CORE.Enums;
-using MatHelper.API.Common;
+using MatHelper.CORE.Models;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
+using Sprache;
+using System.Collections.Concurrent;
 
 namespace MatHelper.API.Controllers
 {
@@ -160,6 +162,14 @@ namespace MatHelper.API.Controllers
                     return Unauthorized(ApiResponse<string>.Fail("Invalid credentials."));
                 }
 
+                Response.Cookies.Append("refreshToken", result.RefreshToken, new CookieOptions
+                {
+                    HttpOnly = true,
+                    Secure = true,
+                    SameSite = SameSiteMode.Strict,
+                    Expires = result.RefreshTokenExpiration
+                });
+
                 return Ok(ApiResponse<LoginResponse>.Ok(result));
             }
             catch (UnauthorizedAccessException ex)
@@ -270,38 +280,84 @@ namespace MatHelper.API.Controllers
         }
 
         [HttpPost("token/refresh")]
-        public async Task<IActionResult> RefreshToken([FromBody] RefreshTokenRequest request)
+        public async Task<IActionResult> RefreshToken()
         {
-            if (string.IsNullOrEmpty(request.RefreshToken))
+            var refreshToken = Request.Cookies["refreshToken"];
+
+            if (string.IsNullOrEmpty(refreshToken))
             {
                 _logger.LogWarning("Attempt to refresh token with an empty token.");
                 return BadRequest(ApiResponse<string>.Fail("Refresh token is required."));
             }
 
-            if (!ProcessingTokens.TryAdd(request.RefreshToken, true))
+            if (!ProcessingTokens.TryAdd(refreshToken, true))
             {
-                _logger.LogWarning("Refresh token request already in progress: {RefreshToken}", request.RefreshToken);
+                _logger.LogWarning("Refresh token request already in progress: {RefreshToken}", refreshToken);
                 return Conflict(ApiResponse<string>.Fail("Token refresh already in progress."));
             }
 
             try
             {
-                var tokens = await _tokenService.RefreshAccessTokenAsync(request.RefreshToken);
+                var tokens = await _tokenService.RefreshAccessTokenAsync(refreshToken);
+
+                if (tokens.AccessToken == null || tokens.RefreshToken == null)
+                {
+                    _logger.LogWarning("Refresh failed for user.");
+                    return Unauthorized(ApiResponse<string>.Fail("Invalid credentials."));
+                }
+
+                Console.WriteLine($"{refreshToken} -> {tokens.RefreshToken}");
+
+                Response.Cookies.Append("refreshToken", tokens.RefreshToken, new CookieOptions
+                {
+                    HttpOnly = true,
+                    Secure = true,
+                    SameSite = SameSiteMode.Strict,
+                    Expires = tokens.RefreshTokenExpiration
+                });
 
                 return Ok(new LoginResponse
                 { 
-                    AccessToken = tokens.AccessToken,
-                    RefreshToken = tokens.RefreshToken
+                    AccessToken = tokens.AccessToken
                 });
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error during refreshing token for refreshToken: {RefreshToken}", request.RefreshToken);
+                _logger.LogError(ex, "Error during refreshing token for refreshToken.");
                 return Unauthorized(ApiResponse<string>.Fail(ex.Message));
             }
             finally
             {
-                ProcessingTokens.TryRemove(request.RefreshToken, out _);
+                ProcessingTokens.TryRemove(refreshToken, out _);
+            }
+        }
+
+        [HttpPost("logout")]
+        public async Task<IActionResult> Logout()
+        {
+            var refreshToken = Request.Cookies["refreshToken"];
+
+            Response.Cookies.Delete("refreshToken");
+
+            if (string.IsNullOrWhiteSpace(refreshToken))
+            {
+                return BadRequest(ApiResponse<string>.Fail("Refresh token is required."));
+            }
+
+            try
+            {
+                var result = await _tokenService.DisableRefreshToken(refreshToken);
+
+                if (!result)
+                {
+                    return BadRequest(ApiResponse<string>.Fail("Token could not be deactivated."));
+                }
+
+                return Ok(ApiResponse<string>.Ok("Logged out successfully."));
+            }
+            catch (Exception ex) 
+            {
+                return Unauthorized(ApiResponse<string>.Fail(ex.Message));
             }
         }
     }

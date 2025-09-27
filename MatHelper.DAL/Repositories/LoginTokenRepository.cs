@@ -32,6 +32,13 @@ namespace MatHelper.DAL.Repositories
             await _context.SaveChangesAsync();
         }
 
+        public async Task DeactivateTokenAsync(LoginToken token)
+        {
+            token.IsActive = false;
+            _context.LoginTokens.Update(token);
+            await _context.SaveChangesAsync();
+        }
+
         public async Task<List<LoginToken>> GetAllLoginTokensAsync()
         {
             return await _context.LoginTokens.Include(t => t.User).ToListAsync();

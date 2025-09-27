@@ -1,8 +1,10 @@
 ﻿using MatHelper.API.Common;
 using MatHelper.CORE.Models;
 using MatHelper.DAL.Database;
+using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using System.Net;
 using System.Net.Http.Json;
 
 namespace MatHelper.IntegrationTests.Tests
@@ -11,16 +13,33 @@ namespace MatHelper.IntegrationTests.Tests
     {
         private readonly CustomWebApplicationFactory<Program> _factory;
         private readonly HttpClient _client;
+        private readonly CookieContainer _cookieContainer;
 
         public AuthControllerTests(CustomWebApplicationFactory<Program> factory)
         {
             _factory = factory;
-            _client = factory.CreateClient();
+
+            _cookieContainer = new CookieContainer();
+
+            var clientOptions = new WebApplicationFactoryClientOptions
+            {
+                HandleCookies = true,
+                BaseAddress = new Uri("https://localhost:5001")
+            };
+
+            _client = factory.CreateClient(clientOptions);
         }
+
 
         [Fact]
         public async Task Register_Login_RefreshToken_WorkFlow()
         {
+            var clientOptions = new WebApplicationFactoryClientOptions
+            {
+                HandleCookies = true,
+            };
+            var client = _factory.CreateClient(clientOptions);
+
             // 1. Registration
             var userDto = new UserDto
             {
@@ -54,20 +73,17 @@ namespace MatHelper.IntegrationTests.Tests
 
             var loginResponse = await _client.PostAsJsonAsync("api/v1/auth/login", loginDto);
             loginResponse.EnsureSuccessStatusCode();
-            var loginResult = await loginResponse.Content.ReadFromJsonAsync<ApiResponse<LoginResponse>>();
 
+            var loginResult = await loginResponse.Content.ReadFromJsonAsync<ApiResponse<LoginResponse>>();
             Assert.NotNull(loginResult?.Data);
             Assert.NotNull(loginResult.Data.AccessToken);
-            Assert.NotNull(loginResult.Data.RefreshToken);
 
             // 3. Refresh token
-            var refreshRequest = new RefreshTokenRequest { RefreshToken = loginResult.Data.RefreshToken };
-            var refreshResponse = await _client.PostAsJsonAsync("api/v1/auth/token/refresh", refreshRequest);
+            var refreshResponse = await _client.PostAsync("api/v1/auth/token/refresh", null);
             refreshResponse.EnsureSuccessStatusCode();
-            var refreshResult = await refreshResponse.Content.ReadFromJsonAsync<LoginResponse>();
 
+            var refreshResult = await refreshResponse.Content.ReadFromJsonAsync<LoginResponse>();
             Assert.NotNull(refreshResult?.AccessToken);
-            Assert.NotNull(refreshResult?.RefreshToken);
         }
 
         [Fact]

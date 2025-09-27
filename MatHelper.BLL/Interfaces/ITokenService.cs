@@ -8,7 +8,8 @@ namespace MatHelper.BLL.Interfaces
 {
     public interface ITokenService
     {
-        Task<(string AccessToken, string RefreshToken)> RefreshAccessTokenAsync(string refreshToken);
+        Task<LoginResponse> RefreshAccessTokenAsync(string refreshToken);
+        Task<bool> DisableRefreshToken(string refreshToken);
         Task<bool> IsTokenDisabled(string token);
         Task<TokenValidationResult> ValidateAdminAccessAsync(HttpRequest request, ClaimsPrincipal user);
         string? ExtractTokenAsync(HttpRequest request);

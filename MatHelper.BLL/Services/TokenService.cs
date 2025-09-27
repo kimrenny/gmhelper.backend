@@ -4,6 +4,7 @@ using System.Security.Claims;
 using Microsoft.AspNetCore.Http;
 using TokenValidationResult = MatHelper.CORE.Enums.TokenValidationResult;
 using MatHelper.BLL.Interfaces;
+using MatHelper.CORE.Models;
 
 namespace MatHelper.BLL.Services
 {
@@ -24,9 +25,9 @@ namespace MatHelper.BLL.Services
             _logger = logger;
         }
 
-        public async Task<(string AccessToken, string RefreshToken)> RefreshAccessTokenAsync(string refreshToken)
+        public async Task<LoginResponse> RefreshAccessTokenAsync(string refreshToken)
         {
-            _logger.LogInformation("Attempting to refresh token: {RefreshToken}", refreshToken);
+            //_logger.LogInformation("Attempting to refresh token: {RefreshToken}", refreshToken);
 
             var token = await _loginTokenRepository.GetLoginTokenByRefreshTokenAsync(refreshToken);
             if (token == null || token.RefreshTokenExpiration < DateTime.UtcNow)
@@ -51,8 +52,28 @@ namespace MatHelper.BLL.Services
 
             await _userRepository.SaveChangesAsync();
 
-            _logger.LogInformation("New tokens generated for UserId: {UserId}", user.Id);
-            return (accessToken, newRefreshToken);
+            //_logger.LogInformation("New tokens generated for UserId: {UserId}", user.Id);
+            return new LoginResponse
+            {
+                AccessToken = accessToken,
+                RefreshToken = newRefreshToken,
+                RefreshTokenExpiration = token.RefreshTokenExpiration
+            };
+        }
+
+        public async Task<bool> DisableRefreshToken(string refreshToken)
+        {
+            if (string.IsNullOrWhiteSpace(refreshToken)) return false;
+
+            var token = await _loginTokenRepository.GetLoginTokenByRefreshTokenAsync(refreshToken);
+            if (token == null || token.RefreshTokenExpiration < DateTime.UtcNow)
+            {
+                _logger.LogWarning("Invalid or expired refresh token: {RefreshToken}", refreshToken);
+                throw new Exception("Invalid or expired refresh token.");
+            }
+
+            await _loginTokenRepository.DeactivateTokenAsync(token);
+            return true;
         }
 
         public async Task<bool> IsTokenDisabled(string token)

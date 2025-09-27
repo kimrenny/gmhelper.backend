@@ -1,6 +1,7 @@
 ﻿using MatHelper.API.Common;
 using MatHelper.BLL.Interfaces;
 using MatHelper.CORE.Models;
+using MatHelper.DAL.Interfaces;
 using MatHelper.DAL.Repositories;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -13,10 +14,10 @@ namespace MatHelper.API.Controllers
     {
         private readonly ITwoFactorService _twoFactorService;
         private readonly ITokenService _tokenService;
-        private readonly UserRepository _userRepository;
+        private readonly IUserRepository _userRepository;
         private readonly ILogger<SecurityController> _logger;
 
-        public SecurityController(ITwoFactorService twoFactorService, ITokenService tokenService, UserRepository userRepository, ILogger<SecurityController> logger)
+        public SecurityController(ITwoFactorService twoFactorService, ITokenService tokenService, IUserRepository userRepository, ILogger<SecurityController> logger)
         {
             _twoFactorService = twoFactorService;
             _tokenService = tokenService;

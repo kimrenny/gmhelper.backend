@@ -7,6 +7,7 @@ namespace MatHelper.DAL.Interfaces
         Task<LoginToken?> GetLoginTokenByRefreshTokenAsync(string refreshToken);
         Task<LoginToken?> GetLoginTokenAsync(string token);
         Task RemoveLoginTokenAsync(LoginToken token);
+        Task DeactivateTokenAsync(LoginToken token);
         Task<List<LoginToken>> GetAllLoginTokensAsync();
         Task ActionTokenAsync(string authToken, string action);
         Task<DashboardTokensDto> GetDashboardTokensAsync();

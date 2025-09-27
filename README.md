@@ -1,6 +1,6 @@
 # GMHelper Backend
 
-This is the backend of the GMHelper application, built with .NET 8 Web API.
+This is the backend of the GMHelper application, built with .NET 9 Web API.
 
 ## Table of Contents
 
@@ -10,6 +10,7 @@ This is the backend of the GMHelper application, built with .NET 8 Web API.
 - [Getting Started](#getting-started)
   - [Running with Docker](#running-with-docker)
   - [Running without Docker](#running-without-docker)
+  - [HTTPS / Secure Mode](#https--secure-mode)
 - [Running Tests](#running-tests)
 - [API Documentation](#api-documentation)
 - [Notes](#notes)
@@ -134,6 +135,24 @@ dotnet watch
 3. The backend will be available at [http://localhost:7057](http://localhost:7057)
 
 Frontend can be run separately (see README in the [frontend repository](https://github.com/kimrenny/gmhelper.ui)).
+
+### HTTPS / Secure Mode
+
+For proper operation, the backend must be run in HTTPS mode.
+
+To run the backend locally in HTTPS, use one of the following commands
+
+```bash
+dotnet run
+```
+
+or
+
+```bash
+dotnet run --launch-profile https
+```
+
+Make sure the frontend is also configured to use HTTPS to avoid mixed content issues.
 
 ## Running Tests
 
