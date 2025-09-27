@@ -166,7 +166,7 @@ namespace MatHelper.API.Controllers
                 {
                     HttpOnly = true,
                     Secure = true,
-                    SameSite = SameSiteMode.Strict,
+                    SameSite = SameSiteMode.None,
                     Expires = result.RefreshTokenExpiration
                 });
 
@@ -306,13 +306,11 @@ namespace MatHelper.API.Controllers
                     return Unauthorized(ApiResponse<string>.Fail("Invalid credentials."));
                 }
 
-                Console.WriteLine($"{refreshToken} -> {tokens.RefreshToken}");
-
                 Response.Cookies.Append("refreshToken", tokens.RefreshToken, new CookieOptions
                 {
                     HttpOnly = true,
                     Secure = true,
-                    SameSite = SameSiteMode.Strict,
+                    SameSite = SameSiteMode.None,
                     Expires = tokens.RefreshTokenExpiration
                 });
 
