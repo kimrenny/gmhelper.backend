@@ -21,6 +21,7 @@ namespace MatHelper.DAL.Interfaces
         Task<int> GetUserCountByIpAsync(string ipAddress);
 
         Task<List<User>> GetAllUsersAsync();
+        IQueryable<User> GetUsersQuery();
         Task<List<TokenDto>> GetAllTokensAsync();
 
         Task UpdateUserAsync(User user);

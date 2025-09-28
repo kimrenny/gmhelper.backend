@@ -51,7 +51,7 @@ namespace MatHelper.DAL.Repositories
         }
 
 
-            public async Task<User?> GetUserAsync(Expression<Func<User, bool>> predicate)
+        public async Task<User?> GetUserAsync(Expression<Func<User, bool>> predicate)
         {
             return await _context.Users.Include(u => u.LoginTokens).FirstOrDefaultAsync(predicate);
         }
@@ -119,6 +119,11 @@ namespace MatHelper.DAL.Repositories
         {
             var users = await _context.Users.ToListAsync();
             return users ?? new List<User>();
+        }
+
+        public IQueryable<User> GetUsersQuery()
+        {
+            return _context.Users.AsQueryable();
         }
 
         public async Task<List<TokenDto>> GetAllTokensAsync()

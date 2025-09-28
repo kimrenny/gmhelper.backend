@@ -6,6 +6,7 @@ using MatHelper.CORE.Options;
 using MatHelper.DAL.Interfaces;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
+using Microsoft.EntityFrameworkCore;
 using System.Collections.Concurrent;
 
 namespace MatHelper.BLL.Services
@@ -29,11 +30,42 @@ namespace MatHelper.BLL.Services
             _logger = logger;
         }
 
-        public async Task<List<AdminUserDto>> GetUsersAsync()
+        public async Task<PagedResult<AdminUserDto>> GetUsersAsync(int page, int pageSize, string sortBy, bool descending, DateTime? maxRegistrationDate = null)
         {
             try
             {
-                var users = await _userRepository.GetAllUsersAsync();
+                var usersQuery = _userRepository.GetUsersQuery();
+
+                if (maxRegistrationDate.HasValue)
+                {
+                    usersQuery = usersQuery.Where(u => u.RegistrationDate <= maxRegistrationDate.Value);
+                }
+
+                int totalCount = await usersQuery.CountAsync();
+
+                sortBy = string.IsNullOrWhiteSpace(sortBy) ? "Id" : char.ToUpper(sortBy[0]) + sortBy.Substring(1);
+
+                usersQuery = (sortBy, descending) switch
+                {
+                    ("Id", false) => usersQuery.OrderBy(u => u.Id),
+                    ("Id", true) => usersQuery.OrderByDescending(u => u.Id),
+                    ("Username", false) => usersQuery.OrderBy(u => u.Username),
+                    ("Username", true) => usersQuery.OrderByDescending(u => u.Username),
+                    ("Email", false) => usersQuery.OrderBy(u => u.Email),
+                    ("Email", true) => usersQuery.OrderByDescending(u => u.Email),
+                    ("Role", false) => usersQuery.OrderBy(u => u.Role),
+                    ("Role", true) => usersQuery.OrderByDescending(u => u.Role),
+                    ("RegistrationDate", false) => usersQuery.OrderBy(u => u.RegistrationDate),
+                    ("RegistrationDate", true) => usersQuery.OrderByDescending(u => u.RegistrationDate),
+                    ("IsBlocked", false) => usersQuery.OrderBy(u => u.IsBlocked),
+                    ("IsBlocked", true) => usersQuery.OrderByDescending(u => u.IsBlocked),
+                    _ => usersQuery.OrderBy(u => u.Id)
+                };
+
+                var users = await usersQuery
+                    .Skip((page - 1) * pageSize)
+                    .Take(pageSize)
+                    .ToListAsync();
 
                 if(users == null || users.Count == 0)
                 {
@@ -41,7 +73,11 @@ namespace MatHelper.BLL.Services
                     throw new InvalidOperationException("No users found.");
                 }
 
-                return users.Select(_userMapper.MapToAdminUserDto).ToList();
+                return new PagedResult<AdminUserDto>
+                {
+                    Items = users.Select(_userMapper.MapToAdminUserDto).ToList(),
+                    TotalCount = totalCount
+                };
             }
             catch (Exception ex)
             {

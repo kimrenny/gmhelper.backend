@@ -26,21 +26,21 @@ namespace MatHelper.API.Controllers
         }
 
         [HttpGet("users")]
-        public async Task<IActionResult> GetUsers()
+        public async Task<IActionResult> GetUsers(int page = 1, int pageSize = 10, string sortBy = "RegistrationDate", bool descending = false, DateTime? maxRegistrationDate = null)
         {
             try
             {
                 var adminValidation = await AdminValidation.ValidateAdminAsync(this, _tokenService);
                 if (adminValidation != null) return adminValidation;
 
-                var users = await _adminService.GetUsersAsync();
-                if (users == null || !users.Any())
+                var pagedUsers = await _adminService.GetUsersAsync(page, pageSize, sortBy, descending, maxRegistrationDate);
+                if (pagedUsers.Items == null || !pagedUsers.Items.Any())
                 {
                     _logger.LogError("Users data not found.");
                     return new ObjectResult(ApiResponse<string>.Fail("Users data not found.")) { StatusCode = 404 };
                 }
 
-                return Ok(ApiResponse<List<AdminUserDto>>.Ok(users));
+                return Ok(ApiResponse<PagedResult<AdminUserDto>>.Ok(pagedUsers));
             }
             catch (Exception ex)
             {
