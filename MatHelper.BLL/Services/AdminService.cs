@@ -104,11 +104,61 @@ namespace MatHelper.BLL.Services
             }
         }
 
-        public async Task<List<TokenDto>> GetTokensAsync()
+        public async Task<PagedResult<TokenDto>> GetTokensAsync(int page, int pageSize, string sortBy, bool descending, DateTime? maxExpirationDate)
         {
             try
             {
-                var tokens = await _userRepository.GetAllTokensAsync();
+                var tokensQuery = _userRepository.GetTokensQuery();
+
+                if (maxExpirationDate.HasValue)
+                {
+                    tokensQuery = tokensQuery.Where(t => t.Expiration <= maxExpirationDate.Value);
+                }
+
+                int totalCount = await tokensQuery.CountAsync();
+
+                sortBy = string.IsNullOrWhiteSpace(sortBy) ? "Id" : char.ToUpper(sortBy[0]) + sortBy.Substring(1);
+
+                tokensQuery = (sortBy, descending) switch
+                {
+                    ("Id", false) => tokensQuery.OrderBy(t => t.Id),
+                    ("Id", true) => tokensQuery.OrderByDescending(t => t.Id),
+                    ("Token", false) => tokensQuery.OrderBy(t => t.Token),
+                    ("Token", true) => tokensQuery.OrderByDescending(t => t.Token),
+                    ("Expiration", false) => tokensQuery.OrderBy(t => t.Expiration),
+                    ("Expiration", true) => tokensQuery.OrderByDescending(t => t.Expiration),
+                    ("RefreshTokenExpiration", false) => tokensQuery.OrderBy(t => t.RefreshTokenExpiration),
+                    ("RefreshTokenExpiration", true) => tokensQuery.OrderByDescending(t => t.RefreshTokenExpiration),
+                    ("UserId", false) => tokensQuery.OrderBy(t => t.UserId),
+                    ("UserId", true) => tokensQuery.OrderByDescending(t => t.UserId),
+                    ("IpAddress", false) => tokensQuery.OrderBy(t => t.IpAddress),
+                    ("IpAddress", true) => tokensQuery.OrderByDescending(t => t.IpAddress),
+                    ("IsActive", false) => tokensQuery.OrderBy(t => t.IsActive),
+                    ("IsActive", true) => tokensQuery.OrderByDescending(t => t.IsActive),
+                    _ => tokensQuery.OrderBy(t => t.Id)
+                };
+
+                var tokens = await tokensQuery
+                    .Skip((page - 1) * pageSize)
+                    .Take(pageSize)
+                    .Select(t => new TokenDto
+                    {
+                        Id = t.Id,
+                        Token = t.Token,
+                        Expiration = t.Expiration,
+                        RefreshTokenExpiration = t.RefreshTokenExpiration,
+                        UserId = t.UserId,
+                        DeviceInfo = t.DeviceInfo != null
+                            ? new DeviceInfo
+                            {
+                                Platform = t.DeviceInfo.Platform,
+                                UserAgent = t.DeviceInfo.UserAgent,
+                            }
+                            : new DeviceInfo(),
+                        IpAddress = t.IpAddress,
+                        IsActive = t.IsActive
+                    })
+                    .ToListAsync();
 
                 if (tokens == null || tokens.Count == 0)
                 {
@@ -116,7 +166,11 @@ namespace MatHelper.BLL.Services
                     throw new InvalidOperationException("No tokens found.");
                 }
 
-                return tokens;
+                return new PagedResult<TokenDto>
+                {
+                    Items = tokens,
+                    TotalCount = totalCount
+                };
             }
             catch (Exception ex)
             {

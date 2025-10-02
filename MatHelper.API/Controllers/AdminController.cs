@@ -73,21 +73,21 @@ namespace MatHelper.API.Controllers
         }
 
         [HttpGet("tokens")]
-        public async Task<IActionResult> GetTokens()
+        public async Task<IActionResult> GetTokens(int page = 1, int pageSize = 10, string sortBy = "Expiration", bool descending = false, DateTime? maxExpirationDate = null)
         {
             try
             {
                 var adminValidation = await AdminValidation.ValidateAdminAsync(this, _tokenService);
                 if (adminValidation != null) return adminValidation;
 
-                var tokens = await _adminService.GetTokensAsync();
-                if (tokens == null || !tokens.Any())
+                var pagedTokens = await _adminService.GetTokensAsync(page, pageSize, sortBy, descending, maxExpirationDate);
+                if (pagedTokens == null || !pagedTokens.Items.Any())
                 {
                     _logger.LogError("Users data not found.");
                     return NotFound(ApiResponse<string>.Fail("Users data not found."));
                 }
 
-                return Ok(ApiResponse<List<TokenDto>>.Ok(tokens));
+                return Ok(ApiResponse<PagedResult<TokenDto>>.Ok(pagedTokens));
             }
             catch (Exception ex)
             {

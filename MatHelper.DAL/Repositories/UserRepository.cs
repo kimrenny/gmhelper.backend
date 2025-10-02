@@ -163,6 +163,13 @@ namespace MatHelper.DAL.Repositories
             }
         }
 
+        public IQueryable<LoginToken> GetTokensQuery()
+        {
+            return _context.LoginTokens
+                .Include(t => t.DeviceInfo)
+                .AsQueryable();
+        }
+
         public async Task UpdateUserAsync(User user)
         {
             _context.Users.Update(user);

@@ -7,7 +7,7 @@ namespace MatHelper.BLL.Interfaces
     {
         Task<PagedResult<AdminUserDto>> GetUsersAsync(int page, int pageSize, string sortBy, bool descending, DateTime? maxRegistrationDate);
         Task ActionUserAsync(Guid userId, string action);
-        Task<List<TokenDto>> GetTokensAsync();
+        Task<PagedResult<TokenDto>> GetTokensAsync(int page, int pageSize, string sortBy, bool descending, DateTime? maxExpirationDate);
         Task ActionTokenAsync(string token, string action);
         Task<List<RegistrationsDto>> GetRegistrationsAsync();
         Task<DashboardTokensDto> GetDashboardTokensAsync();

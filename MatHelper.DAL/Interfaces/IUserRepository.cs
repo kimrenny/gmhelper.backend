@@ -23,6 +23,7 @@ namespace MatHelper.DAL.Interfaces
         Task<List<User>> GetAllUsersAsync();
         IQueryable<User> GetUsersQuery();
         Task<List<TokenDto>> GetAllTokensAsync();
+        IQueryable<LoginToken> GetTokensQuery();
 
         Task UpdateUserAsync(User user);
         Task ActionUserAsync(Guid id, UserAction action);
