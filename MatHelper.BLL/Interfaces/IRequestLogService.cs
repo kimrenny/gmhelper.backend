@@ -7,7 +7,7 @@ namespace MatHelper.BLL.Interfaces
     public interface IRequestLogService
     {
         Task<CombinedRequestLogDto> GetRequestStats();
-        Task<List<RequestLogDetail>> GetRequestLogs();
+        Task<PagedResult<RequestLogDetail>> GetRequestLogs(int page, int pageSize, string sortBy, bool descending, DateTime? maxLogDate);
         Task<List<AuthLog>> GetAuthLogs();
         Task<List<ErrorLog>> GetErrorLogs();
     }

@@ -46,21 +46,21 @@ namespace MatHelper.API.Controllers
         }
 
         [HttpGet]
-        public async Task<IActionResult> GetLogs()
+        public async Task<IActionResult> GetLogs(int page = 1, int pageSize = 10, string sortBy = "Timestamp", bool descending = true, DateTime? maxLogDate = null)
         {
             try
             {
                 var adminValidation = await AdminValidation.ValidateAdminAsync(this, _tokenService);
                 if (adminValidation != null) return adminValidation;
 
-                var requests = await _logService.GetRequestLogs();
-                if (requests == null || !requests.Any())
+                var pagedLogs = await _logService.GetRequestLogs(page, pageSize, sortBy, descending, maxLogDate);
+                if (pagedLogs == null || !pagedLogs.Items.Any())
                 {
                     _logger.LogError("Requests data not found.");
                     return NotFound(ApiResponse<string>.Fail("Requests data not found."));
                 }
 
-                return Ok(ApiResponse<List<RequestLogDetail>>.Ok(requests));
+                return Ok(ApiResponse<PagedResult<RequestLogDetail>>.Ok(pagedLogs));
             }
             catch (Exception ex)
             {

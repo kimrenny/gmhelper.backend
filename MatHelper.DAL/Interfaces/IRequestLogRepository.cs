@@ -21,5 +21,6 @@ namespace MatHelper.DAL.Interfaces
 
         Task<CombinedRequestLogDto> GetRequestStatsAsync();
         Task<List<RequestLogDetail>> GetAllRequestLogsAsync();
+        IQueryable<RequestLogDetail> GetLogsQuery();
     }
 }
