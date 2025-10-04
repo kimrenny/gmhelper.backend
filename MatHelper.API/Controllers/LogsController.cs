@@ -46,7 +46,7 @@ namespace MatHelper.API.Controllers
         }
 
         [HttpGet]
-        public async Task<IActionResult> GetLogs(int page = 1, int pageSize = 10, string sortBy = "Timestamp", bool descending = true, DateTime? maxLogDate = null)
+        public async Task<IActionResult> GetLogs(int page = 1, int pageSize = 10, string sortBy = "Id", bool descending = true, DateTime? maxLogDate = null)
         {
             try
             {
@@ -70,21 +70,21 @@ namespace MatHelper.API.Controllers
         }
 
         [HttpGet("auth")]
-        public async Task<IActionResult> GetAuthLogs()
+        public async Task<IActionResult> GetAuthLogs(int page = 1, int pageSize = 10, string sortBy = "Id", bool descending = true, DateTime? maxLogDate = null)
         {
             try
             {
                 var adminValidation = await AdminValidation.ValidateAdminAsync(this, _tokenService);
                 if (adminValidation != null) return adminValidation;
 
-                var logs = await _logService.GetAuthLogs();
-                if (logs == null || !logs.Any())
+                var pagedLogs = await _logService.GetAuthLogs(page, pageSize, sortBy, descending, maxLogDate);
+                if (pagedLogs == null || !pagedLogs.Items.Any())
                 {
                     _logger.LogError("Auth logs not found.");
                     return NotFound(ApiResponse<string>.Fail("Auth logs not found."));
                 }
 
-                return Ok(ApiResponse<List<AuthLog>>.Ok(logs));
+                return Ok(ApiResponse<PagedResult<AuthLog>>.Ok(pagedLogs));
             }
             catch (Exception ex)
             {

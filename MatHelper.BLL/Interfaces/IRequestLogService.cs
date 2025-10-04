@@ -8,7 +8,7 @@ namespace MatHelper.BLL.Interfaces
     {
         Task<CombinedRequestLogDto> GetRequestStats();
         Task<PagedResult<RequestLogDetail>> GetRequestLogs(int page, int pageSize, string sortBy, bool descending, DateTime? maxLogDate);
-        Task<List<AuthLog>> GetAuthLogs();
+        Task<PagedResult<AuthLog>> GetAuthLogs(int page, int pageSize, string sortBy, bool descending, DateTime? maxLogDate);
         Task<List<ErrorLog>> GetErrorLogs();
     }
 }

@@ -1,9 +1,11 @@
-﻿using MatHelper.DAL.Interfaces;
-using MatHelper.DAL.Models;
-using Microsoft.Extensions.Logging;
+﻿using MatHelper.BLL.Interfaces;
 using MatHelper.CORE.Models;
-using MatHelper.BLL.Interfaces;
+using MatHelper.DAL.Interfaces;
+using MatHelper.DAL.Models;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
+using System.Drawing.Printing;
+using System.Globalization;
 
 namespace MatHelper.BLL.Services
 {
@@ -116,11 +118,58 @@ namespace MatHelper.BLL.Services
             }
         }
 
-        public async Task<List<AuthLog>> GetAuthLogs()
+        public async Task<PagedResult<AuthLog>> GetAuthLogs(int page, int pageSize, string sortBy, bool descending, DateTime? maxLogDate)
         {
             try
             {
-                return await _authLogRepository.GetAllAuthLogsAsync();
+                var logsQuery = _authLogRepository.GetLogsQuery();
+
+                int totalCount = await logsQuery.CountAsync();
+
+                sortBy = string.IsNullOrWhiteSpace(sortBy) ? "Id" : char.ToUpper(sortBy[0]) + sortBy.Substring(1);
+
+                logsQuery = (sortBy, descending) switch
+                {
+                    ("Id", false) => logsQuery.OrderBy(l => l.Id),
+                    ("Id", true) => logsQuery.OrderByDescending(l => l.Id),
+
+                    ("Timestamp", false) => logsQuery.OrderBy(l => l.Timestamp),
+                    ("Timestamp", true) => logsQuery.OrderByDescending(l => l.Timestamp),
+
+                    ("UserId", false) => logsQuery.OrderBy(l => l.UserId),
+                    ("UserId", true) => logsQuery.OrderByDescending(l => l.UserId),
+
+                    ("IpAddress", false) => logsQuery.OrderBy(l => l.IpAddress),
+                    ("IpAddress", true) => logsQuery.OrderByDescending(l => l.IpAddress),
+
+                    ("UserAgent", false) => logsQuery.OrderBy(l => l.UserAgent),
+                    ("UserAgent", true) => logsQuery.OrderByDescending(l => l.UserAgent),
+
+                    ("Status", false) => logsQuery.OrderBy(l => l.Status),
+                    ("Status", true) => logsQuery.OrderByDescending(l => l.Status),
+
+                    ("RequestType", false) => logsQuery.OrderBy(l => l.Message),
+                    ("RequestType", true) => logsQuery.OrderByDescending(l => l.Message),
+
+                    _ => logsQuery.OrderByDescending(l => l.Timestamp)
+                };
+
+                var logs = await logsQuery
+                    .Skip((page - 1) * pageSize)
+                    .Take(pageSize)
+                    .ToListAsync();
+
+                if (logs == null || logs.Count == 0)
+                {
+                    _logger.LogWarning("No logs found in the database.");
+                    throw new InvalidOperationException("No logs found.");
+                }
+
+                return new PagedResult<AuthLog>
+                {
+                    Items = logs,
+                    TotalCount = totalCount
+                };
             }
             catch(Exception ex)
             {

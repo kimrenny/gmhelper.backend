@@ -12,5 +12,6 @@ namespace MatHelper.DAL.Interfaces
             string message = "");
 
         Task<List<AuthLog>> GetAllAuthLogsAsync();
+        IQueryable<AuthLog> GetLogsQuery();
     }
 }

@@ -42,5 +42,10 @@ namespace MatHelper.DAL.Repositories
                 .OrderByDescending(log => log.Timestamp)
                 .ToListAsync();
         }
+
+        public IQueryable<AuthLog> GetLogsQuery()
+        {
+            return _context.AuthLogs.AsQueryable();
+        }
     }
 }
