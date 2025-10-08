@@ -13,6 +13,7 @@ namespace MatHelper.BLL.Middlewares
         private static readonly ConcurrentDictionary<string, DateTime> _recentRequests = new();
 
         private readonly TimeSpan _duplicateThreshold = TimeSpan.FromMilliseconds(500); // change to longer time if necessary
+        private readonly TimeSpan _logsThreshold = TimeSpan.FromMilliseconds(100);
 
         public DuplicateRequestMiddleware(RequestDelegate next)
         {
@@ -37,11 +38,14 @@ namespace MatHelper.BLL.Middlewares
                 bodyHash = ComputeHash(body);
             }
 
+            var path = context.Request.Path.Value?.ToLower() ?? string.Empty;
+            var threshold = path.Contains("/logs") ? _logsThreshold : _duplicateThreshold;
+
             var requestKey = $"{ip}-{deviceKey}-{context.Request.Method}-{context.Request.Path}-{bodyHash}";
 
             if(_recentRequests.TryGetValue(requestKey, out var lastRequestTime))
             {
-                if(DateTime.UtcNow - lastRequestTime < _duplicateThreshold)
+                if(DateTime.UtcNow - lastRequestTime < threshold)
                 {
                     context.Response.StatusCode = StatusCodes.Status429TooManyRequests;
                     await context.Response.WriteAsync("Duplicate request detected. Please wait before retrying.");
