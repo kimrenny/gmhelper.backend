@@ -178,11 +178,55 @@ namespace MatHelper.BLL.Services
             }
         }
 
-        public async Task<List<ErrorLog>> GetErrorLogs()
+        public async Task<PagedResult<ErrorLog>> GetErrorLogs(int page, int pageSize, string sortBy, bool descending, DateTime? maxLogDate)
         {
             try
             {
-                return await _errorLogRepository.GetAllErrorLogsAsync();
+                var logsQuery = _errorLogRepository.GetLogsQuery();
+
+                int totalCount = await logsQuery.CountAsync();
+
+                sortBy = string.IsNullOrWhiteSpace(sortBy) ? "Id" : char.ToUpper(sortBy[0]) + sortBy.Substring(1);
+
+                logsQuery = (sortBy, descending) switch
+                {
+                    ("Id", false) => logsQuery.OrderBy(l => l.Id),
+                    ("Id", true) => logsQuery.OrderByDescending(l => l.Id),
+
+                    ("Timestamp", false) => logsQuery.OrderBy(l => l.Timestamp),
+                    ("Timestamp", true) => logsQuery.OrderByDescending(l => l.Timestamp),
+
+                    ("Message", false) => logsQuery.OrderBy(l => l.Message),
+                    ("Message", true) => logsQuery.OrderByDescending(l => l.Message),
+
+                    ("StackTrace", false) => logsQuery.OrderBy(l => l.StackTrace),
+                    ("StackTrace", true) => logsQuery.OrderByDescending(l => l.StackTrace),
+
+                    ("Endpoint", false) => logsQuery.OrderBy(l => l.Endpoint),
+                    ("Endpoint", true) => logsQuery.OrderByDescending(l => l.Endpoint),
+
+                    ("ExceptionDetails", false) => logsQuery.OrderBy(l => l.ExceptionDetails),
+                    ("ExceptionDetails", true) => logsQuery.OrderByDescending(l => l.ExceptionDetails),
+
+                    _ => logsQuery.OrderByDescending(l => l.Timestamp)
+                };
+
+                var logs = await logsQuery
+                    .Skip((page - 1) * pageSize)
+                    .Take(pageSize)
+                    .ToListAsync();
+
+                if (logs == null || logs.Count == 0)
+                {
+                    _logger.LogWarning("No logs found in the database.");
+                    throw new InvalidOperationException("No logs found.");
+                }
+
+                return new PagedResult<ErrorLog>
+                {
+                    Items = logs,
+                    TotalCount = totalCount
+                };
             }
             catch (Exception ex)
             {

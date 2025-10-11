@@ -6,5 +6,6 @@ namespace MatHelper.DAL.Interfaces
     {
         Task LogErrorAsync(ErrorLog errorLog);
         Task<List<ErrorLog>> GetAllErrorLogsAsync();
+        IQueryable<ErrorLog> GetLogsQuery();
     }
 }
