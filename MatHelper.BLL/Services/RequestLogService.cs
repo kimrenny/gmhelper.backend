@@ -24,6 +24,32 @@ namespace MatHelper.BLL.Services
             _logger = logger;
         }
 
+        public async Task<LogsData> GetLogs()
+        {
+            try
+            {
+                var requestStats = await GetRequestStats();
+                var requestLogs = await GetRequestLogs(1, 30, "Id", false, null);
+                var authLogs = await GetAuthLogs(1, 30, "Id", false, null);
+                var errorLogs = await GetErrorLogs(1, 30, "Id", false, null);
+
+                var result = new LogsData
+                {
+                    RequestStats = requestStats,
+                    RequestLogs = requestLogs,
+                    AuthLogs = authLogs,
+                    ErrorLogs = errorLogs
+                };
+
+                return result;
+            }
+            catch(Exception ex)
+            {
+                _logger.LogError("Error occured during get logs: {ex}", ex);
+                throw new Exception("Error occured during get logs.");
+            }
+        }
+
         public async Task<CombinedRequestLogDto> GetRequestStats()
         {
             try

@@ -5,6 +5,7 @@ namespace MatHelper.BLL.Interfaces
 {
     public interface IAdminService
     {
+        Task<AdminData> GetAdminDataAsync(Guid userId);
         Task<PagedResult<AdminUserDto>> GetUsersAsync(int page, int pageSize, string sortBy, bool descending, DateTime? maxRegistrationDate);
         Task ActionUserAsync(Guid userId, string action);
         Task<PagedResult<TokenDto>> GetTokensAsync(int page, int pageSize, string sortBy, bool descending, DateTime? maxExpirationDate);

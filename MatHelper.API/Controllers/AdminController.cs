@@ -4,6 +4,7 @@ using MatHelper.CORE.Models;
 using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using MatHelper.API.Common;
+using MatHelper.DAL.Models;
 
 namespace MatHelper.API.Controllers
 {
@@ -15,14 +16,63 @@ namespace MatHelper.API.Controllers
         private readonly IAdminService _adminService;
         private readonly IAdminSettingsService _adminSettingsService;
         private readonly ITokenService _tokenService;
+        private readonly IRequestLogService _requestLogService;
         private readonly ILogger<AuthController> _logger;
 
-        public AdminController(IAdminService adminService, IAdminSettingsService AdminSettingsService, ITokenService tokenService, ILogger<AuthController> logger)
+        public AdminController(IAdminService adminService, IAdminSettingsService AdminSettingsService, ITokenService tokenService, IRequestLogService requestLogService, ILogger<AuthController> logger)
         {
             _adminService = adminService;
             _adminSettingsService = AdminSettingsService;
             _tokenService = tokenService;
+            _requestLogService = requestLogService;
             _logger = logger;
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> GetAdminData()
+        {
+            try
+            {
+                var adminValidation = await AdminValidation.ValidateAdminAsync(this, _tokenService);
+                if (adminValidation != null) return adminValidation;
+
+                var userId = User.FindFirstValue(ClaimTypes.Name);
+                if (!Guid.TryParse(userId, out var parsedUserId))
+                {
+                    _logger.LogError("Failed to parse User ID: {UserId}", userId);
+                    return BadRequest(ApiResponse<string>.Fail("Invalid User ID format."));
+                }
+
+                var adminData = await _adminService.GetAdminDataAsync(parsedUserId);
+                var adminLogs = await _requestLogService.GetLogs();
+
+                if (adminData == null || adminLogs == null)
+                {
+                    return NotFound(ApiResponse<string>.Fail("Admin data or logs not found."));
+                }
+
+                var result = new AdminDataDto
+                {
+                    Users = adminData.Users,
+                    Tokens = adminData.Tokens,
+                    Registrations = adminData.Registrations,
+                    DashboardTokens = adminData.DashboardTokens,
+                    CountryStats = adminData.CountryStats,
+                    RoleStats = adminData.RoleStats,
+                    BlockStats = adminData.BlockStats,
+                    RequestStats = adminLogs.RequestStats,
+                    RequestLogs = adminLogs.RequestLogs,
+                    AuthLogs = adminLogs.AuthLogs,
+                    ErrorLogs = adminLogs.ErrorLogs
+                };
+
+                return Ok(ApiResponse<AdminDataDto>.Ok(result));
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "An error occurred while fetching all admin data.");
+                return new ObjectResult(ApiResponse<string>.Fail("Internal server error.")) { StatusCode = 500 };
+            }
         }
 
         [HttpGet("users")]

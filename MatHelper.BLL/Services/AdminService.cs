@@ -30,6 +30,33 @@ namespace MatHelper.BLL.Services
             _logger = logger;
         }
 
+        public async Task<AdminData> GetAdminDataAsync(Guid userId)
+        {
+            var users = await _userRepository.GetAllUsersAsync();
+
+            var pagedUsers = await GetUsersAsync(1, 10, "RegistrationDate", false, null);
+            var pagedTokens = await GetTokensAsync(1, 10, "Expiration", true, null);
+            var registrations = await GetRegistrationsAsync();
+            var dashboardTokens = await GetDashboardTokensAsync();
+            var countryStats = await GetUsersByCountryAsync();
+
+            var roleStats = CalculateRoleStats(users);
+            var blockStats = CalculateBlockStats(users);
+
+            var result = new AdminData
+            {
+                Users = pagedUsers,
+                Tokens = pagedTokens,
+                Registrations = registrations,
+                DashboardTokens = dashboardTokens,
+                CountryStats = countryStats,
+                RoleStats = roleStats,
+                BlockStats = blockStats,
+            };
+
+            return result;
+        }
+
         public async Task<PagedResult<AdminUserDto>> GetUsersAsync(int page, int pageSize, string sortBy, bool descending, DateTime? maxRegistrationDate = null)
         {
             try
@@ -269,32 +296,7 @@ namespace MatHelper.BLL.Services
             try
             {
                 var users = await _userRepository.GetAllUsersAsync();
-                if (users == null || !users.Any())
-                {
-                    _logger.LogWarning("No users found in the database.");
-                    return new List<RoleStatsDto>();
-                }
-
-                var userRoleStats = new Dictionary<string, int>();
-
-                foreach (var user in users)
-                {
-                    var role = user.Role;
-
-                    if (userRoleStats.ContainsKey(role))
-                    {
-                        userRoleStats[role]++;
-                    }
-                    else
-                    {
-                        userRoleStats[role] = 1;
-                    }
-                }
-
-
-                return userRoleStats
-                    .Select(x => new RoleStatsDto { Role = x.Key, Count = x.Value })
-                    .ToList();
+                return CalculateRoleStats(users);
             }
             catch (Exception ex)
             {
@@ -308,37 +310,60 @@ namespace MatHelper.BLL.Services
             try
             {
                 var users = await _userRepository.GetAllUsersAsync();
-                if (users == null || !users.Any())
-                {
-                    _logger.LogWarning("No users found in the database.");
-                    return new List<BlockStatsDto>();
-                }
-
-                var userBlockStats = new Dictionary<string, int>();
-
-                foreach (var user in users)
-                {
-                    var status = user.IsBlocked ? "Banned" : "Active";
-
-                    if (userBlockStats.ContainsKey(status))
-                    {
-                        userBlockStats[status]++;
-                    }
-                    else
-                    {
-                        userBlockStats[status] = 1;
-                    }
-                }
-
-
-                return userBlockStats
-                    .Select(x => new BlockStatsDto { Status = x.Key, Count = x.Value })
-                    .ToList();
+                return CalculateBlockStats(users);
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "An error occured during fetching users by role.");
                 throw new InvalidOperationException("Could not fetch users by role.", ex);
+            }
+        }
+
+        private List<RoleStatsDto> CalculateRoleStats(IEnumerable<User> users)
+        {
+            try
+            {
+                if (users == null || !users.Any())
+                {
+                    _logger.LogWarning("No users provided for role stats calculation.");
+                    return new List<RoleStatsDto>();
+                }
+
+                var userRoleStats = users
+                    .GroupBy(u => u.Role)
+                    .Select(g => new RoleStatsDto { Role = g.Key, Count = g.Count() })
+                    .ToList();
+
+                return userRoleStats;
+            }
+            catch(Exception ex)
+            {
+                _logger.LogError(ex, "An error occurred during calculating users by role.");
+                throw new InvalidOperationException("Could not calculate users by role.", ex);
+            }
+        }
+
+        private List<BlockStatsDto> CalculateBlockStats(IEnumerable<User> users)
+        {
+            try
+            {
+                if (users == null || !users.Any())
+                {
+                    _logger.LogWarning("No users provided for block stats calculation.");
+                    return new List<BlockStatsDto>();
+                }
+
+                var userBlockStats = users
+                    .GroupBy(u => u.IsBlocked ? "Banned" : "Active")
+                    .Select(g => new BlockStatsDto { Status = g.Key, Count = g.Count() })
+                    .ToList();
+
+                return userBlockStats;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "An error occured during calculating block stats.");
+                throw new InvalidOperationException("Could not calculate block stats.", ex);
             }
         }
     }
