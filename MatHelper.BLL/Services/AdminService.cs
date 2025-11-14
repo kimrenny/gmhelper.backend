@@ -20,8 +20,8 @@ namespace MatHelper.BLL.Services
         private readonly IUserMapper _userMapper;
         private readonly ILogger _logger;
 
-        private const DefaultPageNumber = 1;
-        private const DefaultPageSize = 10;
+        private const short DefaultPageNumber = 1;
+        private const short DefaultPageSize = 10;
 
         public AdminService(ISecurityService securityService, ITokenService tokenService, IUserRepository userRepository, ILoginTokenRepository loginTokenRepository, IUserMapper userMapper, ILogger<AdminService> logger)
         {
