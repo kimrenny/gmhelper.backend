@@ -22,6 +22,25 @@ namespace MatHelper.BLL.Services
         private readonly ISecurityService _securityService;
         private readonly ILogger _logger;
 
+        private const byte MaxUsersPerIp = 3;
+        private const byte MaxActiveTokensPerDevice = 3;
+        private const byte MaxTotalActiveTokens = 5;
+        private const ushort UnfamiliarLocationThresholdDays = 14;
+
+        private const ushort RefreshTokenLifetimeDaysRemembered = 28;
+        private const ushort RefreshTokenLifetimeHoursDefault = 6;
+        private const ushort AccessTokenLifetimeMinutes = 30;
+        private const ushort RecoveryTokenLifetimeMinutes = 15;
+        private const byte EmailConfirmTokenLifetimeHours = 1;
+        private const ushort EmailLoginCodeLifetimeMinutes = 15;
+        private const ushort TwoFactorSessionLifetimeMinutes = 10;
+
+        private const byte SessionKeySizeInBytes = 16;
+        private const byte CodeEntropyBytes = 4;
+        private const int IntegerMask = 0x7FFFFFFF;
+        private const int MinConfirmationCodeValue = 100000;
+        private const int ConfirmationCodeRange = 900000;
+
         public AuthenticationService(IUserRepository userRepository, IAppTwoFactorSessionRepository appTwoFactorSessionRepository, ITokenGeneratorService tokenGeneratorService, ITwoFactorService twoFactorService, IEmailConfirmationRepository emailConfirmationRepository, IEmailLoginCodeRepository emailLoginCodeRepository, IPasswordRecoveryRepository passwordRecoveryRepository, IAuthLogRepository authLogRepository, IMailService mailService, ISecurityService securityService, ILogger<AuthenticationService> logger)
         {
             _userRepository = userRepository;
@@ -91,7 +110,7 @@ namespace MatHelper.BLL.Services
 
             var userCountByIp = await _userRepository.GetUserCountByIpAsync(ipAddress);
 
-            if (userCountByIp >= 3)
+            if (userCountByIp >= MaxUsersPerIp)
             {
                 _logger.LogWarning("IP address {IpAddress} has exceeded the registration limit.", ipAddress);
                 var usersToBlock = await _userRepository.GetUsersByIpAsync(ipAddress);
@@ -164,7 +183,7 @@ namespace MatHelper.BLL.Services
             {
                 Token = activationToken,
                 UserId = user.Id,
-                ExpirationDate = DateTime.UtcNow.AddHours(1),
+                ExpirationDate = DateTime.UtcNow.AddHours(EmailConfirmTokenLifetimeHours),
                 IsUsed = false,
                 User = user,
             };
@@ -195,7 +214,7 @@ namespace MatHelper.BLL.Services
                     {
                         Token = newToken,
                         UserId = user.Id,
-                        ExpirationDate = DateTime.UtcNow.AddHours(1),
+                        ExpirationDate = DateTime.UtcNow.AddHours(EmailConfirmTokenLifetimeHours),
                         IsUsed = false,
                         User = user,
                     };
@@ -271,7 +290,7 @@ namespace MatHelper.BLL.Services
 
                 var activeTokens = user.LoginTokens!.Where(t => t.DeviceInfo.UserAgent == deviceInfo.UserAgent && t.DeviceInfo.Platform == deviceInfo.Platform && t.IpAddress == ipAddress && t.IsActive).ToList();
 
-                if (activeTokens.Count >= 3)
+                if (activeTokens.Count >= MaxActiveTokensPerDevice)
                 {
                     foreach (var activeToken in activeTokens)
                     {
@@ -280,7 +299,7 @@ namespace MatHelper.BLL.Services
                 }
 
                 var activeTokenCount = user.LoginTokens!.Count(t => t.IsActive);
-                if (activeTokenCount >= 5)
+                if (activeTokenCount >= MaxTotalActiveTokens)
                 {
                     var oldestToken = user.LoginTokens!.Where(t => t.IsActive).MinBy(t => t.Expiration);
 
@@ -293,12 +312,12 @@ namespace MatHelper.BLL.Services
                 var activeTwoFactor = await _twoFactorService.GetTwoFactorAsync(user.Id, "totp");
                 if (activeTwoFactor != null && activeTwoFactor.IsEnabled && activeTwoFactor.AlwaysAsk) 
                 {
-                    var sessionKey = Convert.ToBase64String(RandomNumberGenerator.GetBytes(16));
+                    var sessionKey = Convert.ToBase64String(RandomNumberGenerator.GetBytes(SessionKeySizeInBytes));
                     var appTwoFactorSession = new AppTwoFactorSession
                     {
                         UserId = user.Id,
                         SessionKey = sessionKey,
-                        Expiration = DateTime.UtcNow.AddMinutes(10),
+                        Expiration = DateTime.UtcNow.AddMinutes(TwoFactorSessionLifetimeMinutes),
                         IpAddress = ipAddress,
                         UserAgent = deviceInfo.UserAgent,
                         Platform = deviceInfo.Platform,
@@ -321,22 +340,22 @@ namespace MatHelper.BLL.Services
                     .FirstOrDefault();
 
                 bool isUnfamiliarLocation = lastTokenForIp == null
-                    || (DateTime.UtcNow - lastTokenForIp.Expiration).TotalDays > 14;
+                    || (DateTime.UtcNow - lastTokenForIp.Expiration).TotalDays > UnfamiliarLocationThresholdDays;
 
                 if (isUnfamiliarLocation)
                 {
                     int codeInt;
                     using (var rng = RandomNumberGenerator.Create())
                     {
-                        byte[] bytes = new byte[4];
+                        byte[] bytes = new byte[CodeEntropyBytes];
                         rng.GetBytes(bytes);
-                        codeInt = BitConverter.ToInt32(bytes, 0) & 0x7FFFFFFF;
-                        codeInt = 100000 + (codeInt % 900000);
+                        codeInt = BitConverter.ToInt32(bytes, 0) & IntegerMask;
+                        codeInt = MinConfirmationCodeValue + (codeInt % ConfirmationCodeRange);
                     }
 
                     var code = codeInt.ToString();
 
-                    var sessionKey = Convert.ToBase64String(RandomNumberGenerator.GetBytes(16));
+                    var sessionKey = Convert.ToBase64String(RandomNumberGenerator.GetBytes(SessionKeySizeInBytes));
 
                     var emailCode = new EmailLoginCode
                     {
@@ -347,7 +366,7 @@ namespace MatHelper.BLL.Services
                         UserAgent = deviceInfo.UserAgent,
                         Platform = deviceInfo.Platform,
                         Remember = loginDto.Remember,
-                        Expiration = DateTime.UtcNow.AddMinutes(15),
+                        Expiration = DateTime.UtcNow.AddMinutes(EmailLoginCodeLifetimeMinutes),
                         IsUsed = false
                     };
 
@@ -364,7 +383,7 @@ namespace MatHelper.BLL.Services
                     };
                 }
 
-                var refreshTokenExpiration = loginDto.Remember == true ? DateTime.UtcNow.AddDays(28) : DateTime.UtcNow.AddHours(6);
+                var refreshTokenExpiration = loginDto.Remember == true ? DateTime.UtcNow.AddDays(RefreshTokenLifetimeDaysRemembered) : DateTime.UtcNow.AddHours(RefreshTokenLifetimeHoursDefault);
 
                 var accessToken = _tokenGeneratorService.GenerateJwtToken(user, deviceInfo);
                 var refreshToken = _tokenGeneratorService.GenerateRefreshToken();
@@ -373,7 +392,7 @@ namespace MatHelper.BLL.Services
                 {
                     Token = accessToken,
                     RefreshToken = refreshToken,
-                    Expiration = DateTime.UtcNow.AddMinutes(30),
+                    Expiration = DateTime.UtcNow.AddMinutes(AccessTokenLifetimeMinutes),
                     RefreshTokenExpiration = refreshTokenExpiration,
                     UserId = user.Id,
                     DeviceInfo = deviceInfo,
@@ -448,13 +467,13 @@ namespace MatHelper.BLL.Services
             var accessToken = _tokenGeneratorService.GenerateJwtToken(user, deviceInfo);
             var refreshToken = _tokenGeneratorService.GenerateRefreshToken();
 
-            var refreshTokenExpiration = emailCode.Remember ? DateTime.UtcNow.AddDays(28) : DateTime.UtcNow.AddHours(6);
+            var refreshTokenExpiration = emailCode.Remember ? DateTime.UtcNow.AddDays(RefreshTokenLifetimeDaysRemembered) : DateTime.UtcNow.AddHours(RefreshTokenLifetimeHoursDefault);
 
             var loginToken = new LoginToken
             {
                 Token = accessToken,
                 RefreshToken = refreshToken,
-                Expiration = DateTime.UtcNow.AddMinutes(30),
+                Expiration = DateTime.UtcNow.AddMinutes(AccessTokenLifetimeMinutes),
                 RefreshTokenExpiration = refreshTokenExpiration,
                 UserId = user.Id,
                 DeviceInfo = deviceInfo,
@@ -503,12 +522,12 @@ namespace MatHelper.BLL.Services
             var accessToken = _tokenGeneratorService.GenerateJwtToken(user, deviceInfo);
             var refreshToken = _tokenGeneratorService.GenerateRefreshToken();
 
-            var refreshTokenExpiration = session.Remember ? DateTime.UtcNow.AddDays(28) : DateTime.UtcNow.AddHours(6);
+            var refreshTokenExpiration = session.Remember ? DateTime.UtcNow.AddDays(RefreshTokenLifetimeDaysRemembered) : DateTime.UtcNow.AddHours(RefreshTokenLifetimeHoursDefault);
             var loginToken = new LoginToken
             {
                 Token = accessToken,
                 RefreshToken = refreshToken,
-                Expiration = DateTime.UtcNow.AddMinutes(30),
+                Expiration = DateTime.UtcNow.AddMinutes(AccessTokenLifetimeMinutes),
                 RefreshTokenExpiration = refreshTokenExpiration,
                 UserId = user.Id,
                 DeviceInfo = deviceInfo,
@@ -549,7 +568,7 @@ namespace MatHelper.BLL.Services
             {
                 Token = Guid.NewGuid().ToString(),
                 UserId = user.Id,
-                ExpirationDate = DateTime.UtcNow.AddMinutes(15),
+                ExpirationDate = DateTime.UtcNow.AddMinutes(RecoveryTokenLifetimeMinutes),
                 IsUsed = false,
                 User = user
             };

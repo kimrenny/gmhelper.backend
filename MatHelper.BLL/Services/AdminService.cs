@@ -20,6 +20,9 @@ namespace MatHelper.BLL.Services
         private readonly IUserMapper _userMapper;
         private readonly ILogger _logger;
 
+        private const DefaultPageNumber = 1;
+        private const DefaultPageSize = 10;
+
         public AdminService(ISecurityService securityService, ITokenService tokenService, IUserRepository userRepository, ILoginTokenRepository loginTokenRepository, IUserMapper userMapper, ILogger<AdminService> logger)
         {
             _securityService = securityService;
@@ -34,8 +37,8 @@ namespace MatHelper.BLL.Services
         {
             var users = await _userRepository.GetAllUsersAsync();
 
-            var pagedUsers = await GetUsersAsync(1, 10, "RegistrationDate", false, null);
-            var pagedTokens = await GetTokensAsync(1, 10, "Expiration", true, null);
+            var pagedUsers = await GetUsersAsync(DefaultPageNumber, DefaultPageSize, "RegistrationDate", false, null);
+            var pagedTokens = await GetTokensAsync(DefaultPageNumber, DefaultPageSize, "Expiration", true, null);
             var registrations = await GetRegistrationsAsync();
             var dashboardTokens = await GetDashboardTokensAsync();
             var countryStats = await GetUsersByCountryAsync();
