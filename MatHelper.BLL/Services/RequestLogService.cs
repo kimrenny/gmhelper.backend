@@ -16,6 +16,9 @@ namespace MatHelper.BLL.Services
         private readonly IErrorLogRepository _errorLogRepository;
         private readonly ILogger _logger;
 
+        private const ushort DefaultPageNumber = 1;
+        private const ushort DefaultPageSize = 30;
+
         public RequestLogService(IRequestLogRepository logRepository, IAuthLogRepository authLogRepository, IErrorLogRepository errorLogRepository, ILogger<RequestLogService> logger)
         {
             _logRepository = logRepository;
@@ -29,9 +32,9 @@ namespace MatHelper.BLL.Services
             try
             {
                 var requestStats = await GetRequestStats();
-                var requestLogs = await GetRequestLogs(1, 30, "Id", false, null);
-                var authLogs = await GetAuthLogs(1, 30, "Id", false, null);
-                var errorLogs = await GetErrorLogs(1, 30, "Id", false, null);
+                var requestLogs = await GetRequestLogs(DefaultPageNumber, DefaultPageSize, "Id", false, null);
+                var authLogs = await GetAuthLogs(DefaultPageNumber, DefaultPageSize, "Id", false, null);
+                var errorLogs = await GetErrorLogs(DefaultPageNumber, DefaultPageSize, "Id", false, null);
 
                 var result = new LogsData
                 {

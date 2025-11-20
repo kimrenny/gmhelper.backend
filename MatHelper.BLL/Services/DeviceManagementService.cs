@@ -9,6 +9,8 @@ namespace MatHelper.BLL.Services
         private readonly IUserRepository _userRepository;
         private readonly ILogger _logger;
 
+        private const ushort AccessTokenExpirationMinutes = 30;
+
         public DeviceManagementService(IUserRepository userRepository, ILogger<DeviceManagementService> logger)
         {
             _userRepository = userRepository;
@@ -30,7 +32,7 @@ namespace MatHelper.BLL.Services
                     Platform = t.DeviceInfo.Platform,
                     UserAgent = t.DeviceInfo.UserAgent,
                     IpAddress = t.IpAddress,
-                    AuthorizationDate = t.Expiration - TimeSpan.FromMinutes(30)
+                    AuthorizationDate = t.Expiration - TimeSpan.FromMinutes(AccessTokenExpirationMinutes)
                 })
                 .ToList();
         }

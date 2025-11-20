@@ -14,6 +14,8 @@ namespace MatHelper.BLL.Services
         private readonly ISecurityService _securityService;
         private readonly ILogger _logger;
 
+        private const ushort MinPasswordLength = 8;
+
         public UserManagementService(IUserRepository userRepository, ITwoFactorService twoFactorService, ISecurityService securityService, ILogger<UserManagementService> logger)
         {
             _userRepository = userRepository;
@@ -111,7 +113,7 @@ namespace MatHelper.BLL.Services
             {
                 _logger.LogInformation("Validating new password for UserId: {UserId}", userId);
 
-                if (request.NewPassword.Length < 8)
+                if (request.NewPassword.Length < MinPasswordLength)
                 {
                     _logger.LogWarning("New password is too short for user {UserId}.", userId);
                     throw new InvalidOperationException("New password is too short.");

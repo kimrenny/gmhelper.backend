@@ -14,6 +14,13 @@ namespace MatHelper.BLL.Services
         private readonly ITaskRatingRepository _taskRatingRepository;
         private readonly ILogger<GeoTaskProcessingService> _logger;
 
+        private const ushort AnonymousRequestLimitHours = 24;
+
+        private const string WebRootFolderName = "wwwroot";
+        private const string TasksFolderName = "Tasks";
+        private const string GeoTaskFolderName = "Geo";
+        private const string JsonFileExtension = ".json";
+
         public GeoTaskProcessingService(ITaskRequestRepository taskRequestRepository, ITaskRatingRepository taskRatingRepository, ILogger<GeoTaskProcessingService> logger)
         {
             _taskRequestRepository = taskRequestRepository;
@@ -34,16 +41,16 @@ namespace MatHelper.BLL.Services
             var now = DateTime.UtcNow;
             var diff = now - latest.RequestTime;
 
-            if (diff.TotalHours >= 24)
+            if (diff.TotalHours >= AnonymousRequestLimitHours)
                 return (true, null);
 
-            return (false, TimeSpan.FromHours(24) - diff);
+            return (false, TimeSpan.FromHours(AnonymousRequestLimitHours) - diff);
         }
 
         public async Task<string> ProcessTaskAsync(JsonElement taskData, string ip, Guid? userId)
         {
             string taskId = Guid.NewGuid().ToString();
-            string folderPath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "Tasks", "Geo");
+            string folderPath = Path.Combine(Directory.GetCurrentDirectory(), WebRootFolderName, TasksFolderName, GeoTaskFolderName);
 
             if (!Directory.Exists(folderPath))
             {
@@ -51,7 +58,7 @@ namespace MatHelper.BLL.Services
                 _logger.LogInformation("Created task directory at: {FolderPath}", folderPath);
             }
 
-            string filePath = Path.Combine(folderPath, $"{taskId}.json");
+            string filePath = Path.Combine(folderPath, $"{taskId}{JsonFileExtension}");
 
             var given = await GenerateGivenSectionAsync(taskData);
             var solution = await GenerateSolutionAsync(taskData);
@@ -88,7 +95,7 @@ namespace MatHelper.BLL.Services
 
         public async Task<JsonElement> GetTaskAsync(string id)
         {
-            var filePath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "Tasks", "Geo", $"{id}.json");
+            var filePath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "Tasks", "Geo", $"{id}{JsonFileExtension}");
 
             if (!File.Exists(filePath))
                 throw new FileNotFoundException();

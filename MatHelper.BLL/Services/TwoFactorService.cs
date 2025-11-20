@@ -11,6 +11,13 @@ namespace MatHelper.BLL.Services
         private readonly ITwoFactorRepository _twoFactorRepository;
         private readonly ILogger _logger;
 
+        private const ushort TwoFAKeyExpirationMinutes = 10;
+        private const ushort TotpSecretSizeInBytes = 20;
+
+        private const string TotpIssuer = "GMHelper";
+        private const ushort QrCodePixelSize = 20;
+        private const byte TotpVerificationWindowSize = 1;
+
         public TwoFactorService(ITwoFactorRepository twoFactorRepository, ILogger<ITwoFactorService> logger)
         {
             _twoFactorRepository = twoFactorRepository;
@@ -28,7 +35,7 @@ namespace MatHelper.BLL.Services
                     throw new InvalidOperationException("Two-factor authentication is already enabled.");
                 }
 
-                if((DateTime.UtcNow - existingKey.CreatedAt).TotalMinutes > 10)
+                if((DateTime.UtcNow - existingKey.CreatedAt).TotalMinutes > TwoFAKeyExpirationMinutes)
                 {
                     _twoFactorRepository.Remove(existingKey);
                     await _twoFactorRepository.SaveChangesAsync();
@@ -86,13 +93,13 @@ namespace MatHelper.BLL.Services
 
         public string GenerateQrCode(string secret, string userEmail)
         {
-            string issuer = "MatHelper";
+            string issuer = TotpIssuer;
             string totpUri = $"otpauth://totp/{issuer}:{userEmail}?secret={secret}&issuer={issuer}";
 
             using var qrGenerator = new QRCoder.QRCodeGenerator();
             using var qrCodeData = qrGenerator.CreateQrCode(totpUri, QRCoder.QRCodeGenerator.ECCLevel.Q);
             using var qrCode = new QRCoder.Base64QRCode(qrCodeData);
-            return qrCode.GetGraphic(20);
+            return qrCode.GetGraphic(QrCodePixelSize);
         }
 
         public async Task<UserTwoFactor?> GetTwoFactorAsync(Guid userId, string type)
@@ -109,12 +116,14 @@ namespace MatHelper.BLL.Services
         public bool VerifyTotp(string secret, string code)
         {
             var totp = new Totp(Base32Encoding.ToBytes(secret));
-            return totp.VerifyTotp(code, out _, new VerificationWindow(previous: 1, future: 1));
+            return totp.VerifyTotp(code, out _, new VerificationWindow(
+                previous: TotpVerificationWindowSize,
+                future: TotpVerificationWindowSize));
         }
 
         private string GenerateSecret()
         {
-            var bytes = KeyGeneration.GenerateRandomKey(20);
+            var bytes = KeyGeneration.GenerateRandomKey(TotpSecretSizeInBytes);
             return Base32Encoding.ToString(bytes);
         }
     }

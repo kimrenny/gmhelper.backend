@@ -14,6 +14,9 @@ namespace MatHelper.BLL.Services
         private readonly JwtOptions _jwtOptions;
         private readonly ILogger _logger;
 
+        private const ushort AccessTokenLifetimeMinutes = 30;
+        private const ushort RefreshTokenSizeInBytes = 64;
+
         public TokenGeneratorService(JwtOptions jwtOptions, ILogger<TokenService> logger)
         {
             _jwtOptions = jwtOptions;
@@ -43,7 +46,7 @@ namespace MatHelper.BLL.Services
                 issuer: _jwtOptions.Issuer,
                 audience: _jwtOptions.Audience,
                 claims: claims,
-                expires: DateTime.UtcNow.AddMinutes(30),
+                expires: DateTime.UtcNow.AddMinutes(AccessTokenLifetimeMinutes),
                 signingCredentials: creds);
 
             return new JwtSecurityTokenHandler().WriteToken(token);
@@ -51,7 +54,7 @@ namespace MatHelper.BLL.Services
 
         public string GenerateRefreshToken()
         {
-            return Convert.ToBase64String(RandomNumberGenerator.GetBytes(64));
+            return Convert.ToBase64String(RandomNumberGenerator.GetBytes(RefreshTokenSizeInBytes));
         }
     }
 }

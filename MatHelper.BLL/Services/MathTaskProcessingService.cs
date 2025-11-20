@@ -13,6 +13,13 @@ namespace MatHelper.BLL.Services
         private readonly ITaskRatingRepository _taskRatingRepository;
         private readonly ILogger<MathTaskProcessingService> _logger;
 
+        private const ushort AnonymousRequestLimitHours = 24;
+
+        private const string WebRootFolderName = "wwwroot";
+        private const string TasksFolderName = "Tasks";
+        private const string MathTaskFolderName = "Math";
+        private const string JsonFileExtension = ".json";
+
         public MathTaskProcessingService(ITaskRequestRepository taskRequestRepository, ITaskRatingRepository taskRatingRepository, ILogger<MathTaskProcessingService> logger)
         {
             _taskRequestRepository = taskRequestRepository;
@@ -33,16 +40,16 @@ namespace MatHelper.BLL.Services
             var now = DateTime.UtcNow;
             var diff = now - latest.RequestTime;
 
-            if (diff.TotalHours >= 24)
+            if (diff.TotalHours >= AnonymousRequestLimitHours)
                 return (true, null);
 
-            return (false, TimeSpan.FromHours(24) - diff);
+            return (false, TimeSpan.FromHours(AnonymousRequestLimitHours) - diff);
         }
 
         public async Task<string> ProcessTaskAsync(JsonElement taskData, string ip, Guid? userId)
         {
             string taskId = Guid.NewGuid().ToString();
-            string folderPath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "Tasks", "Math");
+            string folderPath = Path.Combine(Directory.GetCurrentDirectory(), WebRootFolderName, TasksFolderName, MathTaskFolderName);
 
             if (!Directory.Exists(folderPath))
             {
@@ -75,7 +82,7 @@ namespace MatHelper.BLL.Services
 
         public async Task<JsonElement> GetTaskAsync(string id)
         {
-            var filePath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "Tasks", "Math", $"{id}.json");
+            var filePath = Path.Combine(Directory.GetCurrentDirectory(), WebRootFolderName, TasksFolderName, MathTaskFolderName, $"{id}{JsonFileExtension}");
 
             if (!File.Exists(filePath))
                 throw new FileNotFoundException();

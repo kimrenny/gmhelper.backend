@@ -16,6 +16,8 @@ namespace MatHelper.BLL.Services
         private readonly ILoginTokenRepository _loginTokenRepository;
         private readonly ILogger _logger;
 
+        private const ushort AccessTokenLifetimeMinutes = 30;
+
         public TokenService(ISecurityService secutiryService, ITokenGeneratorService tokenGeneratorService, IUserRepository userRepository, ILoginTokenRepository loginTokenRepository, ILogger<TokenService> logger)
         {
             _securityService = secutiryService;
@@ -47,7 +49,7 @@ namespace MatHelper.BLL.Services
             var newRefreshToken = _tokenGeneratorService.GenerateRefreshToken();
 
             token.Token = accessToken;
-            token.Expiration = DateTime.UtcNow.AddMinutes(30);
+            token.Expiration = DateTime.UtcNow.AddMinutes(AccessTokenLifetimeMinutes);
             token.RefreshToken = newRefreshToken;
 
             await _userRepository.SaveChangesAsync();

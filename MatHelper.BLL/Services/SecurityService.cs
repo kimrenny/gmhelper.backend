@@ -13,6 +13,11 @@ namespace MatHelper.BLL.Services
         private readonly ILoginTokenRepository _loginTokenRepository;
         private readonly ILogger _logger;
 
+        private const ushort SaltSizeInBytes = 32;
+        private const ushort MaxUsersPerDevice = 3;
+
+        private const string GeoApiUrl = "https://get.geojs.io/v1/ip/country.json?ip=";
+
         public SecurityService(IUserRepository userRepository, ILoginTokenRepository loginTokenRepository, ILogger<SecurityService> logger)
         {
             _userRepository = userRepository;
@@ -47,7 +52,7 @@ namespace MatHelper.BLL.Services
         {
             using (var rng = RandomNumberGenerator.Create())
             {
-                byte[] saltBytes = new byte[32];
+                byte[] saltBytes = new byte[SaltSizeInBytes];
                 rng.GetBytes(saltBytes);
                 return Convert.ToBase64String(saltBytes);
             }
@@ -62,7 +67,7 @@ namespace MatHelper.BLL.Services
                 .Distinct()
                 .ToList();
 
-            if (suspiciousAccounts.Count > 3)
+            if (suspiciousAccounts.Count > MaxUsersPerDevice)
             {
                 foreach (var userId in suspiciousAccounts)
                 {
@@ -109,7 +114,7 @@ namespace MatHelper.BLL.Services
                 }
 
                 using var client = new HttpClient();
-                var url = $"https://get.geojs.io/v1/ip/country.json?ip={ipAddress}";
+                var url = $"{GeoApiUrl}{ipAddress}";
                 var response = await client.GetStringAsync(url);
 
                 var jsonArray = JArray.Parse(response);
