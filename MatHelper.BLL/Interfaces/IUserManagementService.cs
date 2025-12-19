@@ -9,6 +9,7 @@ namespace MatHelper.BLL.Interfaces
     {
         Task<UserDetails> GetUserDetailsAsync(Guid userId);
         Task<byte[]> GetUserAvatarAsync(Guid userId);
+        Task<String> GetUserLanguageByEmail(string email);
         Task SaveUserAvatarAsync(Guid userId, byte[] avatarBytes);
         Task UpdateUserAsync(Guid userId, UpdateUserRequest request);
         Task UpdateUserLanguageAsync(Guid userId, LanguageType language);

@@ -78,7 +78,7 @@ namespace MatHelper.DAL.Repositories
                 throw new InvalidOperationException("User is blocked.");
             }
             return user;
-        }
+        }        
 
         public async Task<User?> GetUserByIdAsync(Guid id)
         {
@@ -93,6 +93,19 @@ namespace MatHelper.DAL.Repositories
                 throw new InvalidOperationException("User is blocked.");
             }
             return user;
+        }
+        
+        public async Task<String> GetUserLanguageByEmail(string email)
+        {
+            ValidateEmailOrUsername(email, "email");
+
+            var user = await GetUserAsync(u => u.Email == email);
+            if(user != null && user.IsBlocked)
+            {
+                throw new InvalidOperationException("User is blocked.");
+            }
+
+            return user?.Language.ToString() ?? "En";
         }
 
         public async Task<List<User>> GetUsersByIpAsync(string ipAddress)

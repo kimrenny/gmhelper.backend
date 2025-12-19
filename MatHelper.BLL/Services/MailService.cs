@@ -3,16 +3,23 @@ using Microsoft.Extensions.Configuration;
 using MatHelper.BLL.Interfaces;
 using System.Net;
 using Microsoft.Extensions.Logging;
+using MatHelper.CORE.Enums;
+using MatHelper.DAL.Interfaces;
+using MatHelper.BLL.MailTemplates;
 
 namespace MatHelper.BLL.Services
 {
     public class MailService : IMailService
     {
+        private readonly IUserRepository _userRepository;
+        private readonly IUserManagementService _userManagementService;
         private readonly IConfiguration _configuration;
         private readonly ILogger _logger;
 
-        public MailService(IConfiguration configuration, ILogger<MailService> logger)
+        public MailService(IUserRepository userRepository, IUserManagementService userManagementService, IConfiguration configuration, ILogger<MailService> logger)
         {
+            _userRepository = userRepository;
+            _userManagementService = userManagementService;
             _configuration = configuration;
             _logger = logger;
         }
@@ -124,7 +131,6 @@ namespace MatHelper.BLL.Services
             {
                 var fromAddress = new MailAddress(smtpFrom, "GMHelper");
                 var toAddress = new MailAddress(toEmail);
-                var subject = "Password Recovery";
 
                 var clientBaseUrl = _configuration["ClientApp:BaseUrl"];
                 if (string.IsNullOrWhiteSpace(clientBaseUrl))
@@ -135,28 +141,9 @@ namespace MatHelper.BLL.Services
                 var recoveryLink = $"{clientBaseUrl.TrimEnd('/')}/recover?token={token}";
                 var mainLink = $"{clientBaseUrl.TrimEnd('/')}/";
 
-                var body = $@"
-                <div style='background-color:#000; color:#fff; font-family:Arial, sans-serif; max-width:600px; margin:auto; padding:20px; border-radius:10px;'>
-                    <h2 style='text-align:center;'>
-                        <a href='{mainLink}' style='text-decoration:none; font-size:28px;'>
-                            <span style='color:#C444FF;'>GM</span><span style='color:#FFFFFF;'>Helper</span>
-                        </a>
-                    </h2>
-                    <p style='color:#fff;'>Hello!</p>
-                    <p style='color:#fff;'>We received a request to reset your password. Click the button below to proceed:</p>
-                    <p style='text-align:center;'>
-                        <a href='{recoveryLink}' style='display:inline-block; padding:12px 24px; background-color:#C444FF; color:#fff; text-decoration:none; border-radius:5px;'>Reset Password</a>
-                    </p>
-                    <p style='color:#fff;'>If the button doesn't work, you can copy and paste the following link into your browser:</p>
-                    <p style='color:#fff; text-align:center;'>
-                        <a href='{recoveryLink}' style='color:#C444FF;'>{recoveryLink}</a>
-                    </p>
-                    <p style='color:#fff;'>This link will expire in 15 minutes. If you did not request a password reset, you can safely ignore this message.</p>
-                    <hr style='border-color:#444;'/>
-                    <footer style='text-align:center; font-size:12px; color:#666;'>
-                        &copy; {DateTime.Now.Year} GMHelper. All rights reserved.
-                    </footer>
-                </div>";
+                var language = await _userManagementService.GetUserLanguageByEmail(toEmail);
+
+                var template = PasswordRecoveryMailProvider.Get(language, mainLink, recoveryLink);
 
                 using (var smtpClient = new SmtpClient(smtpHost, smtpPort))
                 {
@@ -165,8 +152,8 @@ namespace MatHelper.BLL.Services
 
                     var mailMessage = new MailMessage(fromAddress, toAddress)
                     {
-                        Subject = subject,
-                        Body = body,
+                        Subject = template.Subject,
+                        Body = template.Body,
                         IsBodyHtml = true
                     };
 
@@ -205,7 +192,6 @@ namespace MatHelper.BLL.Services
             {
                 var fromAddress = new MailAddress(smtpFrom, "GMHelper");
                 var toAddress = new MailAddress(toEmail);
-                var subject = "New Device Login Confirmation";
 
                 var clientBaseUrl = _configuration["ClientApp:BaseUrl"];
                 if (string.IsNullOrWhiteSpace(clientBaseUrl))
@@ -215,20 +201,9 @@ namespace MatHelper.BLL.Services
 
                 var mainLink = $"{clientBaseUrl.TrimEnd('/')}/";
 
-                var body = $@"
-        <div style='background-color:#000; color:#fff; font-family:Arial, sans-serif; max-width:600px; margin:auto; padding:20px; border-radius:10px;'>
-            <h2 style='text-align:center;'>
-                <a href='{mainLink}' style='text-decoration:none; font-size:28px;'>
-                    <span style='color:#C444FF;'>GM</span><span style='color:#FFFFFF;'>Helper</span>
-                </a>
-            </h2>
-            <p style='color:#fff;'>Hello,</p>
-            <p style='color:#fff;'>We detected a login attempt from a new device or IP address. To confirm this login, please enter the code below:</p>
-            <p style='text-align:center; font-size:24px; font-weight:bold; color:#C444FF;'>{code}</p>
-            <p style='color:#fff;'>This code will expire in 15 minutes. If you did not attempt to log in, please ignore this email.</p>
-            <hr style='border-color:#444;'/>
-            <footer style='text-align:center; font-size:12px; color:#666;'>&copy; {DateTime.Now.Year} GMHelper. All rights reserved.</footer>
-        </div>";
+                var language = await _userManagementService.GetUserLanguageByEmail(toEmail);
+
+                var template = IpConfirmationMailProvider.Get(language, mainLink, code);
 
                 using (var smtpClient = new SmtpClient(smtpHost, smtpPort))
                 {
@@ -237,8 +212,8 @@ namespace MatHelper.BLL.Services
 
                     var mailMessage = new MailMessage(fromAddress, toAddress)
                     {
-                        Subject = subject,
-                        Body = body,
+                        Subject = template.Subject,
+                        Body = template.Body,
                         IsBodyHtml = true
                     };
 
@@ -253,5 +228,4 @@ namespace MatHelper.BLL.Services
             }
         }
     }
-    
 }

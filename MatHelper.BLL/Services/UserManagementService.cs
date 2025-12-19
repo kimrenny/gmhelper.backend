@@ -51,6 +51,21 @@ namespace MatHelper.BLL.Services
             return user!.Avatar;
         }
 
+        public async Task<String> GetUserLanguageByEmail(string email)
+        {
+            try
+            {
+                var language = await _userRepository.GetUserLanguageByEmail(email);
+
+                return language?.ToLowerInvariant() ?? LanguageType.EN.ToString().ToLowerInvariant();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"Failed to get user language for email {email}. Defaulting to English.");
+                return LanguageType.EN.ToString().ToLowerInvariant();
+            }
+        }
+
         public async Task SaveUserAvatarAsync(Guid userId, byte[] avatarBytes)
         {
             var user = await _userRepository.GetUserByIdAsync(userId);

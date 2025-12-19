@@ -17,6 +17,8 @@ namespace MatHelper.DAL.Interfaces
         Task<User?> GetUserByUsernameAsync(string username);
         Task<User?> GetUserByIdAsync(Guid id);
 
+        Task<String> GetUserLanguageByEmail(string username);
+
         Task<List<User>> GetUsersByIpAsync(string ipAddress);
         Task<int> GetUserCountByIpAsync(string ipAddress);
 
