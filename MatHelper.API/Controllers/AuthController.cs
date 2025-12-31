@@ -183,6 +183,11 @@ namespace MatHelper.API.Controllers
                 {
                     return Unauthorized(ApiResponse<string>.Fail("Please activate your account by following the link sent to your email."));
                 }
+                else if (ex.Message == "IP temporarily blocked due to multiple failed login attempts.")
+                {
+                    return Unauthorized(ApiResponse<string>.Fail("IP temporarily blocked due to multiple failed login attempts."));
+                }
+
                 return Unauthorized(ApiResponse<string>.Fail("User is banned."));
             }
             catch (InvalidOperationException ex)

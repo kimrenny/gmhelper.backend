@@ -108,6 +108,7 @@ builder.Services.AddScoped<IGeoTaskProcessingService, GeoTaskProcessingService>(
 builder.Services.AddScoped<IMathTaskProcessingService, MathTaskProcessingService>();
 builder.Services.AddScoped<IClientInfoService, ClientInfoService>();
 builder.Services.AddScoped<ITwoFactorService, TwoFactorService>();
+builder.Services.AddScoped<ILoginAttemptService, LoginAttemptService>();
 builder.Services.AddScoped<IUserMapper, UserMapper>();
 builder.Services.AddScoped<ICaptchaValidationService, CaptchaValidationService>();
 builder.Services.AddScoped<IErrorLogRepository, ErrorLogRepository>();
@@ -123,6 +124,7 @@ builder.Services.AddScoped<ITaskRequestRepository, TaskRequestRepository>();
 builder.Services.AddScoped<ITaskRatingRepository, TaskRatingRepository>();
 builder.Services.AddScoped<ITwoFactorRepository, TwoFactorRepository>();
 builder.Services.AddScoped<IAppTwoFactorSessionRepository, AppTwoFactorSessionRepository>();
+builder.Services.AddScoped<IIpLoginAttemptRepository, IpLoginAttemptRepository>();
 builder.Services.AddScoped<ErrorLoggingMiddleware>();
 
 builder.Services.AddAuthentication(options =>

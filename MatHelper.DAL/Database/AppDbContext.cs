@@ -23,6 +23,7 @@ namespace MatHelper.DAL.Database
         public DbSet<EmailLoginCode> EmailLoginCodes { get; set; }
         public DbSet<UserTwoFactor> UserTwoFactors { get; set; }
         public DbSet<AppTwoFactorSession> TwoFactorSessions { get; set; }
+        public DbSet<IpLoginAttempt> IpLoginAttempts { get; set; }
 
         public AppDbContext(DbContextOptions<AppDbContext> options) : base(options) { }
 

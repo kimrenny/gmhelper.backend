@@ -20,6 +20,7 @@ namespace MatHelper.BLL.Services
         private readonly IAuthLogRepository _authLogRepository;
         private readonly IMailService _mailService;
         private readonly ISecurityService _securityService;
+        private readonly ILoginAttemptService _loginAttemptService;
         private readonly ILogger _logger;
 
         private const byte MaxUsersPerIp = 3;
@@ -41,7 +42,7 @@ namespace MatHelper.BLL.Services
         private const int MinConfirmationCodeValue = 100000;
         private const int ConfirmationCodeRange = 900000;
 
-        public AuthenticationService(IUserRepository userRepository, IAppTwoFactorSessionRepository appTwoFactorSessionRepository, ITokenGeneratorService tokenGeneratorService, ITwoFactorService twoFactorService, IEmailConfirmationRepository emailConfirmationRepository, IEmailLoginCodeRepository emailLoginCodeRepository, IPasswordRecoveryRepository passwordRecoveryRepository, IAuthLogRepository authLogRepository, IMailService mailService, ISecurityService securityService, ILogger<AuthenticationService> logger)
+        public AuthenticationService(IUserRepository userRepository, IAppTwoFactorSessionRepository appTwoFactorSessionRepository, ITokenGeneratorService tokenGeneratorService, ITwoFactorService twoFactorService, IEmailConfirmationRepository emailConfirmationRepository, IEmailLoginCodeRepository emailLoginCodeRepository, IPasswordRecoveryRepository passwordRecoveryRepository, IAuthLogRepository authLogRepository, IMailService mailService, ISecurityService securityService, ILoginAttemptService loginAttemptService, ILogger<AuthenticationService> logger)
         {
             _userRepository = userRepository;
             _twoFactorSessionRepository = appTwoFactorSessionRepository;
@@ -53,6 +54,7 @@ namespace MatHelper.BLL.Services
             _authLogRepository = authLogRepository;
             _mailService = mailService;
             _securityService = securityService;
+            _loginAttemptService = loginAttemptService;
             _logger = logger;
         }
 
@@ -238,8 +240,21 @@ namespace MatHelper.BLL.Services
 
         public async Task<LoginResponse> LoginUserAsync(LoginDto loginDto, DeviceInfo deviceInfo, string ipAddress)
         {
+            try
+            {
+                await _loginAttemptService.CheckIpBlockedAsync(ipAddress);
+            }
+            catch(UnauthorizedAccessException)
+            {
+                throw;
+            }
+
             var user = await _userRepository.GetUserByEmailAsync(loginDto.Email);
-            if (user == null) throw new InvalidOperationException("User not found.");
+            if (user == null)
+            {
+                await _loginAttemptService.RegisterFailedAttemptAsync(ipAddress);
+                throw new InvalidOperationException("User not found.");
+            }
 
             if (!user.IsActive) throw new UnauthorizedAccessException("Please activate your account by following the link sent to your email.");
 
@@ -247,7 +262,13 @@ namespace MatHelper.BLL.Services
             {
                 if (user.IsBlocked) throw new UnauthorizedAccessException("User is banned.");
 
-                if (!_securityService.VerifyPassword(loginDto.Password, user.PasswordHash, user.PasswordSalt)) throw new UnauthorizedAccessException("Invalid password.");
+                if (!_securityService.VerifyPassword(loginDto.Password, user.PasswordHash, user.PasswordSalt))
+                {
+                    await _loginAttemptService.RegisterFailedAttemptAsync(ipAddress);
+                    throw new UnauthorizedAccessException("Invalid password.");
+                }
+
+                await _loginAttemptService.ResetAttemptsAsync(ipAddress);
 
                 if (deviceInfo.UserAgent == null || deviceInfo.Platform == null)
                 {
