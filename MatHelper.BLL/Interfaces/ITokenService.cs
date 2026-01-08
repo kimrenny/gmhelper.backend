@@ -10,6 +10,7 @@ namespace MatHelper.BLL.Interfaces
     {
         Task<LoginResponse> RefreshAccessTokenAsync(string refreshToken);
         Task<bool> DisableRefreshToken(string refreshToken);
+        Task DeactivateAllUserTokensAsync(Guid userId);
         Task<bool> IsTokenDisabled(string token);
         Task<TokenValidationResult> ValidateAdminAccessAsync(HttpRequest request, ClaimsPrincipal user);
         string? ExtractTokenAsync(HttpRequest request);

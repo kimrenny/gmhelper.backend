@@ -78,6 +78,27 @@ namespace MatHelper.BLL.Services
             return true;
         }
 
+        public async Task DeactivateAllUserTokensAsync(Guid userId)
+        {
+            var tokens = await _loginTokenRepository.GetAllLoginTokensAsync();
+
+            var userTokens = tokens
+                .Where(t => t.User != null && t.User.Id == userId && t.IsActive)
+                .ToList();
+
+            if (!userTokens.Any())
+                return;
+
+            foreach (var token in userTokens)
+            {
+                token.IsActive = false;
+            }
+
+            await _loginTokenRepository.SaveChangesAsync();
+
+            _logger.LogInformation("All active tokens were deactivated for UserId: {UserId}", userId);
+        }
+
         public async Task<bool> IsTokenDisabled(string token)
         {
             var loginToken = await _loginTokenRepository.GetLoginTokenAsync(token);

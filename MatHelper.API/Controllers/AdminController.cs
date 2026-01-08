@@ -17,9 +17,9 @@ namespace MatHelper.API.Controllers
         private readonly IAdminSettingsService _adminSettingsService;
         private readonly ITokenService _tokenService;
         private readonly IRequestLogService _requestLogService;
-        private readonly ILogger<AuthController> _logger;
+        private readonly ILogger<AdminController> _logger;
 
-        public AdminController(IAdminService adminService, IAdminSettingsService AdminSettingsService, ITokenService tokenService, IRequestLogService requestLogService, ILogger<AuthController> logger)
+        public AdminController(IAdminService adminService, IAdminSettingsService AdminSettingsService, ITokenService tokenService, IRequestLogService requestLogService, ILogger<AdminController> logger)
         {
             _adminService = adminService;
             _adminSettingsService = AdminSettingsService;
