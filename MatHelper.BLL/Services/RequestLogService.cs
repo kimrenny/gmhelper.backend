@@ -128,12 +128,6 @@ namespace MatHelper.BLL.Services
                     .Take(pageSize)
                     .ToListAsync();
 
-                if(logs == null || logs.Count == 0)
-                {
-                    _logger.LogWarning("No logs found in the database.");
-                    throw new InvalidOperationException("No logs found.");
-                }
-
                 return new PagedResult<RequestLogDetail>
                 {
                     Items = logs,
@@ -188,12 +182,6 @@ namespace MatHelper.BLL.Services
                     .Take(pageSize)
                     .ToListAsync();
 
-                if (logs == null || logs.Count == 0)
-                {
-                    _logger.LogWarning("No logs found in the database.");
-                    throw new InvalidOperationException("No logs found.");
-                }
-
                 return new PagedResult<AuthLog>
                 {
                     Items = logs,
@@ -244,12 +232,6 @@ namespace MatHelper.BLL.Services
                     .Skip((page - 1) * pageSize)
                     .Take(pageSize)
                     .ToListAsync();
-
-                if (logs == null || logs.Count == 0)
-                {
-                    _logger.LogWarning("No logs found in the database.");
-                    throw new InvalidOperationException("No logs found.");
-                }
 
                 return new PagedResult<ErrorLog>
                 {

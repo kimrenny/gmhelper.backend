@@ -5,6 +5,6 @@ namespace MatHelper.BLL.Interfaces
 {
     public interface IOwnerService
     {
-        Task ChangeUserRoleAsync(Guid targetUserId, string newRole);
+        Task ChangeUserRoleAsync(Guid requesterUserId, Guid targetUserId, string newRole);
     }
 }

@@ -91,6 +91,12 @@ namespace MatHelper.BLL.Services
             await _twoFactorRepository.UpdateTwoFactorModeAsync(userId, type, alwaysAsk);
         }
 
+        public async Task<bool> IsTwoFactorEnabledAsync(Guid userId, string type)
+        {
+            var twoFactor = await _twoFactorRepository.GetTwoFactorAsync(userId, type);
+            return twoFactor != null && twoFactor.IsEnabled;
+        }
+
         public string GenerateQrCode(string secret, string userEmail)
         {
             string issuer = TotpIssuer;

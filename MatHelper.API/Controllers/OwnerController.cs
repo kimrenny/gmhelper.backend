@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using MatHelper.BLL.Interfaces;
 using MatHelper.CORE.Models;
+using MatHelper.CORE.Exceptions;
 using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using MatHelper.API.Common;
@@ -32,9 +33,24 @@ namespace MatHelper.API.Controllers
                 var ownerValidation = await AdminValidation.ValidateAdminAsync(this, _tokenService);
                 if (ownerValidation != null) return ownerValidation;
 
-                await _ownerService.ChangeUserRoleAsync(userId, request.Role);
+                var authToken = _tokenService.ExtractTokenAsync(Request);
+                if(authToken == null)
+                    return Unauthorized(ApiResponse<string>.Fail("Unauthorized."));
+
+                var requesterUserId = await _tokenService.GetUserIdFromTokenAsync(authToken);
+                if (requesterUserId == null)
+                    return Unauthorized(ApiResponse<string>.Fail("Unauthorized."));
+
+                await _ownerService.ChangeUserRoleAsync(requesterUserId.Value, userId, request.Role);
 
                 return Ok(ApiResponse<string>.Ok("User role updated successfully."));
+            }
+            catch(TwoFactorRequiredException ex)
+            {
+                return new ObjectResult(ApiResponse<string>.Fail(ex.Message))
+                {
+                    StatusCode = StatusCodes.Status403Forbidden
+                };
             }
             catch (Exception ex)
             {
