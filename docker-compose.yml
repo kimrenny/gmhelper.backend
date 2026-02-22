@@ -9,6 +9,11 @@ services:
       - pgdata:/var/lib/postgresql/data
     ports:
       - "5432:5432"
+    healthcheck:
+        test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER}"]
+        interval: 5s
+        timeout: 5s
+        retries: 5
 
   gmhelper-api:
     build:
@@ -27,12 +32,13 @@ services:
       ASPNETCORE_ENVIRONMENT: "Production"
     ports:
       - "7057:7057"
+    env_file:
+      - .env
     volumes:
-      - .:/src
-      - ~/.nuget/packages:/root/.nuget/packages:cached
       - ./data-protection-keys:/root/.aspnet/DataProtection-Keys
     depends_on:
-      - postgres
+        postgres:
+            condition: service_healthy
 
   gmhelper-client:
     build:
@@ -43,6 +49,15 @@ services:
     volumes:
       - ../gmhelper.ui:/app
       - /app/node_modules
+
+  solution-hub:
+    build:
+      context: ../gmhelper.solution-hub
+      dockerfile: Dockerfile
+    container_name: solution-hub
+    expose:
+        - "50051"
+    restart: unless-stopped
 
 volumes:
   pgdata:

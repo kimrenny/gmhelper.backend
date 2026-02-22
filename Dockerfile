@@ -1,4 +1,4 @@
-FROM mcr.microsoft.com/dotnet/sdk:8.0
+FROM mcr.microsoft.com/dotnet/sdk:9.0
 
 WORKDIR /src
 
@@ -6,8 +6,10 @@ COPY . .
 
 RUN dotnet restore MatHelper.API/MatHelper.API.csproj
 
-RUN dotnet build MatHelper.API/MatHelper.API.csproj -c Debug --no-restore
+RUN dotnet publish MatHelper.API/MatHelper.API.csproj -c Release -o /app
+
+WORKDIR /app
 
 EXPOSE 7057
 
-ENTRYPOINT ["dotnet", "watch", "--project", "MatHelper.API/MatHelper.API.csproj", "run", "--launch-profile", "http"]
+ENTRYPOINT ["dotnet", "MatHelper.API.dll"]

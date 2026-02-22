@@ -18,10 +18,7 @@ var builder = WebApplication.CreateBuilder(args);
 
 builder.WebHost.ConfigureKestrel(options =>
 {
-    options.ListenAnyIP(7057, listenOptions =>
-    {
-        listenOptions.UseHttps();
-    });
+    options.ListenAnyIP(7057);
 });
 
 Env.Load("../.env");
@@ -34,14 +31,17 @@ builder.Services.AddControllers(options =>
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
+/*
 var corsOrigins = Environment.GetEnvironmentVariable("CORS_ORIGINS")?
     .Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+*/
 
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowFrontend", policy =>
     {
-        policy.WithOrigins(corsOrigins ?? Array.Empty<string>())
+        policy
+              .SetIsOriginAllowed(_ => true)
               .AllowAnyMethod()
               .AllowAnyHeader()
               .AllowCredentials();
