@@ -3,11 +3,18 @@
   <ItemGroup>
     <ProjectReference Include="..\MatHelper.CORE\MatHelper.CORE.csproj" />
     <ProjectReference Include="..\MatHelper.DAL\MatHelper.DAL.csproj" />
+    <ProjectReference Include="..\MatHelper.Protos\MatHelper.Protos.csproj" />
   </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="Azure.Core" Version="1.47.1" />
     <PackageReference Include="Azure.Identity" Version="1.14.2" />
+    <PackageReference Include="Google.Protobuf" Version="3.33.5" />
+    <PackageReference Include="Grpc.Net.Client" Version="2.76.0" />
+    <PackageReference Include="Grpc.Tools" Version="2.78.0">
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
     <PackageReference Include="Microsoft.AspNetCore.Http" Version="2.3.0" />
     <PackageReference Include="Microsoft.AspNetCore.Http.Abstractions" Version="2.3.0" />
     <PackageReference Include="microsoft.aspnetcore.mvc" Version="2.3.0" />

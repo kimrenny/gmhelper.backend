@@ -4,11 +4,15 @@ using Microsoft.Extensions.Logging;
 using System.Text.Json;
 using MatHelper.CORE.Enums;
 using MatHelper.BLL.Interfaces;
+using Grpc.Net.Client;
+using SolutionHub;
 
 namespace MatHelper.BLL.Services
 {
     public class MathTaskProcessingService : IMathTaskProcessingService
     {
+        private readonly SolutionHub.SolutionHubService.SolutionHubServiceClient _solutionHubClient;
+
         private readonly ITaskRequestRepository _taskRequestRepository;
         private readonly ITaskRatingRepository _taskRatingRepository;
         private readonly ILogger<MathTaskProcessingService> _logger;
@@ -20,8 +24,9 @@ namespace MatHelper.BLL.Services
         private const string MathTaskFolderName = "Math";
         private const string JsonFileExtension = ".json";
 
-        public MathTaskProcessingService(ITaskRequestRepository taskRequestRepository, ITaskRatingRepository taskRatingRepository, ILogger<MathTaskProcessingService> logger)
+        public MathTaskProcessingService(SolutionHub.SolutionHubService.SolutionHubServiceClient solutionHubClient, ITaskRequestRepository taskRequestRepository, ITaskRatingRepository taskRatingRepository, ILogger<MathTaskProcessingService> logger)
         {
+            _solutionHubClient = solutionHubClient;
             _taskRequestRepository = taskRequestRepository;
             _taskRatingRepository = taskRatingRepository;
             _logger = logger;
@@ -58,6 +63,24 @@ namespace MatHelper.BLL.Services
             }
 
             string filePath = Path.Combine(folderPath, $"{taskId}.json");
+
+            try
+            {
+                var request = new SubmitTaskRequest
+                {
+                    TaskId = taskId,
+                    TaskJson = JsonSerializer.Serialize(taskData),
+                    UserId = userId?.ToString() ?? ""
+                };
+
+                var response = await _solutionHubClient.SubmitTaskAsync(request);
+
+                _logger.LogInformation("Task sent to SolutionHub. TaskId: {TaskId}, Status: {Status}", taskId, response.Status);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to send task to SolutionHub. TaskId: {TaskId}", taskId);
+            }
 
             var solution = await GenerateSolutionAsync(taskData);
 

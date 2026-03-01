@@ -13,6 +13,7 @@ using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
+using SolutionHub;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -127,6 +128,11 @@ builder.Services.AddScoped<ITwoFactorRepository, TwoFactorRepository>();
 builder.Services.AddScoped<IAppTwoFactorSessionRepository, AppTwoFactorSessionRepository>();
 builder.Services.AddScoped<IIpLoginAttemptRepository, IpLoginAttemptRepository>();
 builder.Services.AddScoped<ErrorLoggingMiddleware>();
+
+builder.Services.AddGrpcClient<SolutionHubService.SolutionHubServiceClient>(options =>
+{
+    options.Address = new Uri(Environment.GetEnvironmentVariable("SOLUTION_HUB_URL") ?? "http://solution-hub:50051");
+});
 
 builder.Services.AddAuthentication(options =>
 {
