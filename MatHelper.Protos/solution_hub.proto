@@ -1,5 +1,8 @@
 syntax = "proto3";
 
+package solutionhub;
+
+option go_package = "gmhelper.solution-hub/proto;proto";
 option csharp_namespace = "SolutionHub";
 
 service SolutionHubService {
@@ -10,6 +13,7 @@ message SubmitTaskRequest {
   string taskId = 1;
   string taskJson = 2;
   string userId = 3;
+  string taskType = 4;
 }
 
 message SubmitTaskResponse {
