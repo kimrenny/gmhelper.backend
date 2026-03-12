@@ -30,38 +30,6 @@ namespace MatHelper.API.Controllers
             _captchaValidationService = captchaValidationService;
         }
 
-        [HttpPost("password/recover")]
-        public async Task<IActionResult> SendRecoveryPasswordEmail([FromBody] PasswordRecoveryEmailDto recoveryDto)
-        {
-            if (!await _captchaValidationService.ValidateCaptchaAsync(recoveryDto.CaptchaToken))
-            {
-                _logger.LogWarning("Invalid CAPTCHA token for user: {Email}", recoveryDto.Email);
-                return BadRequest(ApiResponse<string>.Fail("Invalid CAPTCHA token."));
-            }
-
-            try
-            {
-                var result = await _authenticationService.SendRecoverPasswordLinkAsync(recoveryDto.Email);
-
-                if (result)
-                {
-                    return Ok(ApiResponse<string>.Ok("Recovery link sent."));
-                }
-                else
-                {
-                    return BadRequest(ApiResponse<string>.Fail("A problem occurred while executing the request. Please try again later."));
-                }
-            }
-            catch (InvalidDataException ex)
-            {
-                _logger.LogWarning($"Invalid or expired token error occured: {ex.Message}");
-                return BadRequest(ApiResponse<string>.Fail("Invalid or expired token."));
-            }
-            catch (Exception ex)
-            {
-                _logger.LogWarning($"Email confirmation failed: {ex.Message}");
-                return StatusCode(500, ApiResponse<string>.Fail("An unexpected error occured."));
-            }
-        }
+        // todo: add microservice for sending emails, and move this logic there
     }
 }
