@@ -17,14 +17,16 @@ namespace MatHelper.API.Controllers
         private readonly IAdminSettingsService _adminSettingsService;
         private readonly ITokenService _tokenService;
         private readonly IRequestLogService _requestLogService;
+        private readonly IReportService _reportService;
         private readonly ILogger<AdminController> _logger;
 
-        public AdminController(IAdminService adminService, IAdminSettingsService AdminSettingsService, ITokenService tokenService, IRequestLogService requestLogService, ILogger<AdminController> logger)
+        public AdminController(IAdminService adminService, IAdminSettingsService AdminSettingsService, ITokenService tokenService, IRequestLogService requestLogService, IReportService reportService, ILogger<AdminController> logger)
         {
             _adminService = adminService;
             _adminSettingsService = AdminSettingsService;
             _tokenService = tokenService;
             _requestLogService = requestLogService;
+            _reportService = reportService;
             _logger = logger;
         }
 
@@ -55,6 +57,7 @@ namespace MatHelper.API.Controllers
                 {
                     Users = adminData.Users,
                     Tokens = adminData.Tokens,
+                    NotFoundReports = adminData.NotFoundReports,
                     Registrations = adminData.Registrations,
                     DashboardTokens = adminData.DashboardTokens,
                     CountryStats = adminData.CountryStats,
@@ -281,6 +284,26 @@ namespace MatHelper.API.Controllers
             catch (Exception ex)
             {
                 _logger.LogError(ex, "An error occured while processing the request.");
+                return StatusCode(500, ApiResponse<string>.Fail("Internal server error."));
+            }
+        }
+
+        [HttpGet("reports/notfound")]
+        public async Task<IActionResult> GetNotFoundReports(int page = 1, int pageSize = 10, string sortBy = "Id", bool descending = true)
+        {
+            try
+            {
+                var reports = await _adminService.GetNotFoundReportsAsync(page, pageSize, sortBy, descending);
+                if (reports.Items == null || !reports.Items.Any())
+                {
+                    return NotFound(ApiResponse<string>.Fail("No reports found."));
+                }
+
+                return Ok(ApiResponse<PagedResult<NotFoundReport>>.Ok(reports));
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error fetching not found reports.");
                 return StatusCode(500, ApiResponse<string>.Fail("Internal server error."));
             }
         }

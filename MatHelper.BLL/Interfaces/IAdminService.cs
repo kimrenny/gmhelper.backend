@@ -1,4 +1,5 @@
 using MatHelper.CORE.Models;
+using MatHelper.DAL.Models;
 using System.Threading.Tasks;
 
 namespace MatHelper.BLL.Interfaces
@@ -15,5 +16,6 @@ namespace MatHelper.BLL.Interfaces
         Task<List<CountryStatsDto>> GetUsersByCountryAsync();
         Task<List<RoleStatsDto>> GetRoleStatsAsync();
         Task<List<BlockStatsDto>> GetBlockStatsAsync();
+        Task<PagedResult<NotFoundReport>> GetNotFoundReportsAsync(int page, int pageSize, string sortBy, bool descending);
     }
 }

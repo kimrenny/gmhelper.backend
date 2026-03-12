@@ -17,18 +17,20 @@ namespace MatHelper.BLL.Services
         private readonly ITokenService _tokenService;
         private readonly IUserRepository _userRepository;
         private readonly ILoginTokenRepository _loginTokenRepository;
+        private readonly INotFoundReportRepository _notFoundReportRepository;
         private readonly IUserMapper _userMapper;
         private readonly ILogger _logger;
 
         private const short DefaultPageNumber = 1;
         private const short DefaultPageSize = 10;
 
-        public AdminService(ISecurityService securityService, ITokenService tokenService, IUserRepository userRepository, ILoginTokenRepository loginTokenRepository, IUserMapper userMapper, ILogger<AdminService> logger)
+        public AdminService(ISecurityService securityService, ITokenService tokenService, IUserRepository userRepository, ILoginTokenRepository loginTokenRepository, INotFoundReportRepository notFoundReportRepository, IUserMapper userMapper, ILogger<AdminService> logger)
         {
             _securityService = securityService;
             _tokenService = tokenService;
             _userRepository = userRepository;
             _loginTokenRepository = loginTokenRepository;
+            _notFoundReportRepository = notFoundReportRepository;
             _userMapper = userMapper;
             _logger = logger;
         }
@@ -39,6 +41,7 @@ namespace MatHelper.BLL.Services
 
             var pagedUsers = await GetUsersAsync(DefaultPageNumber, DefaultPageSize, "RegistrationDate", false, null);
             var pagedTokens = await GetTokensAsync(DefaultPageNumber, DefaultPageSize, "Expiration", true, null);
+            var pagedNotFoundReports = await GetNotFoundReportsAsync(DefaultPageNumber, DefaultPageSize, "ClientTimestamp", true);
             var registrations = await GetRegistrationsAsync();
             var dashboardTokens = await GetDashboardTokensAsync();
             var countryStats = await GetUsersByCountryAsync();
@@ -50,6 +53,7 @@ namespace MatHelper.BLL.Services
             {
                 Users = pagedUsers,
                 Tokens = pagedTokens,
+                NotFoundReports = pagedNotFoundReports,
                 Registrations = registrations,
                 DashboardTokens = dashboardTokens,
                 CountryStats = countryStats,
@@ -319,6 +323,51 @@ namespace MatHelper.BLL.Services
             {
                 _logger.LogError(ex, "An error occured during fetching users by role.");
                 throw new InvalidOperationException("Could not fetch users by role.", ex);
+            }
+        }
+
+        public async Task<PagedResult<NotFoundReport>> GetNotFoundReportsAsync(int page, int pageSize, string sortBy, bool descending)
+        {
+            try
+            {
+                var query = _notFoundReportRepository.GetReportsQuery();
+
+                int totalCount = await query.CountAsync();
+
+                sortBy = string.IsNullOrWhiteSpace(sortBy) ? "Id" : char.ToUpper(sortBy[0]) + sortBy.Substring(1);
+
+                query = (sortBy, descending) switch
+                {
+                    ("Id", false) => query.OrderBy(x => x.Id),
+                    ("Id", true) => query.OrderByDescending(x => x.Id),
+                    ("Url", false) => query.OrderBy(x => x.Url),
+                    ("Url", true) => query.OrderByDescending(x => x.Url),
+                    ("ClientTimestamp", false) => query.OrderBy(x => x.ClientTimestamp),
+                    ("ClientTimestamp", true) => query.OrderByDescending(x => x.ClientTimestamp),
+                    _ => query.OrderBy(x => x.Id)
+                };
+
+                var reports = await query
+                    .Skip((page - 1) * pageSize)
+                    .Take(pageSize)
+                    .ToListAsync();
+
+                if (reports == null || reports.Count == 0)
+                {
+                    _logger.LogWarning("No notfound reports found in the database.");
+                    throw new InvalidOperationException("No notfound reports found.");
+                }
+
+                return new PagedResult<NotFoundReport>
+                {
+                    Items = reports,
+                    TotalCount = totalCount
+                };
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "An error occurred while fetching notfound reports.");
+                throw new InvalidOperationException("Could not fetch notfound reports.", ex);
             }
         }
 
