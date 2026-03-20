@@ -308,6 +308,29 @@ namespace MatHelper.API.Controllers
             }
         }
 
+        [HttpPut("reports/{id}/action")]
+        public async Task<IActionResult> ActionReport(int id, [FromBody] AdminActionDto adminActionDto)
+        {
+            if (adminActionDto == null || string.IsNullOrWhiteSpace(adminActionDto.Action))
+            {
+                return BadRequest(ApiResponse<string>.Fail("Invalid data."));
+            }
+
+            try
+            {
+                var adminValidation = await AdminValidation.ValidateAdminAsync(this, _tokenService);
+                if (adminValidation != null) return adminValidation;
+
+                await _adminService.ActionReportAsync(id, adminActionDto.Action);
+                return Ok(ApiResponse<string>.Ok("Action performed successfully."));
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "An error occurred while processing the request.");
+                return StatusCode(500, ApiResponse<string>.Fail("Internal server error."));
+            }
+        }
+
         [HttpGet("settings")]
         public async Task<IActionResult> GetAdminSettings()
         {

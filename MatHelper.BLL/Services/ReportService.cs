@@ -31,7 +31,8 @@ namespace MatHelper.BLL.Services
                 ScreenHeight = request.ClientInfo?.Screen?.Height,
                 ViewportWidth = request.ClientInfo?.Viewport?.Width,
                 ViewportHeight = request.ClientInfo?.Viewport?.Height,
-                ClientTimestamp = request.ClientInfo?.Timestamp
+                ClientTimestamp = request.ClientInfo?.Timestamp,
+                IsResolved = false
             };
 
             await _notFoundRepository.SaveReportAsync(entity);

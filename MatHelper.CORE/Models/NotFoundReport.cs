@@ -23,5 +23,6 @@
         public DateTime? ClientTimestamp { get; set; }
 
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+        public bool IsResolved { get; set; } = false;
     }
 }

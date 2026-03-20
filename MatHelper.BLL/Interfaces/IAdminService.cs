@@ -17,5 +17,6 @@ namespace MatHelper.BLL.Interfaces
         Task<List<RoleStatsDto>> GetRoleStatsAsync();
         Task<List<BlockStatsDto>> GetBlockStatsAsync();
         Task<PagedResult<NotFoundReport>> GetNotFoundReportsAsync(int page, int pageSize, string sortBy, bool descending);
+        Task ActionReportAsync(int reportId, string action);
     }
 }

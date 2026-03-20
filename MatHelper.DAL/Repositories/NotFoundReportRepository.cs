@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using MatHelper.DAL.Models;
 using MatHelper.DAL.Interfaces;
 using MatHelper.CORE.Models;
+using MatHelper.CORE.Enums;
 
 namespace MatHelper.DAL.Repositories
 {
@@ -24,6 +25,25 @@ namespace MatHelper.DAL.Repositories
         public IQueryable<NotFoundReport> GetReportsQuery()
         {
             return _context.NotFoundReports.AsQueryable();
+        }
+
+        public async Task ActionReportAsync(int id, ReportAction action)
+        {
+            if (string.IsNullOrWhiteSpace(id.ToString()))
+            {
+                throw new InvalidDataException("Id is null or empty");
+            }
+
+            var report = await _context.NotFoundReports.FirstOrDefaultAsync(r => r.Id == id);
+
+            if (report == null)
+            {
+                throw new InvalidOperationException("Report not found.");
+            }
+
+            report.IsResolved = action == ReportAction.Resolved;
+
+            await _context.SaveChangesAsync();
         }
     }
 }

@@ -344,6 +344,8 @@ namespace MatHelper.BLL.Services
                     ("Url", true) => query.OrderByDescending(x => x.Url),
                     ("ClientTimestamp", false) => query.OrderBy(x => x.ClientTimestamp),
                     ("ClientTimestamp", true) => query.OrderByDescending(x => x.ClientTimestamp),
+                    ("IsResolved", false) => query.OrderBy(x => x.IsResolved),
+                    ("IsResolved", true) => query.OrderByDescending(x => x.IsResolved),
                     _ => query.OrderBy(x => x.Id)
                 };
 
@@ -368,6 +370,24 @@ namespace MatHelper.BLL.Services
             {
                 _logger.LogError(ex, "An error occurred while fetching notfound reports.");
                 throw new InvalidOperationException("Could not fetch notfound reports.", ex);
+            }
+        }
+
+        public async Task ActionReportAsync(int reportId, string action)
+        {
+            try
+            {
+                if (!Enum.TryParse<ReportAction>(action, ignoreCase: true, out var parsedAction))
+                {
+                    throw new ArgumentException("Invalid report action.");
+                }
+
+                await _notFoundReportRepository.ActionReportAsync(reportId, parsedAction);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "An error occured during action user.");
+                throw new InvalidOperationException("Could not action user.", ex);
             }
         }
 
