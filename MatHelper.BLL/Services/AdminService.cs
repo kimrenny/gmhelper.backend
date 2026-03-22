@@ -41,7 +41,7 @@ namespace MatHelper.BLL.Services
 
             var pagedUsers = await GetUsersAsync(DefaultPageNumber, DefaultPageSize, "RegistrationDate", false, null);
             var pagedTokens = await GetTokensAsync(DefaultPageNumber, DefaultPageSize, "Expiration", true, null);
-            var pagedNotFoundReports = await GetNotFoundReportsAsync(DefaultPageNumber, DefaultPageSize, "ClientTimestamp", true);
+            var pagedNotFoundReports = await GetNotFoundReportsAsync(DefaultPageNumber, DefaultPageSize, "IsResolved", false);
             var registrations = await GetRegistrationsAsync();
             var dashboardTokens = await GetDashboardTokensAsync();
             var countryStats = await GetUsersByCountryAsync();

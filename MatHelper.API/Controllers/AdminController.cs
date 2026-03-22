@@ -289,7 +289,7 @@ namespace MatHelper.API.Controllers
         }
 
         [HttpGet("reports/notfound")]
-        public async Task<IActionResult> GetNotFoundReports(int page = 1, int pageSize = 10, string sortBy = "Id", bool descending = true)
+        public async Task<IActionResult> GetNotFoundReports(int page = 1, int pageSize = 10, string sortBy = "IsResolved", bool descending = false)
         {
             try
             {
