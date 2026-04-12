@@ -3,11 +3,16 @@ using Moq;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Configuration;
 using MatHelper.BLL.Services;
+using MatHelper.DAL.Interfaces;
+using MatHelper.BLL.Interfaces;
+using MatHelper.CORE.Enums;
 
 namespace MatHelper.Tests.BLL
 {
     public class MailServiceTests
     {
+        private readonly Mock<IUserRepository> _userRepoMock;
+        private readonly Mock<IUserManagementService> _userManagementMock;
         private readonly Mock<ILogger<MailService>> _loggerMock;
         private readonly IConfiguration _configuration;
         private readonly MailService _service;
@@ -21,8 +26,11 @@ namespace MatHelper.Tests.BLL
                 .AddInMemoryCollection(inMemorySettings!)
                 .Build();
 
+            _userRepoMock = new Mock<IUserRepository>();
+            _userManagementMock = new Mock<IUserManagementService>();
             _loggerMock = new Mock<ILogger<MailService>>();
-            _service = new MailService(_configuration, _loggerMock.Object);
+
+            _service = new MailService(_userRepoMock.Object, _userManagementMock.Object, _configuration, _loggerMock.Object);
         }
 
         [Fact]
@@ -55,7 +63,7 @@ namespace MatHelper.Tests.BLL
         public async Task SendPasswordRecoveryEmailAsync_ShouldThrow_WhenClientBaseUrlMissing()
         {
             var configWithoutUrl = new ConfigurationBuilder().Build();
-            var service = new MailService(configWithoutUrl, _loggerMock.Object);
+            var service = new MailService(_userRepoMock.Object, _userManagementMock.Object, configWithoutUrl, _loggerMock.Object);
 
             Environment.SetEnvironmentVariable("SMTP__Host", "smtp.test.com");
             Environment.SetEnvironmentVariable("SMTP_Port", "587");

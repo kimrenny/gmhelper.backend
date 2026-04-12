@@ -35,7 +35,10 @@ namespace MatHelper.Tests.Services
         public async Task GetRequestStats_ReturnsData_WhenRepositorySucceeds()
         {
             var expected = new CombinedRequestLogDto();
-            _requestLogRepoMock.Setup(r => r.GetRequestStatsAsync()).ReturnsAsync(expected);
+
+            _requestLogRepoMock
+                .Setup(r => r.GetRequestStatsAsync())
+                .ReturnsAsync(expected);
 
             var result = await _service.GetRequestStats();
 
@@ -45,9 +48,12 @@ namespace MatHelper.Tests.Services
         [Fact]
         public async Task GetRequestStats_ThrowsException_WhenRepositoryFails()
         {
-            _requestLogRepoMock.Setup(r => r.GetRequestStatsAsync()).ThrowsAsync(new Exception("db error"));
+            _requestLogRepoMock
+                .Setup(r => r.GetRequestStatsAsync())
+                .Throws(new Exception("db error"));
 
-            var ex = await Assert.ThrowsAsync<Exception>(() => _service.GetRequestStats());
+            var ex = await Assert.ThrowsAsync<Exception>(() =>
+                _service.GetRequestStats());
 
             Assert.Equal("Error occured during get requests stats.", ex.Message);
         }
@@ -55,7 +61,7 @@ namespace MatHelper.Tests.Services
         [Fact]
         public async Task GetRequestLogs_ReturnsData_WhenRepositorySucceeds()
         {
-            var expected = new List<RequestLogDetail>
+            var data = new List<RequestLogDetail>
             {
                 new RequestLogDetail
                 {
@@ -63,19 +69,28 @@ namespace MatHelper.Tests.Services
                     Method = "GET"
                 }
             };
-            _requestLogRepoMock.Setup(r => r.GetAllRequestLogsAsync()).ReturnsAsync(expected);
 
-            var result = await _service.GetRequestLogs();
+            var query = new TestAsyncEnumerable<RequestLogDetail>(data);
 
-            Assert.Equal(expected, result);
+            _requestLogRepoMock
+                .Setup(r => r.GetLogsQuery())
+                .Returns(query);
+
+            var result = await _service.GetRequestLogs(1, 10, "Date", false, null);
+
+            Assert.Single(result.Items);
+            Assert.Equal("/test", result.Items.First().Path);
         }
 
         [Fact]
         public async Task GetRequestLogs_ThrowsException_WhenRepositoryFails()
         {
-            _requestLogRepoMock.Setup(r => r.GetAllRequestLogsAsync()).ThrowsAsync(new Exception("db error"));
+            _requestLogRepoMock
+                .Setup(r => r.GetLogsQuery())
+                .Throws(new Exception("db error"));
 
-            var ex = await Assert.ThrowsAsync<Exception>(() => _service.GetRequestLogs());
+            var ex = await Assert.ThrowsAsync<Exception>(() =>
+                _service.GetRequestLogs(1, 10, "Date", false, null));
 
             Assert.Equal("Error occured during get requests.", ex.Message);
         }
@@ -83,20 +98,36 @@ namespace MatHelper.Tests.Services
         [Fact]
         public async Task GetAuthLogs_ReturnsData_WhenRepositorySucceeds()
         {
-            var expected = new List<AuthLog> { new AuthLog() };
-            _authLogRepoMock.Setup(r => r.GetAllAuthLogsAsync()).ReturnsAsync(expected);
+            var data = new List<AuthLog>
+            {
+                new AuthLog
+                {
+                    Id = 1,
+                    Timestamp = DateTime.UtcNow
+                }
+            };
 
-            var result = await _service.GetAuthLogs();
+            var query = new TestAsyncEnumerable<AuthLog>(data);
 
-            Assert.Equal(expected, result);
+            _authLogRepoMock
+                .Setup(r => r.GetLogsQuery())
+                .Returns(query);
+
+            var result = await _service.GetAuthLogs(1, 10, "Date", false, null);
+
+            Assert.Single(result.Items);
+            Assert.Equal(1, result.Items.First().Id);
         }
 
         [Fact]
         public async Task GetAuthLogs_ThrowsException_WhenRepositoryFails()
         {
-            _authLogRepoMock.Setup(r => r.GetAllAuthLogsAsync()).ThrowsAsync(new Exception("db error"));
+            _authLogRepoMock
+                .Setup(r => r.GetLogsQuery())
+                .Throws(new Exception("db error"));
 
-            var ex = await Assert.ThrowsAsync<Exception>(() => _service.GetAuthLogs());
+            var ex = await Assert.ThrowsAsync<Exception>(() =>
+                _service.GetAuthLogs(1, 10, "Date", false, null));
 
             Assert.Equal("Error occured during get auth logs.", ex.Message);
         }
@@ -104,20 +135,32 @@ namespace MatHelper.Tests.Services
         [Fact]
         public async Task GetErrorLogs_ReturnsData_WhenRepositorySucceeds()
         {
-            var expected = new List<ErrorLog> { new ErrorLog() };
-            _errorLogRepoMock.Setup(r => r.GetAllErrorLogsAsync()).ReturnsAsync(expected);
+            var data = new List<ErrorLog>
+            {
+                new ErrorLog { Id = 1 }
+            };
 
-            var result = await _service.GetErrorLogs();
+            var query = new TestAsyncEnumerable<ErrorLog>(data);
 
-            Assert.Equal(expected, result);
+            _errorLogRepoMock
+                .Setup(r => r.GetLogsQuery())
+                .Returns(query);
+
+            var result = await _service.GetErrorLogs(1, 10, "Date", false, null);
+
+            Assert.Single(result.Items);
+            Assert.Equal(1, result.Items.First().Id);
         }
 
         [Fact]
         public async Task GetErrorLogs_ThrowsException_WhenRepositoryFails()
         {
-            _errorLogRepoMock.Setup(r => r.GetAllErrorLogsAsync()).ThrowsAsync(new Exception("db error"));
+            _errorLogRepoMock
+                .Setup(r => r.GetLogsQuery())
+                .Throws(new Exception("db error"));
 
-            var ex = await Assert.ThrowsAsync<Exception>(() => _service.GetErrorLogs());
+            var ex = await Assert.ThrowsAsync<Exception>(() =>
+                _service.GetErrorLogs(1, 10, "Date", false, null));
 
             Assert.Equal("Error occured during get error logs.", ex.Message);
         }

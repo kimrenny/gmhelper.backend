@@ -21,6 +21,7 @@ namespace MatHelper.Tests
         private readonly Mock<IAuthLogRepository> _authLogRepoMock = new();
         private readonly Mock<IMailService> _mailServiceMock = new();
         private readonly Mock<ISecurityService> _securityServiceMock = new();
+        private readonly Mock<ILoginAttemptService> _loginAttemptServiceMock = new();
         private readonly Mock<ILogger<AuthenticationService>> _loggerMock = new();
 
         private AuthenticationService CreateService() => new(
@@ -34,6 +35,7 @@ namespace MatHelper.Tests
             _authLogRepoMock.Object,
             _mailServiceMock.Object,
             _securityServiceMock.Object,
+            _loginAttemptServiceMock.Object,
             _loggerMock.Object
         );
 

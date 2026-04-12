@@ -1,16 +1,18 @@
-﻿using Xunit;
-using Moq;
-using MatHelper.BLL.Services;
+﻿using MatHelper.BLL.Services;
 using MatHelper.DAL.Interfaces;
 using MatHelper.DAL.Models;
 using Microsoft.Extensions.Logging;
+using SolutionHub;
 using System.Text.Json;
 using MatHelper.CORE.Enums;
+using Xunit;
+using Moq;
 
 namespace MatHelper.Tests.BLL
 {
     public class MathTaskProcessingServiceTests
     {
+        private readonly Mock<SolutionHubService.SolutionHubServiceClient> _solutionHubMock = new();
         private readonly Mock<ITaskRequestRepository> _taskRequestRepositoryMock;
         private readonly Mock<ITaskRatingRepository> _taskRatingRepositoryMock;
         private readonly Mock<ILogger<MathTaskProcessingService>> _loggerMock;
@@ -22,6 +24,7 @@ namespace MatHelper.Tests.BLL
             _taskRatingRepositoryMock = new Mock<ITaskRatingRepository>();
             _loggerMock = new Mock<ILogger<MathTaskProcessingService>>();
             _service = new MathTaskProcessingService(
+                _solutionHubMock.Object,
                 _taskRequestRepositoryMock.Object,
                 _taskRatingRepositoryMock.Object,
                 _loggerMock.Object

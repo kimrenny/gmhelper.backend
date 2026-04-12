@@ -3,6 +3,7 @@ using MatHelper.CORE.Enums;
 using MatHelper.CORE.Models;
 using MatHelper.DAL.Interfaces;
 using MatHelper.DAL.Models;
+using SolutionHub;
 using Microsoft.Extensions.Logging;
 using Moq;
 using System.Text.Json;
@@ -15,11 +16,13 @@ namespace MatHelper.Tests
         private readonly Mock<ITaskRequestRepository> _taskRequestRepoMock = new();
         private readonly Mock<ITaskRatingRepository> _taskRatingRepoMock = new();
         private readonly Mock<ILogger<GeoTaskProcessingService>> _loggerMock = new();
+        private readonly Mock<SolutionHubService.SolutionHubServiceClient> _solutionHubMock = new();
         private readonly GeoTaskProcessingService _service;
 
         public GeoTaskProcessingServiceTests()
         {
             _service = new GeoTaskProcessingService(
+                _solutionHubMock.Object,
                 _taskRequestRepoMock.Object,
                 _taskRatingRepoMock.Object,
                 _loggerMock.Object

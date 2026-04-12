@@ -120,7 +120,7 @@ namespace MatHelper.BLL.Services
                 var jsonArray = JArray.Parse(response);
                 var country = jsonArray.FirstOrDefault()?["name"]?.ToString();
 
-                return country ?? "Unknown";
+                return string.IsNullOrWhiteSpace(country) ? "Unknown" : country;
             }
             catch (Exception ex)
             {
