@@ -2,14 +2,18 @@
 using MatHelper.BLL.Interfaces;
 using MatHelper.BLL.Mappers;
 using MatHelper.BLL.Services;
+using MatHelper.BLL.Filters;
+using MatHelper.DAL.Database;
 using MatHelper.DAL.Interfaces;
 using MatHelper.DAL.Repositories;
 using MatHelper.IntegrationTests.Services;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.AspNetCore.TestHost;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 
 public class CustomWebApplicationFactory<TProgram> : WebApplicationFactory<TProgram> where TProgram : class
 {
@@ -22,25 +26,18 @@ public class CustomWebApplicationFactory<TProgram> : WebApplicationFactory<TProg
         var projectDir = System.IO.Path.GetFullPath("../../../../");
         Env.Load(System.IO.Path.Combine(projectDir, ".env.test"));
 
-        builder.ConfigureServices(services =>
+        builder.ConfigureTestServices(services =>
         {
-            var descriptor = services.SingleOrDefault(d => d.ServiceType == typeof(DbContextOptions<DbContext>));
+            var descriptor = services.SingleOrDefault(
+                d => d.ServiceType == typeof(DbContextOptions<AppDbContext>));
+
             if (descriptor != null)
                 services.Remove(descriptor);
 
-            services.AddDbContext<DbContext>(options =>
+            services.AddDbContext<AppDbContext>(options =>
             {
-                var connectionString = Environment.GetEnvironmentVariable("ConnectionStrings__DefaultConnection");
-                options.UseNpgsql(connectionString);
+                options.UseInMemoryDatabase("TestDb");
             });
-
-            var sp = services.BuildServiceProvider();
-            using var scope = sp.CreateScope();
-            var db = scope.ServiceProvider.GetRequiredService<DbContext>();
-            db.Database.EnsureDeleted();
-            db.Database.EnsureCreated();
-
-            services.AddSingleton<IHttpContextAccessor, HttpContextAccessor>();
 
             services.AddScoped<IAuthenticationService, AuthenticationService>();
             services.AddScoped<ISecurityService, SecurityService>();
@@ -64,13 +61,24 @@ public class CustomWebApplicationFactory<TProgram> : WebApplicationFactory<TProg
             services.AddScoped<IEmailLoginCodeRepository, EmailLoginCodeRepository>();
             services.AddScoped<ILoginTokenRepository, LoginTokenRepository>();
             services.AddScoped<IPasswordRecoveryRepository, PasswordRecoveryRepository>();
-            services.AddScoped<IRequestLogRepository, RequestLogRepository>();
+            services.AddScoped<IRequestLogRepository, MockRequestLogRepository>();
             services.AddScoped<IAuthLogRepository, AuthLogRepository>();
             services.AddScoped<IAdminSettingsRepository, AdminSettingsRepository>();
             services.AddScoped<ITaskRequestRepository, TaskRequestRepository>();
             services.AddScoped<ITaskRatingRepository, TaskRatingRepository>();
             services.AddScoped<ITwoFactorRepository, TwoFactorRepository>();
             services.AddScoped<IAppTwoFactorSessionRepository, AppTwoFactorSessionRepository>();
+
+            services.RemoveAll<RequestLoggingFilter>();
         });
+    }
+
+    public void ResetDatabase()
+    {
+        using var scope = Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+
+        db.Database.EnsureDeleted();
+        db.Database.EnsureCreated();
     }
 }

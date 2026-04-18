@@ -22,6 +22,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\MatHelper.API\MatHelper.API.csproj" />
+    <ProjectReference Include="..\MatHelper.DAL\MatHelper.DAL.csproj" />
   </ItemGroup>
 
 </Project>
