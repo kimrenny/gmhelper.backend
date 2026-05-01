@@ -11,6 +11,7 @@ using MatHelper.DAL.Repositories;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.InMemory;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using SolutionHub;
@@ -55,20 +56,20 @@ builder.Services.Configure<DbOptions>(
 builder.Services.AddDbContext<AppDbContext>((provider, ctx) =>
 {
     var options = provider.GetRequiredService<IOptions<DbOptions>>().Value;
-    string? connectionString;
 
-    var env = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") ?? "Production";
+    var isTest = builder.Environment.IsEnvironment("IntegrationTest");
+    var isDev = builder.Environment.IsDevelopment();
 
-    if (env == "Development")
+    if (isTest)
     {
-        connectionString = Environment.GetEnvironmentVariable("ConnectionStrings__DevConnection");
-    }
-    else
-    {
-        connectionString = Environment.GetEnvironmentVariable("ConnectionStrings__DefaultConnection");
+        ctx.UseInMemoryDatabase("TestDb");
+        return;
     }
 
-    //connectionString = Environment.GetEnvironmentVariable("ConnectionStrings__DefaultConnection");
+    var connectionString =
+        isDev
+            ? Environment.GetEnvironmentVariable("ConnectionStrings__DevConnection")
+            : Environment.GetEnvironmentVariable("ConnectionStrings__DefaultConnection");
 
     ctx.UseNpgsql(connectionString, npgsqlOptions =>
     {
@@ -159,8 +160,9 @@ builder.Services.AddAuthentication(options =>
 
 var app = builder.Build();
 
-using (var scope = app.Services.CreateScope())
+if (!app.Environment.IsEnvironment("IntegrationTest"))
 {
+    using var scope = app.Services.CreateScope();
     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
     db.Database.Migrate();
 }

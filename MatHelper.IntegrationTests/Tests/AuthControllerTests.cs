@@ -18,6 +18,7 @@ namespace MatHelper.IntegrationTests.Tests
         public AuthControllerTests(CustomWebApplicationFactory<Program> factory)
         {
             _factory = factory;
+            _factory.ResetDatabase();
 
             _cookieContainer = new CookieContainer();
 
