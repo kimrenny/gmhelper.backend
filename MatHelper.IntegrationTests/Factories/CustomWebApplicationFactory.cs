@@ -24,7 +24,30 @@ public class CustomWebApplicationFactory<TProgram> : WebApplicationFactory<TProg
         builder.UseSetting("https_port", "5001");
 
         var projectDir = System.IO.Path.GetFullPath("../../../../");
-        Env.Load(System.IO.Path.Combine(projectDir, ".env.test"));
+        var envPath = Path.Combine(projectDir, ".env.test");
+
+        if (File.Exists(envPath))
+        {
+            var lines = File.ReadAllLines(envPath);
+
+            foreach (var line in lines)
+            {
+                if (string.IsNullOrWhiteSpace(line) || line.StartsWith("#"))
+                    continue;
+
+                var parts = line.Split('=', 2);
+                if (parts.Length != 2)
+                    continue;
+
+                var key = parts[0].Trim();
+                var value = parts[1].Trim();
+
+                if (Environment.GetEnvironmentVariable(key) == null)
+                {
+                    Environment.SetEnvironmentVariable(key, value);
+                }
+            }
+        }
 
         builder.ConfigureTestServices(services =>
         {
