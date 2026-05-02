@@ -88,7 +88,7 @@ namespace MatHelper.BLL.Services
 
             //_logger.LogInformation("User {UserId} found. Validating current password.", userId);
 
-            if (string.IsNullOrEmpty(request.CurrentPassword) || !_securityService.VerifyPassword(request.CurrentPassword, user.PasswordHash, user.PasswordSalt))
+            if (string.IsNullOrEmpty(request.CurrentPassword) || !_securityService.VerifyPassword(request.CurrentPassword, user.PasswordHash))
             {
                 _logger.LogWarning("Invalid current password for user {UserId}.", userId);
                 throw new InvalidOperationException("Invalid current password.");
@@ -135,9 +135,7 @@ namespace MatHelper.BLL.Services
                 }
 
                 //_logger.LogInformation("Generating new salt and hashing password for UserId: {UserId}", userId);
-                var newSalt = _securityService.GenerateSalt();
-                user.PasswordSalt = newSalt;
-                user.PasswordHash = _securityService.HashPassword(request.NewPassword, newSalt);
+                user.PasswordHash = _securityService.HashPassword(request.NewPassword);
             }
 
             //_logger.LogInformation("Saving changes for UserId: {UserId}", userId);

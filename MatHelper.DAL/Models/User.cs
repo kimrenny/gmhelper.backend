@@ -9,7 +9,6 @@ namespace MatHelper.CORE.Models
         public required string Email { get; set; }
         public required DateTime RegistrationDate { get; set; }
         public required string PasswordHash { get; set; }
-        public required string PasswordSalt { get; set; }
         public byte[]? Avatar { get; set; }
         public required string Role { get; set; }
         public List<LoginToken>? LoginTokens { get; set; }

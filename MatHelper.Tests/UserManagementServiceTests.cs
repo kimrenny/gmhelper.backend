@@ -44,7 +44,6 @@ namespace MatHelper.Tests.Services
                 Username = "TestUser",
                 Email = "test@example.com",
                 PasswordHash = "hash",
-                PasswordSalt = "salt",
                 Role = "User",
                 RegistrationDate = DateTime.UtcNow,
                 IsBlocked = false,
@@ -80,7 +79,6 @@ namespace MatHelper.Tests.Services
                 Email = "test@example.com",
                 Role = "User",
                 PasswordHash = "hash",
-                PasswordSalt = "salt",
                 RegistrationDate = DateTime.UtcNow,
                 IsBlocked = false,
             };
@@ -103,7 +101,6 @@ namespace MatHelper.Tests.Services
                 Email = "test@example.com",
                 Role = "User",
                 PasswordHash = "hash",
-                PasswordSalt = "salt",
                 RegistrationDate = DateTime.UtcNow,
                 IsBlocked = false,
             };
@@ -124,7 +121,6 @@ namespace MatHelper.Tests.Services
                 Email = "test@example.com",
                 Role = "User",
                 PasswordHash = "hash",
-                PasswordSalt = "salt",
                 RegistrationDate = DateTime.UtcNow,
                 IsBlocked = false,
             };
@@ -148,7 +144,6 @@ namespace MatHelper.Tests.Services
                 Username = "OldName",
                 Email = "old@example.com",
                 PasswordHash = "hash",
-                PasswordSalt = "salt123",
                 Role = "User",
                 RegistrationDate = DateTime.UtcNow,
                 IsBlocked = false,
@@ -161,7 +156,7 @@ namespace MatHelper.Tests.Services
             };
 
             _userRepoMock.Setup(r => r.GetUserByIdAsync(userId)).ReturnsAsync(user);
-            _securityMock.Setup(s => s.VerifyPassword(request.CurrentPassword, user.PasswordHash, user.PasswordSalt))
+            _securityMock.Setup(s => s.VerifyPassword(request.CurrentPassword, user.PasswordHash))
                 .Returns(true);
 
             var ex = await Assert.ThrowsAsync<InvalidOperationException>(() =>
@@ -182,7 +177,6 @@ namespace MatHelper.Tests.Services
                 Username = "OldName",
                 Email = "old@example.com",
                 PasswordHash = "hash",
-                PasswordSalt = "salt123",
                 Role = "User",
                 RegistrationDate = DateTime.UtcNow,
                 IsBlocked = false,
@@ -199,18 +193,16 @@ namespace MatHelper.Tests.Services
             _userRepoMock.Setup(r => r.GetUserByIdAsync(userId)).ReturnsAsync(user);
             _userRepoMock.Setup(r => r.GetUserByEmailAsync(It.IsAny<string>())).ReturnsAsync((User?)null);
             _userRepoMock.Setup(r => r.GetUserByUsernameAsync(It.IsAny<string>())).ReturnsAsync((User?)null);
-            _securityMock.Setup(s => s.GenerateSalt()).Returns("newSalt");
             _userRepoMock.Setup(r => r.UpdateUserAsync(user)).Returns(Task.CompletedTask);
-            _securityMock.Setup(s => s.VerifyPassword(request.CurrentPassword, user.PasswordHash, user.PasswordSalt))
+            _securityMock.Setup(s => s.VerifyPassword(request.CurrentPassword, user.PasswordHash))
                 .Returns(true);
-            _securityMock.Setup(s => s.HashPassword(request.NewPassword, "newSalt")).Returns("newHash");
+            _securityMock.Setup(s => s.HashPassword(request.NewPassword)).Returns("newHash");
 
 
             await _service.UpdateUserAsync(userId, request);
 
             Assert.Equal("new@example.com", user.Email);
             Assert.Equal("NewName", user.Username);
-            Assert.Equal("newSalt", user.PasswordSalt);
             Assert.Equal("newHash", user.PasswordHash);
         }
 
@@ -224,7 +216,6 @@ namespace MatHelper.Tests.Services
                 Username = "User",
                 Email = "user@example.com",
                 PasswordHash = "hash",
-                PasswordSalt = "salt",
                 Role = "User",
                 RegistrationDate = DateTime.UtcNow,
                 IsBlocked = false,

@@ -46,7 +46,6 @@ namespace MatHelper.Tests.Services
                 Username = "TestUser",
                 Email = "test@example.com",
                 PasswordHash = "hash",
-                PasswordSalt = "salt",
                 Role = "Admin",
                 RegistrationDate = DateTime.UtcNow,
                 IsBlocked = false,

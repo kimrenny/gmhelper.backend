@@ -45,7 +45,6 @@ namespace MatHelper.Tests.BLL
                     Email = "test@example.com",
                     RegistrationDate = DateTime.UtcNow,
                     PasswordHash = "hash",
-                    PasswordSalt = "salt",
                     Role = "Admin",
                     IsBlocked = false,
                     IsActive = true
@@ -98,7 +97,6 @@ namespace MatHelper.Tests.BLL
                 Email = "new@example.com",
                 RegistrationDate = DateTime.UtcNow,
                 PasswordHash = "hash",
-                PasswordSalt = "salt",
                 Role = "Admin",
                 IsBlocked = false,
                 IsActive = true

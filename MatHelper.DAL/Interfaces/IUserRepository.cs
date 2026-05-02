@@ -10,7 +10,7 @@ namespace MatHelper.DAL.Interfaces
 
         Task AddUserAsync(User user);
         Task DeleteUserAsync(User user);
-        Task<bool> ChangePassword(User user, string password, string salt);
+        Task<bool> ChangePassword(User user, string password);
 
         Task<User?> GetUserAsync(Expression<Func<User, bool>> predicate);
         Task<User?> GetUserByEmailAsync(string email);

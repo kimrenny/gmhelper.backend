@@ -3,6 +3,7 @@ using MatHelper.DAL.Interfaces;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json.Linq;
 using System.Security.Cryptography;
+using Konscious.Security.Cryptography;
 using System.Text;
 
 namespace MatHelper.BLL.Services
@@ -13,7 +14,7 @@ namespace MatHelper.BLL.Services
         private readonly ILoginTokenRepository _loginTokenRepository;
         private readonly ILogger _logger;
 
-        private const ushort SaltSizeInBytes = 32;
+        private const ushort SaltSizeInBytes = 16;
         private const ushort MaxUsersPerDevice = 3;
 
         private const string GeoApiUrl = "https://get.geojs.io/v1/ip/country.json?ip=";
@@ -26,36 +27,44 @@ namespace MatHelper.BLL.Services
         }
 
 
-        public string HashPassword(string password, string salt)
+        public string HashPassword(string password)
         {
             if (string.IsNullOrWhiteSpace(password)) throw new ArgumentException("Password is required.");
-            if (string.IsNullOrWhiteSpace(salt)) throw new ArgumentException("Salt is required.");
 
-            using (var hmac = new HMACSHA256(Encoding.UTF8.GetBytes(salt)))
+            var salt = RandomNumberGenerator.GetBytes(SaltSizeInBytes);
+
+            var argon2 = new Argon2id(Encoding.UTF8.GetBytes(password))
             {
-                var passwordBytes = Encoding.UTF8.GetBytes(password);
-                var hashBytes = hmac.ComputeHash(passwordBytes);
-                var hashString = Convert.ToBase64String(hashBytes);
-                return hashString;
+                Salt = salt,
+                DegreeOfParallelism = 8,
+                Iterations = 4,
+                MemorySize = 1024 * 64
             };
+
+            var hash = argon2.GetBytes(32);
+
+            var result = Convert.ToBase64String(salt.Concat(hash).ToArray());
+            return result;
         }
 
-        public bool VerifyPassword(string password, string hash, string salt)
+        public bool VerifyPassword(string password, string storedHash)
         {
-            var hashedPasswordBytes = Convert.FromBase64String(HashPassword(password, salt));
-            var hashBytes = Convert.FromBase64String(hash);
+            var fullBytes = Convert.FromBase64String(storedHash);
 
-            return CryptographicOperations.FixedTimeEquals(hashedPasswordBytes, hashBytes);
-        }
+            var salt = fullBytes.Take(16).ToArray();
+            var hash = fullBytes.Skip(16).ToArray();
 
-        public string GenerateSalt()
-        {
-            using (var rng = RandomNumberGenerator.Create())
+            var argon2 = new Argon2id(Encoding.UTF8.GetBytes(password))
             {
-                byte[] saltBytes = new byte[SaltSizeInBytes];
-                rng.GetBytes(saltBytes);
-                return Convert.ToBase64String(saltBytes);
-            }
+                Salt = salt,
+                DegreeOfParallelism = 8,
+                Iterations = 4,
+                MemorySize = 1024 * 64
+            };
+
+            var computedHash = argon2.GetBytes(32);
+
+            return CryptographicOperations.FixedTimeEquals(hash, computedHash);
         }
 
         public async Task<bool> CheckSuspiciousActivityAsync(string ipAddress, string userAgent, string platform)

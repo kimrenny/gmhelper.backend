@@ -142,8 +142,7 @@ namespace MatHelper.BLL.Services
                 throw new UnauthorizedAccessException("Violation of service rules. All user accounts have been blocked.");
             }
 
-            var salt = _securityService.GenerateSalt();
-            var hashedPassword = _securityService.HashPassword(userDto.Password, salt);
+            var hashedPassword = _securityService.HashPassword(userDto.Password);
 
             var user = new User
             {
@@ -152,7 +151,6 @@ namespace MatHelper.BLL.Services
                 Email = userDto.Email,
                 RegistrationDate = DateTime.UtcNow,
                 PasswordHash = hashedPassword,
-                PasswordSalt = salt,
                 Avatar = null,
                 Role = "User",
                 IsActive = false,
@@ -262,7 +260,7 @@ namespace MatHelper.BLL.Services
             {
                 if (user.IsBlocked) throw new UnauthorizedAccessException("User is banned.");
 
-                if (!_securityService.VerifyPassword(loginDto.Password, user.PasswordHash, user.PasswordSalt))
+                if (!_securityService.VerifyPassword(loginDto.Password, user.PasswordHash))
                 {
                     await _loginAttemptService.RegisterFailedAttemptAsync(ipAddress);
                     throw new UnauthorizedAccessException("Invalid password.");
@@ -607,9 +605,7 @@ namespace MatHelper.BLL.Services
         {
             try
             {
-                //var sw = Stopwatch.StartNew();
                 var (result, user) = await _passwordRecoveryRepository.GetUserByRecoveryToken(token);
-                //_logger.LogInformation("GetUserByRecoveryToken finished in {Time}ms with result: {Result}", sw.ElapsedMilliseconds, result);
 
                 if (user == null)
                 {
@@ -618,12 +614,9 @@ namespace MatHelper.BLL.Services
 
                 if (result == RecoverPasswordResult.Success)
                 {
-                    //_logger.LogInformation("Changing password...");
-                    var salt = _securityService.GenerateSalt();
-                    var hashedPassword = _securityService.HashPassword(password, salt);
+                    var hashedPassword = _securityService.HashPassword(password);
 
-                    var changePasswordResult = await _userRepository.ChangePassword(user, hashedPassword, salt);
-                    //_logger.LogInformation("Password change result: {Result}", changePasswordResult);
+                    var changePasswordResult = await _userRepository.ChangePassword(user, hashedPassword);
                 }
 
                 return result;

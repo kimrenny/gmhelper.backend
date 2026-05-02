@@ -67,7 +67,6 @@ namespace MatHelper.Tests
                 Role = "User",
                 RegistrationDate = DateTime.UtcNow,
                 PasswordHash = "hash",
-                PasswordSalt = "salt",
                 IsActive = true
             };
             _userRepoMock.Setup(x => x.GetUserByEmailAsync(It.IsAny<string>()))
@@ -86,7 +85,7 @@ namespace MatHelper.Tests
             var userDto = new UserDto { Email = "new@test.com", UserName = "existinguser", Password = "pass", CaptchaToken = "token" };
 
             _userRepoMock.Setup(x => x.GetUserByUsernameAsync(It.IsAny<string>()))
-                         .ReturnsAsync(new User { Id = Guid.NewGuid(), Username = "existinguser", Email = "existing@test.com", PasswordHash = "hash", PasswordSalt = "salt", Role = "User", RegistrationDate = DateTime.UtcNow, LoginTokens = new List<LoginToken>() });
+                         .ReturnsAsync(new User { Id = Guid.NewGuid(), Username = "existinguser", Email = "existing@test.com", PasswordHash = "hash", Role = "User", RegistrationDate = DateTime.UtcNow, LoginTokens = new List<LoginToken>() });
 
             await Assert.ThrowsAsync<InvalidOperationException>(() => service.RegisterUserAsync(userDto, new DeviceInfo(), "127.0.0.1"));
         }
@@ -147,8 +146,7 @@ namespace MatHelper.Tests
                          .Returns(Task.CompletedTask);
             _userRepoMock.Setup(x => x.SaveChangesAsync()).Returns(Task.CompletedTask);
 
-            _securityServiceMock.Setup(x => x.GenerateSalt()).Returns("salt");
-            _securityServiceMock.Setup(x => x.HashPassword(It.IsAny<string>(), It.IsAny<string>())).Returns("hashed");
+            _securityServiceMock.Setup(x => x.HashPassword(It.IsAny<string>())).Returns("hashed");
 
             _tokenGenMock.Setup(x => x.GenerateJwtToken(It.IsAny<User>(), It.IsAny<DeviceInfo>())).Returns("token");
             _tokenGenMock.Setup(x => x.GenerateRefreshToken()).Returns("refresh");
@@ -201,7 +199,6 @@ namespace MatHelper.Tests
                 Username = "testuser",
                 Email = "test@test.com",
                 PasswordHash = "hash",
-                PasswordSalt = "salt",
                 Role = "User",
                 RegistrationDate = DateTime.UtcNow,
                 IsBlocked = false,
@@ -240,7 +237,6 @@ namespace MatHelper.Tests
                 Username = "testuser",
                 Email = "test@test.com",
                 PasswordHash = "hash",
-                PasswordSalt = "salt",
                 Role = "User",
                 RegistrationDate = DateTime.UtcNow,
                 IsBlocked = false,
@@ -250,15 +246,14 @@ namespace MatHelper.Tests
             _passwordRecoveryRepoMock.Setup(x => x.GetUserByRecoveryToken(It.IsAny<string>()))
                 .ReturnsAsync((RecoverPasswordResult.Success, user));
 
-            _userRepoMock.Setup(x => x.ChangePassword(It.IsAny<User>(), It.IsAny<string>(), It.IsAny<string>())).ReturnsAsync(true);
+            _userRepoMock.Setup(x => x.ChangePassword(It.IsAny<User>(), It.IsAny<string>())).ReturnsAsync(true);
 
-            _securityServiceMock.Setup(x => x.GenerateSalt()).Returns("salt");
-            _securityServiceMock.Setup(x => x.HashPassword(It.IsAny<string>(), "salt")).Returns("hashed");
+            _securityServiceMock.Setup(x => x.HashPassword(It.IsAny<string>())).Returns("hashed");
 
             var result = await service.RecoverPassword("token", "newpass");
 
             Assert.Equal(RecoverPasswordResult.Success, result);
-            _userRepoMock.Verify(x => x.ChangePassword(user, "hashed", "salt"), Times.Once);
+            _userRepoMock.Verify(x => x.ChangePassword(user, "hashed"), Times.Once);
         }
     }
 }
