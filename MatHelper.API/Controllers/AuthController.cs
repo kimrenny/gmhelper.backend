@@ -193,7 +193,7 @@ namespace MatHelper.API.Controllers
             catch (InvalidOperationException ex)
             {
                 _logger.LogError($"Login failed for user: {loginDto.Email}. Reason: {ex.Message}");
-                return Unauthorized(ApiResponse<string>.Fail("User not found."));
+                return Unauthorized(ApiResponse<string>.Fail("Invalid credentials."));
             }
             catch (Exception ex)
             {
@@ -253,21 +253,15 @@ namespace MatHelper.API.Controllers
 
             try
             {
-                var result = await _authenticationService.SendRecoverPasswordLinkAsync(recoveryDto.Email);
+                await _authenticationService.SendRecoverPasswordLinkAsync(recoveryDto.Email);
 
-                if (result)
-                {
-                    return Ok(ApiResponse<string>.Ok("Recovery link sent."));
-                }
-                else
-                {
-                    return BadRequest(ApiResponse<string>.Fail("A problem occurred while executing the request. Please try again later."));
-                }
+                
+                return Ok(ApiResponse<string>.Ok("If an account with this email exists, a recovery email has been sent."));
             }
             catch (InvalidDataException ex)
             {
                 _logger.LogWarning($"Invalid or expired token error occured: {ex.Message}");
-                return BadRequest(ApiResponse<string>.Fail("Invalid or expired token."));
+                return Ok(ApiResponse<string>.Ok("If an account with this email exists, a recovery email has been sent."));
             }
             catch (Exception ex)
             {
