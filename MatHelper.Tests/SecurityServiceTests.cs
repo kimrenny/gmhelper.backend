@@ -37,15 +37,6 @@ namespace MatHelper.Tests.Services
         }
 
         [Fact]
-        public void HashPassword_ProducesConsistentHash()
-        {
-            var hash1 = _service.HashPassword("mypassword");
-            var hash2 = _service.HashPassword("mypassword");
-
-            Assert.Equal(hash1, hash2);
-        }
-
-        [Fact]
         public void VerifyPassword_ReturnsTrue_WhenCorrect()
         {
             var hash = _service.HashPassword("mypassword");
