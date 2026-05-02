@@ -33,12 +33,11 @@ namespace MatHelper.DAL.Repositories
             await _context.SaveChangesAsync();
         }
 
-        public async Task<bool> ChangePassword(User user, string password, string salt)
+        public async Task<bool> ChangePassword(User user, string password)
         {
             try
             {
                 user.PasswordHash = password;
-                user.PasswordSalt = salt;
 
                 await _context.SaveChangesAsync();
 

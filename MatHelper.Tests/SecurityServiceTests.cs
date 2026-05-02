@@ -33,32 +33,15 @@ namespace MatHelper.Tests.Services
         [Fact]
         public void HashPassword_Throws_WhenPasswordIsEmpty()
         {
-            Assert.Throws<ArgumentException>(() => _service.HashPassword("", "salt"));
-        }
-
-        [Fact]
-        public void HashPassword_Throws_WhenSaltIsEmpty()
-        {
-            Assert.Throws<ArgumentException>(() => _service.HashPassword("password", ""));
-        }
-
-        [Fact]
-        public void HashPassword_ProducesConsistentHash()
-        {
-            var salt = Convert.ToBase64String(Encoding.UTF8.GetBytes("mysalt"));
-            var hash1 = _service.HashPassword("mypassword", salt);
-            var hash2 = _service.HashPassword("mypassword", salt);
-
-            Assert.Equal(hash1, hash2);
+            Assert.Throws<ArgumentException>(() => _service.HashPassword(""));
         }
 
         [Fact]
         public void VerifyPassword_ReturnsTrue_WhenCorrect()
         {
-            var salt = Convert.ToBase64String(Encoding.UTF8.GetBytes("mysalt"));
-            var hash = _service.HashPassword("mypassword", salt);
+            var hash = _service.HashPassword("mypassword");
 
-            var result = _service.VerifyPassword("mypassword", hash, salt);
+            var result = _service.VerifyPassword("mypassword", hash);
 
             Assert.True(result);
         }
@@ -66,23 +49,11 @@ namespace MatHelper.Tests.Services
         [Fact]
         public void VerifyPassword_ReturnsFalse_WhenIncorrect()
         {
-            var salt = Convert.ToBase64String(Encoding.UTF8.GetBytes("mysalt"));
-            var hash = _service.HashPassword("mypassword", salt);
+            var hash = _service.HashPassword("mypassword");
 
-            var result = _service.VerifyPassword("wrongpass", hash, salt);
+            var result = _service.VerifyPassword("wrongpass", hash);
 
             Assert.False(result);
-        }
-
-        [Fact]
-        public void GenerateSalt_ReturnsUniqueValues()
-        {
-            var salt1 = _service.GenerateSalt();
-            var salt2 = _service.GenerateSalt();
-
-            Assert.NotEqual(salt1, salt2);
-            Assert.False(string.IsNullOrWhiteSpace(salt1));
-            Assert.False(string.IsNullOrWhiteSpace(salt2));
         }
 
         [Fact]
@@ -112,7 +83,6 @@ namespace MatHelper.Tests.Services
                             Role = "User",
                             RegistrationDate = DateTime.UtcNow,
                             PasswordHash = "hash",
-                            PasswordSalt = "salt",
                             Email = "test@example.com",
                             IsBlocked = false, 
                             LoginTokens = new List<LoginToken> { token } 
@@ -165,7 +135,6 @@ namespace MatHelper.Tests.Services
                 Username = "test",
                 Email = "a@a.com",
                 PasswordHash = "hash",
-                PasswordSalt = "salt",
                 RegistrationDate = DateTime.UtcNow
             };
 
@@ -186,7 +155,6 @@ namespace MatHelper.Tests.Services
                 Username = "test",
                 Email = "a@a.com",
                 PasswordHash = "hash",
-                PasswordSalt = "salt",
                 RegistrationDate = DateTime.UtcNow
             };
 

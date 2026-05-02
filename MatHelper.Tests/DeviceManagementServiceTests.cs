@@ -40,7 +40,6 @@ namespace MatHelper.Tests
                 Email = "test@example.com",
                 RegistrationDate = DateTime.UtcNow,
                 PasswordHash = "hash",
-                PasswordSalt = "salt",
                 Role = "User",
                 LoginTokens = new List<LoginToken>()
             };
@@ -61,7 +60,6 @@ namespace MatHelper.Tests
                 Email = "test@example.com",
                 RegistrationDate = DateTime.UtcNow,
                 PasswordHash = "hash",
-                PasswordSalt = "salt",
                 Role = "User",
                 LoginTokens = new List<LoginToken>
                 {
@@ -127,7 +125,6 @@ namespace MatHelper.Tests
                 Email = "test@example.com",
                 RegistrationDate = DateTime.UtcNow,
                 PasswordHash = "hash",
-                PasswordSalt = "salt",
                 Role = "User",
                 LoginTokens = new List<LoginToken>()
             };
@@ -148,7 +145,6 @@ namespace MatHelper.Tests
                 Email = "test@example.com",
                 RegistrationDate = DateTime.UtcNow,
                 PasswordHash = "hash",
-                PasswordSalt = "salt",
                 Role = "User",
                 LoginTokens = new List<LoginToken>
                 {
@@ -182,7 +178,6 @@ namespace MatHelper.Tests
                 Email = "test@example.com",
                 RegistrationDate = DateTime.UtcNow,
                 PasswordHash = "hash",
-                PasswordSalt = "salt",
                 Role = "User",
                 LoginTokens = new List<LoginToken>
                 {

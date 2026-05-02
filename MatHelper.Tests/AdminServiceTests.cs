@@ -56,7 +56,6 @@ namespace MatHelper.Tests.BLL
                     Role = "User",
                     Email = "test@example.com",
                     PasswordHash = "hash",
-                    PasswordSalt = "salt",
                     RegistrationDate = DateTime.UtcNow
                 }
             };
