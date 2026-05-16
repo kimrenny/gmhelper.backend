@@ -3,156 +3,108 @@ using Moq;
 using Microsoft.Extensions.Logging;
 using MatHelper.BLL.Services;
 using MatHelper.CORE.Models;
-using MatHelper.DAL.Interfaces;
 using MatHelper.BLL.Interfaces;
+using MatHelper.DAL.Models;
 
 namespace MatHelper.Tests.BLL
 {
     public class AdminServiceTests
     {
-        private readonly Mock<ISecurityService> _securityServiceMock;
-        private readonly Mock<ITokenService> _tokenServiceMock;
-        private readonly Mock<IUserRepository> _userRepositoryMock;
-        private readonly Mock<ILoginTokenRepository> _loginTokenRepositoryMock;
-        private readonly Mock<INotFoundReportRepository> _notFoundReportRepositoryMock;
-        private readonly Mock<IUserMapper> _userMapperMock;
-        private readonly Mock<ILogger<AdminService>> _loggerMock;
-
-        public AdminServiceTests()
-        {
-            _securityServiceMock = new Mock<ISecurityService>();
-            _tokenServiceMock = new Mock<ITokenService>();
-            _userRepositoryMock = new Mock<IUserRepository>();
-            _loginTokenRepositoryMock = new Mock<ILoginTokenRepository>();
-            _notFoundReportRepositoryMock = new Mock<INotFoundReportRepository>();
-            _userMapperMock = new Mock<IUserMapper>();
-            _loggerMock = new Mock<ILogger<AdminService>>();
-        }
+        private readonly Mock<IUserAdminService> _userAdminServiceMock = new();
+        private readonly Mock<ITokenAdminService> _tokenAdminServiceMock = new();
+        private readonly Mock<IReportService> _reportServiceMock = new();
+        private readonly Mock<IAnalyticsService> _analyticsServiceMock = new();
+        private readonly Mock<ILogger<AdminService>> _loggerMock = new();
 
         private AdminService CreateService()
         {
             return new AdminService(
-                _securityServiceMock.Object,
-                _tokenServiceMock.Object,
-                _userRepositoryMock.Object,
-                _loginTokenRepositoryMock.Object,
-                _notFoundReportRepositoryMock.Object,
-                _userMapperMock.Object,
+                _userAdminServiceMock.Object,
+                _tokenAdminServiceMock.Object,
+                _reportServiceMock.Object,
+                _analyticsServiceMock.Object,
                 _loggerMock.Object
             );
         }
 
         [Fact]
-        public async Task GetUsersAsync_ShouldReturnMappedUsers()
+        public async Task GetAdminDataAsync_ShouldAggregateData()
         {
             var userId = Guid.NewGuid();
 
-            var users = new List<User>
+            var users = new PagedResult<AdminUserDto>
             {
-                new User
-                {
-                    Id = userId,
-                    Username = "test",
-                    Role = "User",
-                    Email = "test@example.com",
-                    PasswordHash = "hash",
-                    RegistrationDate = DateTime.UtcNow
-                }
+                Items = new List<AdminUserDto>()
             };
 
-            var asyncUsers = new TestAsyncEnumerable<User>(users);
+            var tokens = new PagedResult<TokenDto>
+            {
+                Items = new List<TokenDto>()
+            };
 
-            _userRepositoryMock
-                .Setup(r => r.GetUsersQuery())
-                .Returns(asyncUsers);
+            var reports = new PagedResult<NotFoundReport>
+            {
+                Items = new List<NotFoundReport>()
+            };
 
-            _userMapperMock
-                .Setup(m => m.MapToAdminUserDto(It.IsAny<User>()))
-                .Returns((User u) => new AdminUserDto
+            _userAdminServiceMock.Setup(x =>
+                x.GetUsersAsync(
+                    It.IsAny<int>(),
+                    It.IsAny<int>(),
+                    It.IsAny<string>(),
+                    It.IsAny<bool>(),
+                    It.IsAny<DateTime?>()
+                ))
+                .ReturnsAsync(users);
+
+            _tokenAdminServiceMock.Setup(x =>
+                x.GetTokensAsync(
+                    It.IsAny<int>(),
+                    It.IsAny<int>(),
+                    It.IsAny<string>(),
+                    It.IsAny<bool>(),
+                    It.IsAny<DateTime?>()
+                ))
+                .ReturnsAsync(tokens);
+
+            _reportServiceMock.Setup(x =>
+                x.GetNotFoundReportsAsync(
+                    It.IsAny<int>(),
+                    It.IsAny<int>(),
+                    It.IsAny<string>(),
+                    It.IsAny<bool>()
+                ))
+                .ReturnsAsync(reports);
+
+            _analyticsServiceMock.Setup(x => x.GetRegistrationsAsync())
+                .ReturnsAsync(new List<RegistrationsDto>());
+
+            _analyticsServiceMock.Setup(x => x.GetUsersByCountryAsync())
+                .ReturnsAsync(new List<CountryStatsDto>());
+
+            _analyticsServiceMock.Setup(x => x.GetRoleStatsAsync())
+                .ReturnsAsync(new List<RoleStatsDto>());
+
+            _analyticsServiceMock.Setup(x => x.GetBlockStatsAsync())
+                .ReturnsAsync(new List<BlockStatsDto>());
+
+            _tokenAdminServiceMock.Setup(x => x.GetDashboardTokensAsync())
+                .ReturnsAsync(new DashboardTokensDto()
                 {
-                    Id = u.Id,
-                    Username = u.Username,
-                    Role = u.Role,
-                    Email = u.Email
+                    ActiveTokens = 0,
+                    TotalTokens = 0,
+                    ActiveAdminTokens = 0,
+                    TotalAdminTokens = 0
                 });
 
             var service = CreateService();
 
-            var result = await service.GetUsersAsync(1, 10, "RegistrationDate", false, null);
+            var result = await service.GetAdminDataAsync(userId);
 
             Assert.NotNull(result);
-            Assert.Single(result.Items);
-            Assert.Equal("test", result.Items[0].Username);
-        }
-
-        [Fact]
-        public async Task GetUsersAsync_ShouldThrow_WhenNoUsers()
-        {
-            var asyncUsers = new TestAsyncEnumerable<User>(new List<User>());
-
-            _userRepositoryMock
-                .Setup(r => r.GetUsersQuery())
-                .Returns(asyncUsers);
-
-            var service = CreateService();
-
-            await Assert.ThrowsAsync<InvalidOperationException>(() =>
-                service.GetUsersAsync(1, 10, "RegistrationDate", false, null));
-        }
-
-        [Fact]
-        public async Task ActionUserAsync_ShouldCallRepository_WithCorrectParameters()
-        {
-            var userId = Guid.NewGuid();
-
-            _userRepositoryMock
-                .Setup(r => r.ActionUserAsync(userId, CORE.Enums.UserAction.Ban))
-                .Returns(Task.CompletedTask);
-
-            var service = CreateService();
-
-            await service.ActionUserAsync(userId, "Ban");
-
-            _userRepositoryMock
-                .Verify(r => r.ActionUserAsync(userId, CORE.Enums.UserAction.Ban), Times.Once);
-        }
-
-        [Fact]
-        public async Task GetTokensAsync_ShouldReturnTokens()
-        {
-            var tokens = new List<LoginToken>
-            {
-                new LoginToken
-                {
-                    Token = "abc",
-                    IpAddress = "127.0.0.1",
-                    DeviceInfo = new DeviceInfo
-                    {
-                        Platform = "Windows",
-                        UserAgent = "TestAgent"
-                    },
-                    Expiration = DateTime.UtcNow.AddDays(1),
-                    RefreshToken = "refresh",
-                    RefreshTokenExpiration = DateTime.UtcNow.AddDays(2),
-                    UserId = Guid.NewGuid(),
-                    IsActive = true
-                }
-            };
-
-            var asyncTokens = new TestAsyncEnumerable<LoginToken>(tokens);
-
-            _userRepositoryMock
-                .Setup(r => r.GetTokensQuery())
-                .Returns(asyncTokens);
-
-            var service = CreateService();
-
-            var result = await service.GetTokensAsync(1, 10, "Expiration", false, null);
-
-            Assert.NotNull(result);
-            Assert.Single(result.Items);
-            Assert.Equal("abc", result.Items[0].Token);
+            Assert.Equal(users, result.Users);
+            Assert.Equal(tokens, result.Tokens);
+            Assert.Equal(reports, result.NotFoundReports);
         }
     }
-
 }

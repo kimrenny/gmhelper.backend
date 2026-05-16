@@ -1,4 +1,5 @@
 ﻿using MatHelper.BLL.Services;
+using MatHelper.BLL.Interfaces;
 using MatHelper.CORE.Models;
 using MatHelper.DAL.Interfaces;
 using MatHelper.DAL.Models;
@@ -12,12 +13,14 @@ namespace MatHelper.Tests.BLL
     {
         private readonly Mock<IAdminSettingsRepository> _adminSettingsRepoMock;
         private readonly Mock<IUserRepository> _userRepoMock;
+        private readonly Mock<ICacheService> _cacheServiceMock;
         private readonly Mock<ILogger<AdminSettingsService>> _loggerMock;
 
         public AdminSettingsServiceTests()
         {
             _adminSettingsRepoMock = new Mock<IAdminSettingsRepository>();
             _userRepoMock = new Mock<IUserRepository>();
+            _cacheServiceMock = new Mock<ICacheService>();
             _loggerMock = new Mock<ILogger<AdminSettingsService>>();
         }
 
@@ -26,13 +29,27 @@ namespace MatHelper.Tests.BLL
             return new AdminSettingsService(
                 _adminSettingsRepoMock.Object,
                 _userRepoMock.Object,
+                _cacheServiceMock.Object,
                 _loggerMock.Object
             );
+        }
+
+        private void SetupCache()
+        {
+            _cacheServiceMock
+                .Setup(x => x.GetAsync<bool[][]>(It.IsAny<string>()))
+                .ReturnsAsync((bool[][]?)null);
+
+            _cacheServiceMock
+                .Setup(x => x.SetAsync(It.IsAny<string>(), It.IsAny<object>(), It.IsAny<TimeSpan?>()))
+                .Returns(Task.CompletedTask);
         }
 
         [Fact]
         public async Task GetOrCreateAdminSettingsAsync_ShouldReturnExistingSettings_WhenTheyExist()
         {
+            SetupCache();
+
             var userId = Guid.NewGuid();
 
             var adminSettings = new AdminSettings
@@ -49,29 +66,26 @@ namespace MatHelper.Tests.BLL
                     IsBlocked = false,
                     IsActive = true
                 },
-                Sections = new List<AdminSection>
-                {
-                    new AdminSection
-                    {
-                        Id = 1,
-                        Title = "Dashboard",
-                        AdminSettings = null!,
-                        Switches = new List<AdminSwitch>()
-                    }
-                }
+                Sections = new List<AdminSection>()
             };
 
-            foreach (var section in adminSettings.Sections)
+            var section = new AdminSection
             {
-                section.AdminSettings = adminSettings;
-                section.Switches.Add(new AdminSwitch
-                {
-                    Id = 1,
-                    Label = "requests",
-                    Value = true,
-                    AdminSection = section
-                });
-            }
+                Id = 1,
+                Title = "Dashboard",
+                AdminSettings = adminSettings,
+                Switches = new List<AdminSwitch>()
+            };
+
+            section.Switches.Add(new AdminSwitch
+            {
+                Id = 1,
+                Label = "requests",
+                Value = true,
+                AdminSection = section
+            });
+
+            adminSettings.Sections.Add(section);
 
             _adminSettingsRepoMock
                 .Setup(r => r.GetByUserIdAsync(userId))
@@ -89,7 +103,10 @@ namespace MatHelper.Tests.BLL
         [Fact]
         public async Task GetOrCreateAdminSettingsAsync_ShouldCreateSettings_WhenNoneExist()
         {
+            SetupCache();
+
             var userId = Guid.NewGuid();
+
             var user = new User
             {
                 Id = userId,
@@ -118,7 +135,9 @@ namespace MatHelper.Tests.BLL
             var result = await service.GetOrCreateAdminSettingsAsync(userId);
 
             Assert.NotNull(result);
+
             Assert.Equal(4, result.Length);
+
             foreach (var section in result)
             {
                 Assert.Equal(5, section.Length);
@@ -131,7 +150,10 @@ namespace MatHelper.Tests.BLL
         [Fact]
         public async Task UpdateSwitchAsync_ShouldReturnRepositoryResult()
         {
+            SetupCache();
+
             var userId = Guid.NewGuid();
+
             _adminSettingsRepoMock
                 .Setup(r => r.UpdateSwitchAsync(userId, "dashboard", "requests", false))
                 .ReturnsAsync(true);
@@ -145,7 +167,10 @@ namespace MatHelper.Tests.BLL
         [Fact]
         public async Task UpdateSwitchAsync_ShouldReturnFalse_WhenExceptionThrown()
         {
+            SetupCache();
+
             var userId = Guid.NewGuid();
+
             _adminSettingsRepoMock
                 .Setup(r => r.UpdateSwitchAsync(It.IsAny<Guid>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>()))
                 .Throws(new Exception("test exception"));
