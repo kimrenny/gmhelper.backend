@@ -14,15 +14,21 @@ namespace MatHelper.API.Controllers
     public class AdminController : ControllerBase
     {
         private readonly IAdminService _adminService;
+        private readonly IUserAdminService _userAdminService;
+        private readonly ITokenAdminService _tokenAdminService;
+        private readonly IAnalyticsService _analyticsService;
         private readonly IAdminSettingsService _adminSettingsService;
         private readonly ITokenService _tokenService;
         private readonly IRequestLogService _requestLogService;
         private readonly IReportService _reportService;
         private readonly ILogger<AdminController> _logger;
 
-        public AdminController(IAdminService adminService, IAdminSettingsService AdminSettingsService, ITokenService tokenService, IRequestLogService requestLogService, IReportService reportService, ILogger<AdminController> logger)
+        public AdminController(IAdminService adminService, IUserAdminService userAdminService, ITokenAdminService tokenAdminService, IAnalyticsService analyticsService, IAdminSettingsService AdminSettingsService, ITokenService tokenService, IRequestLogService requestLogService, IReportService reportService, ILogger<AdminController> logger)
         {
             _adminService = adminService;
+            _userAdminService = userAdminService;
+            _tokenAdminService = tokenAdminService;
+            _analyticsService = analyticsService;
             _adminSettingsService = AdminSettingsService;
             _tokenService = tokenService;
             _requestLogService = requestLogService;
@@ -86,7 +92,7 @@ namespace MatHelper.API.Controllers
                 var adminValidation = await AdminValidation.ValidateAdminAsync(this, _tokenService);
                 if (adminValidation != null) return adminValidation;
 
-                var pagedUsers = await _adminService.GetUsersAsync(page, pageSize, sortBy, descending, maxRegistrationDate);
+                var pagedUsers = await _userAdminService.GetUsersAsync(page, pageSize, sortBy, descending, maxRegistrationDate);
                 if (pagedUsers.Items == null || !pagedUsers.Items.Any())
                 {
                     _logger.LogError("Users data not found.");
@@ -115,7 +121,7 @@ namespace MatHelper.API.Controllers
                 var adminValidation = await AdminValidation.ValidateAdminAsync(this, _tokenService);
                 if (adminValidation != null) return adminValidation;
 
-                await _adminService.ActionUserAsync(Guid.Parse(id), adminActionDto.Action);
+                await _userAdminService.ActionUserAsync(Guid.Parse(id), adminActionDto.Action);
                 return Ok(ApiResponse<string>.Ok("Action performed successfully."));
             }
             catch (Exception ex)
@@ -133,11 +139,11 @@ namespace MatHelper.API.Controllers
                 var adminValidation = await AdminValidation.ValidateAdminAsync(this, _tokenService);
                 if (adminValidation != null) return adminValidation;
 
-                var pagedTokens = await _adminService.GetTokensAsync(page, pageSize, sortBy, descending, maxExpirationDate);
+                var pagedTokens = await _tokenAdminService.GetTokensAsync(page, pageSize, sortBy, descending, maxExpirationDate);
                 if (pagedTokens == null || !pagedTokens.Items.Any())
                 {
-                    _logger.LogError("Users data not found.");
-                    return NotFound(ApiResponse<string>.Fail("Users data not found."));
+                    _logger.LogError("Tokens data not found.");
+                    return NotFound(ApiResponse<string>.Fail("Tokens data not found."));
                 }
 
                 return Ok(ApiResponse<PagedResult<TokenDto>>.Ok(pagedTokens));
@@ -162,7 +168,7 @@ namespace MatHelper.API.Controllers
                 var adminValidation = await AdminValidation.ValidateAdminAsync(this, _tokenService);
                 if (adminValidation != null) return adminValidation;
 
-                await _adminService.ActionTokenAsync(id, adminActionDto.Action);
+                await _tokenAdminService.ActionTokenAsync(id, adminActionDto.Action);
                 return Ok(ApiResponse<string>.Ok("Token action performed successfully."));
             }
             catch (Exception ex)
@@ -180,7 +186,7 @@ namespace MatHelper.API.Controllers
                 var adminValidation = await AdminValidation.ValidateAdminAsync(this, _tokenService);
                 if (adminValidation != null) return adminValidation;
 
-                var registrations = await _adminService.GetRegistrationsAsync();
+                var registrations = await _analyticsService.GetRegistrationsAsync();
                 if (registrations == null || !registrations.Any())
                 {
                     _logger.LogError("Users data not found.");
@@ -204,7 +210,7 @@ namespace MatHelper.API.Controllers
                 var adminValidation = await AdminValidation.ValidateAdminAsync(this, _tokenService);
                 if (adminValidation != null) return adminValidation;
 
-                var activeUsers = await _adminService.GetDashboardTokensAsync();
+                var activeUsers = await _tokenAdminService.GetDashboardTokensAsync();
 
                 return Ok(ApiResponse<DashboardTokensDto>.Ok(activeUsers));
             }
@@ -223,7 +229,7 @@ namespace MatHelper.API.Controllers
                 var adminValidation = await AdminValidation.ValidateAdminAsync(this, _tokenService);
                 if (adminValidation != null) return adminValidation;
 
-                var userCountryStats = await _adminService.GetUsersByCountryAsync();
+                var userCountryStats = await _analyticsService.GetUsersByCountryAsync();
                 
                 if(userCountryStats == null || !userCountryStats.Any())
                 {
@@ -248,7 +254,7 @@ namespace MatHelper.API.Controllers
                 var adminValidation = await AdminValidation.ValidateAdminAsync(this, _tokenService);
                 if (adminValidation != null) return adminValidation;
 
-                var roleStats = await _adminService.GetRoleStatsAsync();
+                var roleStats = await _analyticsService.GetRoleStatsAsync();
 
                 if (roleStats == null || !roleStats.Any())
                 {
@@ -272,7 +278,7 @@ namespace MatHelper.API.Controllers
                 var adminValidation = await AdminValidation.ValidateAdminAsync(this, _tokenService);
                 if (adminValidation != null) return adminValidation;
 
-                var blockStats = await _adminService.GetBlockStatsAsync();
+                var blockStats = await _analyticsService.GetBlockStatsAsync();
 
                 if (blockStats == null || !blockStats.Any())
                 {
@@ -293,7 +299,7 @@ namespace MatHelper.API.Controllers
         {
             try
             {
-                var reports = await _adminService.GetNotFoundReportsAsync(page, pageSize, sortBy, descending);
+                var reports = await _reportService.GetNotFoundReportsAsync(page, pageSize, sortBy, descending);
                 if (reports.Items == null || !reports.Items.Any())
                 {
                     return NotFound(ApiResponse<string>.Fail("No reports found."));
@@ -321,7 +327,7 @@ namespace MatHelper.API.Controllers
                 var adminValidation = await AdminValidation.ValidateAdminAsync(this, _tokenService);
                 if (adminValidation != null) return adminValidation;
 
-                await _adminService.ActionReportAsync(id, adminActionDto.Action);
+                await _reportService.ActionReportAsync(id, adminActionDto.Action);
                 return Ok(ApiResponse<string>.Ok("Action performed successfully."));
             }
             catch (Exception ex)

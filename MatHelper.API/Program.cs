@@ -14,6 +14,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.InMemory;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
+using StackExchange.Redis;
 using SolutionHub;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -93,6 +94,19 @@ var jwtOptions = new JwtOptions
     Audience = audience!
 };
 
+builder.Services.AddStackExchangeRedisCache(options =>
+{
+    var redisConnection = builder.Configuration.GetConnectionString("Redis") ?? "localhost:6379";
+    var config = ConfigurationOptions.Parse(redisConnection);
+
+    config.AbortOnConnectFail = true;
+    config.ConnectTimeout = 500;
+    config.SyncTimeout = 500;
+    config.ConnectRetry = 0;
+
+    options.ConfigurationOptions = config;
+});
+
 builder.Services.AddSingleton(jwtOptions);
 builder.Services.AddSingleton<IHttpContextAccessor, HttpContextAccessor>();
 
@@ -101,6 +115,9 @@ builder.Services.AddScoped<ISecurityService, SecurityService>();
 builder.Services.AddScoped<ITokenService, TokenService>();
 builder.Services.AddScoped<ITokenGeneratorService,  TokenGeneratorService>();
 builder.Services.AddScoped<IAdminService, AdminService>();
+builder.Services.AddScoped<IAnalyticsService, AnalyticsService>();
+builder.Services.AddScoped<IUserAdminService, UserAdminService>();
+builder.Services.AddScoped<ITokenAdminService, TokenAdminService>();
 builder.Services.AddScoped<IOwnerService, OwnerService>();
 builder.Services.AddScoped<IUserManagementService, UserManagementService>();
 builder.Services.AddScoped<IDeviceManagementService, DeviceManagementService>();
@@ -130,6 +147,7 @@ builder.Services.AddScoped<ITwoFactorRepository, TwoFactorRepository>();
 builder.Services.AddScoped<IAppTwoFactorSessionRepository, AppTwoFactorSessionRepository>();
 builder.Services.AddScoped<IIpLoginAttemptRepository, IpLoginAttemptRepository>();
 builder.Services.AddScoped<INotFoundReportRepository, NotFoundReportRepository>();
+builder.Services.AddScoped<ICacheService, CacheService>();
 
 builder.Services.AddScoped<ErrorLoggingMiddleware>();
 
