@@ -12,56 +12,45 @@ namespace MatHelper.BLL.Services
     {
         private readonly IUserRepository _userRepository;
         private readonly IAppTwoFactorSessionRepository _twoFactorSessionRepository;
-        private readonly ITokenGeneratorService _tokenGeneratorService;
         private readonly ITwoFactorService _twoFactorService;
         private readonly IEmailConfirmationRepository _emailConfirmationRepository;
         private readonly IEmailLoginCodeRepository _emailLoginCodeRepository;
-        private readonly IPasswordRecoveryRepository _passwordRecoveryRepository;
         private readonly IAuthLogRepository _authLogRepository;
         private readonly IMailService _mailService;
         private readonly ISecurityService _securityService;
         private readonly ILoginAttemptService _loginAttemptService;
-        private readonly ILogger _logger;
+        private readonly IRegistrationService _registrationService;
+        private readonly ISecurityPolicyService _securityPolicy;
+        private readonly IEmailAuthService _emailAuthService;
+        private readonly ILoginService _loginService;
+        private readonly IRecoveryService _recoveryService;
+        private readonly ITwoFactorAuthService _twoFactorAuthService;
+        private readonly ITokenService _tokenService;
+        private readonly ILogger<AuthenticationService> _logger;
 
-        private const byte MaxUsersPerIp = 3;
-        private const byte MaxActiveTokensPerDevice = 3;
-        private const byte MaxTotalActiveTokens = 5;
-        private const ushort UnfamiliarLocationThresholdDays = 14;
-
-        private const ushort RefreshTokenLifetimeDaysRemembered = 28;
-        private const ushort RefreshTokenLifetimeHoursDefault = 6;
-        private const ushort AccessTokenLifetimeMinutes = 30;
-        private const ushort RecoveryTokenLifetimeMinutes = 15;
-        private const byte EmailConfirmTokenLifetimeHours = 1;
-        private const ushort EmailLoginCodeLifetimeMinutes = 15;
-        private const ushort TwoFactorSessionLifetimeMinutes = 10;
-
-        private const byte SessionKeySizeInBytes = 16;
-        private const byte CodeEntropyBytes = 4;
-        private const int IntegerMask = 0x7FFFFFFF;
-        private const int MinConfirmationCodeValue = 100000;
-        private const int ConfirmationCodeRange = 900000;
-
-        public AuthenticationService(IUserRepository userRepository, IAppTwoFactorSessionRepository appTwoFactorSessionRepository, ITokenGeneratorService tokenGeneratorService, ITwoFactorService twoFactorService, IEmailConfirmationRepository emailConfirmationRepository, IEmailLoginCodeRepository emailLoginCodeRepository, IPasswordRecoveryRepository passwordRecoveryRepository, IAuthLogRepository authLogRepository, IMailService mailService, ISecurityService securityService, ILoginAttemptService loginAttemptService, ILogger<AuthenticationService> logger)
+        public AuthenticationService(IUserRepository userRepository, IAppTwoFactorSessionRepository appTwoFactorSessionRepository, ITwoFactorService twoFactorService, IEmailConfirmationRepository emailConfirmationRepository, IEmailLoginCodeRepository emailLoginCodeRepository, IAuthLogRepository authLogRepository, IMailService mailService, ISecurityService securityService, ILoginAttemptService loginAttemptService, IRegistrationService registrationService, ISecurityPolicyService securityPolicy, IEmailAuthService emailAuthService, ILoginService loginService, IRecoveryService recoveryService, ITwoFactorAuthService twoFactorAuthService, ITokenService tokenService, ILogger<AuthenticationService> logger)
         {
             _userRepository = userRepository;
             _twoFactorSessionRepository = appTwoFactorSessionRepository;
-            _tokenGeneratorService = tokenGeneratorService;
             _twoFactorService = twoFactorService;
             _emailConfirmationRepository = emailConfirmationRepository;
             _emailLoginCodeRepository = emailLoginCodeRepository;
-            _passwordRecoveryRepository = passwordRecoveryRepository;
             _authLogRepository = authLogRepository;
             _mailService = mailService;
             _securityService = securityService;
             _loginAttemptService = loginAttemptService;
+            _registrationService = registrationService;
+            _securityPolicy = securityPolicy;
+            _emailAuthService = emailAuthService;
+            _loginService = loginService;
+            _recoveryService = recoveryService;
+            _twoFactorAuthService = twoFactorAuthService;
+            _tokenService = tokenService;
             _logger = logger;
         }
 
         public async Task<bool> RegisterUserAsync(UserDto userDto, DeviceInfo deviceInfo, string ipAddress)
         {
-            _logger.LogInformation("Attempting to register user with email: {Email} and username: {Username}", userDto.Email, userDto.UserName);
-
             if (string.IsNullOrWhiteSpace(userDto.Email))
             {
                 _logger.LogError("Email cannot be null or empty.");
@@ -78,162 +67,33 @@ namespace MatHelper.BLL.Services
                 throw new ArgumentException("IP Address cannot be null or empty.");
             }
 
-            var existingUserByEmail = await _userRepository.GetUserByEmailAsync(userDto.Email);
-            if (existingUserByEmail != null)
-            {
-                if (!existingUserByEmail.IsActive)
-                {
-                    var existingToken = await _emailConfirmationRepository.GetTokenByUserIdAsync(existingUserByEmail.Id);
-                    if (existingToken != null && existingToken.ExpirationDate > DateTime.UtcNow) 
-                    {
-                        _logger.LogWarning("User with email {Email} has not confirmed email yet.", existingUserByEmail.Email);
-                        throw new InvalidOperationException("The account awaits confirmation. Follow the link in the email.");
-                    }
-                    else
-                    {
-                        _logger.LogInformation("Email confirmation token expired or null. Deleting user {Email}", existingUserByEmail.Email);
-                        await _userRepository.DeleteUserAsync(existingUserByEmail);
-                        _userRepository.Detach(existingUserByEmail);
-                    }
-                }
-                else
-                {
-                    _logger.LogError("Email is already used by another user: {Email}", userDto.Email);
-                    throw new InvalidOperationException("Email is already used by another user.");
-                }
-            }
+            await _securityPolicy.EnforceRegistrationIpLimitAsync(ipAddress);
 
-            var existingUserByUsername = await _userRepository.GetUserByUsernameAsync(userDto.UserName);
-            if (existingUserByUsername != null)
-            {
-                _logger.LogError("Username is already used by another user: {Username}", userDto.UserName);
-                throw new InvalidOperationException("Username is already used by another user.");
-            }
+            await _registrationService.EnsureEmailAndUsernameUniqueAsync(userDto.Email, userDto.UserName);
 
-            var userCountByIp = await _userRepository.GetUserCountByIpAsync(ipAddress);
+            var passwordHash = _securityService.HashPassword(userDto.Password);
 
-            if (userCountByIp >= MaxUsersPerIp)
-            {
-                _logger.LogWarning("IP address {IpAddress} has exceeded the registration limit.", ipAddress);
-                var usersToBlock = await _userRepository.GetUsersByIpAsync(ipAddress);
+            var user = await _registrationService.BuildNewUserAsync(userDto, passwordHash);
 
-                if (usersToBlock == null || !usersToBlock.Any())
-                    throw new InvalidOperationException("No users found with the specified IP address.");
-
-                foreach (var blockedUser in usersToBlock)
-                {
-                    if (blockedUser != null && blockedUser.Role != "Owner")
-                    {
-                        blockedUser.IsBlocked = true;
-                        if (blockedUser.LoginTokens != null)
-                        {
-                            var tokens = blockedUser.LoginTokens.Where(t => t.IsActive);
-                            foreach (var token in tokens)
-                            {
-                                if (token != null)
-                                    token.IsActive = false;
-                            }
-                        }
-                    }
-                }
-
-                await _userRepository.SaveChangesAsync();
-                _logger.LogWarning("Accounts from IP {IpAddress} have been blocked due to violation of service rules.", ipAddress);
-                throw new UnauthorizedAccessException("Violation of service rules. All user accounts have been blocked.");
-            }
-
-            var hashedPassword = _securityService.HashPassword(userDto.Password);
-
-            var user = new User
-            {
-                Id = Guid.NewGuid(),
-                Username = userDto.UserName,
-                Email = userDto.Email,
-                RegistrationDate = DateTime.UtcNow,
-                PasswordHash = hashedPassword,
-                Avatar = null,
-                Role = "User",
-                IsActive = false,
-            };
-
-            var accessToken = _tokenGeneratorService.GenerateJwtToken(user, deviceInfo);
-            var refreshToken = _tokenGeneratorService.GenerateRefreshToken();
-
-            /* Temporary inactive token used to track registration attempt (not for authentication yet) */
-            var loginToken = new LoginToken
-            {
-                Token = accessToken,
-                RefreshToken = refreshToken,
-                Expiration = DateTime.UtcNow,
-                RefreshTokenExpiration = DateTime.UtcNow,
-                UserId = user.Id,
-                DeviceInfo = deviceInfo,
-                IpAddress = ipAddress,
-                IsActive = false
-            };
-
-            user.LoginTokens = new List<LoginToken> { loginToken };
+            await _registrationService.CreateInactiveInitialSessionAsync(user, deviceInfo, ipAddress);
 
             await _userRepository.AddUserAsync(user);
+            
+            var emailToken = await _emailAuthService.CreateEmailConfirmationTokenAsync(user);
 
-            _logger.LogInformation("User {UserName} created successfully. Awaiting email confirmation.", userDto.UserName);
-
-            var activationToken = Guid.NewGuid().ToString();
-            var emailConfirmationToken = new EmailConfirmationToken
-            {
-                Token = activationToken,
-                UserId = user.Id,
-                ExpirationDate = DateTime.UtcNow.AddHours(EmailConfirmTokenLifetimeHours),
-                IsUsed = false,
-                User = user,
-            };
-
-            await _emailConfirmationRepository.AddEmailConfirmationTokenAsync(emailConfirmationToken);
+            await _emailConfirmationRepository.AddEmailConfirmationTokenAsync(emailToken);
 
             await _userRepository.SaveChangesAsync();
             await _emailConfirmationRepository.SaveChangesAsync();
 
-            _logger.LogInformation("Activation token generated and stored for user {UserName}", userDto.UserName);
-
-            _logger.LogInformation("Sending email confirmation to {Email} with token link.", userDto.Email);
-            await _mailService.SendConfirmationEmailAsync(user.Email, activationToken);
+            await _mailService.SendConfirmationEmailAsync(user.Email, emailToken.Token);
 
             return true;
         }
 
         public async Task<ConfirmTokenResult> ConfirmEmailAsync(string token)
         {
-            try
-            {
-                var (result, user) = await _emailConfirmationRepository.ConfirmUserByTokenAsync(token);
-                
-                if(result == ConfirmTokenResult.TokenExpired && user is not null)
-                {
-                    var newToken = Guid.NewGuid().ToString();
-                    var newEmailToken = new EmailConfirmationToken
-                    {
-                        Token = newToken,
-                        UserId = user.Id,
-                        ExpirationDate = DateTime.UtcNow.AddHours(EmailConfirmTokenLifetimeHours),
-                        IsUsed = false,
-                        User = user,
-                    };
-
-                    await _emailConfirmationRepository.AddEmailConfirmationTokenAsync(newEmailToken);
-                    await _emailConfirmationRepository.SaveChangesAsync();
-                    await _mailService.SendConfirmationEmailAsync(user.Email, newToken);
-                }
-
-                return result;
-            }
-            catch (InvalidDataException)
-            {
-                throw new InvalidDataException("Invalid or expired token");
-            }
-            catch (Exception ex)
-            {
-                throw new Exception("Unknown error occurred during request", ex);
-            }
+            return await _emailAuthService.ConfirmEmailAsync(token);
         }
 
         public async Task<LoginResponse> LoginUserAsync(LoginDto loginDto, DeviceInfo deviceInfo, string ipAddress)
@@ -241,223 +101,77 @@ namespace MatHelper.BLL.Services
             try
             {
                 await _loginAttemptService.CheckIpBlockedAsync(ipAddress);
-            }
-            catch(UnauthorizedAccessException)
-            {
-                throw;
-            }
 
-            var user = await _userRepository.GetUserByEmailAsync(loginDto.Email);
-            if (user == null)
-            {
-                await _loginAttemptService.RegisterFailedAttemptAsync(ipAddress);
-                throw new InvalidOperationException("User not found.");
-            }
+                var user = await _loginService.ValidateUserCredentialsAsync(loginDto.Email, loginDto.Password);
 
-            if (!user.IsActive) throw new UnauthorizedAccessException("Please activate your account by following the link sent to your email.");
-
-            try
-            {
-                if (user.IsBlocked) throw new UnauthorizedAccessException("User is banned.");
-
-                if (!_securityService.VerifyPassword(loginDto.Password, user.PasswordHash))
-                {
-                    await _loginAttemptService.RegisterFailedAttemptAsync(ipAddress);
-                    throw new UnauthorizedAccessException("Invalid password.");
-                }
+                await _loginService.EnsureUserCanLoginAsync(user);
 
                 await _loginAttemptService.ResetAttemptsAsync(ipAddress);
 
-                if (deviceInfo.UserAgent == null || deviceInfo.Platform == null)
+                _securityPolicy.ValidateDeviceInfo(deviceInfo);
+
+                await _loginService.CleanupUserSessionsAsync(user, deviceInfo, ipAddress);
+
+                await _loginService.ApplySessionLimitsAsync(user);
+
+                var twoFactor = await _twoFactorService.GetTwoFactorAsync(user.Id, "totp");
+
+                if (twoFactor != null && twoFactor.IsEnabled && twoFactor.AlwaysAsk)
                 {
-                    _logger.LogError("deviceInfo does not meet the requirements");
-                    throw new InvalidDataException("deviceInfo does not meet the requirements");
-                }
-
-                var expiredTokens = user.LoginTokens!.Where(t => t.Expiration <= DateTime.UtcNow).ToList();
-                foreach (var expiredToken in expiredTokens)
-                {
-                    expiredToken.IsActive = false;
-                    //user.LoginTokens!.Remove(expiredToken);
-                }
-
-                var duplicateGroups = user.LoginTokens!
-                    .Where(t => t.IsActive)
-                    .GroupBy(t => new { t.DeviceInfo.UserAgent, t.DeviceInfo.Platform, t.IpAddress });
-
-                foreach (var group in duplicateGroups)
-                {
-                    var latestToken = group.OrderByDescending(t => t.Expiration).FirstOrDefault();
-                    foreach (var token in group)
-                    {
-                        if (token != latestToken)
-                            token.IsActive = false;
-                    }
-                }
-
-                var currentDeviceTokens = user.LoginTokens!
-                    .Where(t => t.IsActive
-                        && t.DeviceInfo.UserAgent == deviceInfo.UserAgent
-                        && t.DeviceInfo.Platform == deviceInfo.Platform
-                        && t.IpAddress == ipAddress)
-                    .ToList();
-
-                foreach (var token in currentDeviceTokens)
-                    token.IsActive = false;
-
-                await _userRepository.SaveChangesAsync();
-
-                var activeTokens = user.LoginTokens!.Where(t => t.DeviceInfo.UserAgent == deviceInfo.UserAgent && t.DeviceInfo.Platform == deviceInfo.Platform && t.IpAddress == ipAddress && t.IsActive).ToList();
-
-                if (activeTokens.Count >= MaxActiveTokensPerDevice)
-                {
-                    foreach (var activeToken in activeTokens)
-                    {
-                        activeToken.IsActive = false;
-                    }
-                }
-
-                var activeTokenCount = user.LoginTokens!.Count(t => t.IsActive);
-                if (activeTokenCount >= MaxTotalActiveTokens)
-                {
-                    var oldestToken = user.LoginTokens!.Where(t => t.IsActive).MinBy(t => t.Expiration);
-
-                    if (oldestToken != null)
-                    {
-                        oldestToken.IsActive = false;
-                    }
-                }
-
-                var activeTwoFactor = await _twoFactorService.GetTwoFactorAsync(user.Id, "totp");
-                if (activeTwoFactor != null && activeTwoFactor.IsEnabled && activeTwoFactor.AlwaysAsk) 
-                {
-                    var sessionKey = Convert.ToBase64String(RandomNumberGenerator.GetBytes(SessionKeySizeInBytes));
-                    var appTwoFactorSession = new AppTwoFactorSession
-                    {
-                        UserId = user.Id,
-                        SessionKey = sessionKey,
-                        Expiration = DateTime.UtcNow.AddMinutes(TwoFactorSessionLifetimeMinutes),
-                        IpAddress = ipAddress,
-                        UserAgent = deviceInfo.UserAgent,
-                        Platform = deviceInfo.Platform,
-                        Remember = loginDto.Remember,
-                        IsUsed = false
-                    };
-
-                    await _twoFactorSessionRepository.AddSessionAsync(appTwoFactorSession);
+                    var session = await _twoFactorAuthService.CreateTwoFactorSessionAsync(user, deviceInfo, ipAddress, loginDto.Remember);
 
                     return new LoginResponse
                     {
                         Message = "Enter the 2FA code from your app",
-                        SessionKey = sessionKey
+                        SessionKey = session.SessionKey
                     };
                 }
 
-                var lastTokenForIp = user.LoginTokens?
+                var lastToken = user.LoginTokens?
                     .Where(t => t.IpAddress == ipAddress)
                     .OrderByDescending(t => t.Expiration)
                     .FirstOrDefault();
 
-                bool isUnfamiliarLocation = lastTokenForIp == null
-                    || (DateTime.UtcNow - lastTokenForIp.Expiration).TotalDays > UnfamiliarLocationThresholdDays;
+                var unfamiliar = _securityPolicy.IsUnfamiliar(lastToken, ipAddress, deviceInfo.UserAgent!); 
 
-                if (isUnfamiliarLocation)
+                if (unfamiliar)
                 {
-                    int codeInt;
-                    using (var rng = RandomNumberGenerator.Create())
-                    {
-                        byte[] bytes = new byte[CodeEntropyBytes];
-                        rng.GetBytes(bytes);
-                        codeInt = BitConverter.ToInt32(bytes, 0) & IntegerMask;
-                        codeInt = MinConfirmationCodeValue + (codeInt % ConfirmationCodeRange);
-                    }
-
-                    var code = codeInt.ToString();
-
-                    var sessionKey = Convert.ToBase64String(RandomNumberGenerator.GetBytes(SessionKeySizeInBytes));
-
-                    var emailCode = new EmailLoginCode
-                    {
-                        UserId = user.Id,
-                        Code = code,
-                        SessionKey = sessionKey,
-                        IpAddress = ipAddress,
-                        UserAgent = deviceInfo.UserAgent,
-                        Platform = deviceInfo.Platform,
-                        Remember = loginDto.Remember,
-                        Expiration = DateTime.UtcNow.AddMinutes(EmailLoginCodeLifetimeMinutes),
-                        IsUsed = false
-                    };
-
-                    await _emailLoginCodeRepository.AddCodeAsync(emailCode);
-
-                    await _mailService.SendIpConfirmationCodeEmailAsync(user.Email, code);
-
-                    await _authLogRepository.LogAuthAsync(user.Id.ToString(), ipAddress, deviceInfo.UserAgent, "Sent confirmation code");
+                    var emailCode = await _emailAuthService.CreateEmailLoginCodeAsync(user, deviceInfo, ipAddress, loginDto.Remember);
 
                     return new LoginResponse
                     {
                         Message = "Check your email for the code",
-                        SessionKey = sessionKey
+                        SessionKey = emailCode.SessionKey
                     };
                 }
 
-                var refreshTokenExpiration = loginDto.Remember == true ? DateTime.UtcNow.AddDays(RefreshTokenLifetimeDaysRemembered) : DateTime.UtcNow.AddHours(RefreshTokenLifetimeHoursDefault);
+                var token = await _loginService.IssueLoginTokenAsync(user, deviceInfo, ipAddress, loginDto.Remember);
 
-                var accessToken = _tokenGeneratorService.GenerateJwtToken(user, deviceInfo);
-                var refreshToken = _tokenGeneratorService.GenerateRefreshToken();
-
-                var loginToken = new LoginToken
-                {
-                    Token = accessToken,
-                    RefreshToken = refreshToken,
-                    Expiration = DateTime.UtcNow.AddMinutes(AccessTokenLifetimeMinutes),
-                    RefreshTokenExpiration = refreshTokenExpiration,
-                    UserId = user.Id,
-                    DeviceInfo = deviceInfo,
-                    IpAddress = ipAddress,
-                    IsActive = true
-                };
-
-                user.LoginTokens!.Add(loginToken);
+                user.LoginTokens!.Add(token);
                 await _userRepository.SaveChangesAsync();
 
-                await _authLogRepository.LogAuthAsync(user.Id.ToString(), ipAddress, deviceInfo.UserAgent, "Success");
-
-                if (await _securityService.CheckSuspiciousActivityAsync(ipAddress, deviceInfo.UserAgent, deviceInfo.Platform))
-                {
+                if (await _securityService.CheckSuspiciousActivityAsync(ipAddress, deviceInfo.UserAgent!, deviceInfo.Platform!))
                     throw new UnauthorizedAccessException("Suspicious activity detected. Accounts blocked.");
-                }
 
                 return new LoginResponse
                 {
-                    AccessToken = accessToken,
-                    RefreshToken = refreshToken,
-                    RefreshTokenExpiration = refreshTokenExpiration
+                    AccessToken = token.Token,
+                    RefreshToken = token.RefreshToken,
+                    RefreshTokenExpiration = token.RefreshTokenExpiration
                 };
             }
-            catch (Exception ex) when (ex is UnauthorizedAccessException
-                        || ex is InvalidOperationException
-                        || ex is InvalidDataException)
+            catch (Exception ex) when (
+                ex is UnauthorizedAccessException ||
+                ex is InvalidOperationException ||
+                ex is InvalidDataException)
             {
-                await _authLogRepository.LogAuthAsync(
-                    user?.Id.ToString() ?? "Unknown",
-                    ipAddress,
-                    deviceInfo.UserAgent ?? "Unknown",
-                    "Failed",
-                    ex.Message
-                );
+                await _loginAttemptService.RegisterFailedAttemptAsync(ipAddress);
+                await _authLogRepository.LogAuthAsync("Unknown", ipAddress, deviceInfo.UserAgent ?? "Unknown", "Failed", ex.Message);
                 throw;
             }
             catch (Exception ex)
             {
-                await _authLogRepository.LogAuthAsync(
-                    user?.Id.ToString() ?? "Unknown",
-                    ipAddress,
-                    deviceInfo.UserAgent ?? "Unknown",
-                    "Failed",
-                    "Unknown error occurred."
-                );
+                await _authLogRepository.LogAuthAsync("Unknown", ipAddress, deviceInfo.UserAgent ?? "Unknown", "Failed", "Unknown error occurred.");
                 throw new Exception("Unknown error occurred during request", ex);
             }
         }
@@ -465,13 +179,18 @@ namespace MatHelper.BLL.Services
         public async Task<LoginResponse> ConfirmEmailCodeAsync(string code, string sessionKey)
         {
             var emailCode = await _emailLoginCodeRepository.GetBySessionKeyAsync(sessionKey);
-            if (emailCode == null) throw new UnauthorizedAccessException("Invalid or expired session key.");
+            if (emailCode == null)
+                throw new UnauthorizedAccessException("Invalid or expired session key.");
 
-            if (emailCode.Code != code) throw new UnauthorizedAccessException("Invalid confirmation code.");
+            if (emailCode.Code != code)
+                throw new UnauthorizedAccessException("Invalid confirmation code.");
 
             var user = await _userRepository.GetUserByIdAsync(emailCode.UserId);
-            if (user == null) throw new UnauthorizedAccessException("User not found.");
-            if (user.IsBlocked) throw new UnauthorizedAccessException("User is banned.");
+            if (user == null)
+                throw new UnauthorizedAccessException("User not found.");
+
+            if (user.IsBlocked)
+                throw new UnauthorizedAccessException("User is banned.");
 
             emailCode.IsUsed = true;
             await _emailLoginCodeRepository.SaveChangesAsync();
@@ -481,149 +200,109 @@ namespace MatHelper.BLL.Services
                 UserAgent = emailCode.UserAgent,
                 Platform = emailCode.Platform
             };
-            var ipAddress = emailCode.IpAddress;
 
-            var accessToken = _tokenGeneratorService.GenerateJwtToken(user, deviceInfo);
-            var refreshToken = _tokenGeneratorService.GenerateRefreshToken();
-
-            var refreshTokenExpiration = emailCode.Remember ? DateTime.UtcNow.AddDays(RefreshTokenLifetimeDaysRemembered) : DateTime.UtcNow.AddHours(RefreshTokenLifetimeHoursDefault);
-
-            var loginToken = new LoginToken
-            {
-                Token = accessToken,
-                RefreshToken = refreshToken,
-                Expiration = DateTime.UtcNow.AddMinutes(AccessTokenLifetimeMinutes),
-                RefreshTokenExpiration = refreshTokenExpiration,
-                UserId = user.Id,
-                DeviceInfo = deviceInfo,
-                IpAddress = ipAddress,
-                IsActive = true
-            };
+            var loginToken = await _tokenService.IssueLoginTokenAsync(
+                user,
+                deviceInfo,
+                emailCode.IpAddress,
+                emailCode.Remember
+            );
 
             user.LoginTokens!.Add(loginToken);
             await _userRepository.SaveChangesAsync();
 
-            await _authLogRepository.LogAuthAsync(user.Id.ToString(), ipAddress, deviceInfo.UserAgent, "Success via email confirmation");
+            await _authLogRepository.LogAuthAsync(
+                user.Id.ToString(),
+                emailCode.IpAddress,
+                deviceInfo.UserAgent,
+                "Success via email confirmation"
+            );
 
             return new LoginResponse
             {
-                AccessToken = accessToken,
-                RefreshToken = refreshToken
+                AccessToken = loginToken.Token,
+                RefreshToken = loginToken.RefreshToken
             };
         }
 
         public async Task<LoginResponse> ConfirmTwoFactorCodeAsync(string code, string sessionKey)
-        {   
+        {
+            var result = await _twoFactorAuthService.ValidateTwoFactorSessionAsync(sessionKey, code);
+
+            if (!result.Success)
+                throw new UnauthorizedAccessException(result.Error ?? "2FA validation failed.");
+
+            if (!result.UserId.HasValue)
+                throw new UnauthorizedAccessException("UserId is missing.");
+
+            var user = await _userRepository.GetUserByIdAsync(result.UserId.Value);
+
+            if (user == null)
+                throw new UnauthorizedAccessException("User not found.");
+
             var session = await _twoFactorSessionRepository.GetBySessionKeyAsync(sessionKey);
-            if (session == null) throw new UnauthorizedAccessException("Invalid or expired session key.");
 
-            var user = await _userRepository.GetUserByIdAsync(session.UserId);
-            if (user == null) throw new UnauthorizedAccessException("User not found.");
-            if (user.IsBlocked) throw new UnauthorizedAccessException("User is banned.");
-
-            var twoFactor = await _twoFactorService.GetTwoFactorAsync(user.Id, "totp");
-            if (twoFactor == null || !twoFactor.IsEnabled) throw new UnauthorizedAccessException("Two-factor authentication is not enabled.");
-
-            if (twoFactor.Secret == null) throw new UnauthorizedAccessException("Invalid key");
-            var isValid = _twoFactorService.VerifyTotp(twoFactor.Secret, code);
-            if (!isValid) throw new UnauthorizedAccessException("Invalid 2FA code.");
-
-            session.IsUsed = true;
-            await _twoFactorSessionRepository.SaveChangesAsync();
+            if (session == null)
+                throw new UnauthorizedAccessException("Session not found.");
 
             var deviceInfo = new DeviceInfo
             {
                 UserAgent = session.UserAgent,
                 Platform = session.Platform
             };
-            var ipAddress = session.IpAddress;
 
-            var accessToken = _tokenGeneratorService.GenerateJwtToken(user, deviceInfo);
-            var refreshToken = _tokenGeneratorService.GenerateRefreshToken();
+            var token = await _loginService.IssueLoginTokenAsync(
+                user,
+                deviceInfo,
+                session.IpAddress,
+                session.Remember
+            );
 
-            var refreshTokenExpiration = session.Remember ? DateTime.UtcNow.AddDays(RefreshTokenLifetimeDaysRemembered) : DateTime.UtcNow.AddHours(RefreshTokenLifetimeHoursDefault);
-            var loginToken = new LoginToken
-            {
-                Token = accessToken,
-                RefreshToken = refreshToken,
-                Expiration = DateTime.UtcNow.AddMinutes(AccessTokenLifetimeMinutes),
-                RefreshTokenExpiration = refreshTokenExpiration,
-                UserId = user.Id,
-                DeviceInfo = deviceInfo,
-                IpAddress = ipAddress,
-                IsActive = true
-            };
+            user.LoginTokens ??= new List<LoginToken>();
+            user.LoginTokens.Add(token);
+            
+            session.IsUsed = true;
 
-            user.LoginTokens!.Add(loginToken);
             await _userRepository.SaveChangesAsync();
+            await _twoFactorSessionRepository.SaveChangesAsync();
 
-            await _authLogRepository.LogAuthAsync(user.Id.ToString(), ipAddress, deviceInfo.UserAgent, "Success via 2FA");
+            await _authLogRepository.LogAuthAsync(
+                user.Id.ToString(),
+                session.IpAddress,
+                deviceInfo.UserAgent,
+                "Success via 2FA"
+            );
 
             return new LoginResponse
             {
-                AccessToken = accessToken,
-                RefreshToken = refreshToken,
+                AccessToken = token.Token,
+                RefreshToken = token.RefreshToken
             };
         }
 
         public async Task<bool> SendRecoverPasswordLinkAsync(string email)
         {
-            _logger.LogInformation("Attempting password recovery for email: {Email}", email);
-
-            if (string.IsNullOrWhiteSpace(email))
+            try
             {
-                _logger.LogError("Email cannot be null or empty.");
-                throw new ArgumentException("Email cannot be null or empty.");
+                return await _recoveryService.SendRecoveryEmailAsync(email);
             }
-
-            var user = await _userRepository.GetUserByEmailAsync(email);
-            if (user == null)
+            catch(Exception ex)
             {
-                _logger.LogWarning("Password recovery attempted for non-existent email: {Email}", email);
-                return false;
+                _logger.LogError(ex, "Error while sending password recovery link.");
+                throw;
             }
-
-            var recoveryToken = new PasswordRecoveryToken
-            {
-                Token = Guid.NewGuid().ToString(),
-                UserId = user.Id,
-                ExpirationDate = DateTime.UtcNow.AddMinutes(RecoveryTokenLifetimeMinutes),
-                IsUsed = false,
-                User = user
-            };
-
-            await _passwordRecoveryRepository.AddPasswordRecoveryTokenAsync(recoveryToken);
-            await _passwordRecoveryRepository.SaveChangesAsync();
-
-            _logger.LogInformation("Password recovery token created for user: {Email}", email);
-            await _mailService.SendPasswordRecoveryEmailAsync(user.Email, recoveryToken.Token);
-
-            return true;
         }
 
         public async Task<RecoverPasswordResult> RecoverPassword(string token, string password)
         {
             try
             {
-                var (result, user) = await _passwordRecoveryRepository.GetUserByRecoveryToken(token);
-
-                if (user == null)
-                {
-                    return result;
-                }
-
-                if (result == RecoverPasswordResult.Success)
-                {
-                    var hashedPassword = _securityService.HashPassword(password);
-
-                    var changePasswordResult = await _userRepository.ChangePassword(user, hashedPassword);
-                }
-
-                return result;
+                return await _recoveryService.ResetPasswordAsync(token, password);
             }
             catch (Exception ex) 
             {
                 _logger.LogError("Unknown error occurred during request: {ex}", ex);
+
                 return RecoverPasswordResult.Failed;
             }
         }

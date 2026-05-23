@@ -8,6 +8,8 @@ namespace MatHelper.BLL.Interfaces
 {
     public interface ITokenService
     {
+        Task<LoginToken> IssueLoginTokenAsync(User user, DeviceInfo device, string ip, bool remember);
+        void DeactivateToken(LoginToken token);
         Task<LoginResponse> RefreshAccessTokenAsync(string refreshToken);
         Task<bool> DisableRefreshToken(string refreshToken);
         Task DeactivateAllUserTokensAsync(Guid userId);

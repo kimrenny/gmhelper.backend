@@ -1,0 +1,91 @@
+using MatHelper.BLL.Interfaces;
+using MatHelper.CORE.Models;
+using MatHelper.CORE.Enums;
+using MatHelper.DAL.Models;
+using MatHelper.DAL.Interfaces;
+using Microsoft.Extensions.Logging;
+using System.Security.Cryptography;
+
+namespace MatHelper.BLL.Services
+{
+    public class RecoveryService : IRecoveryService
+    {
+        private const ushort RecoveryTokenLifetimeMinutes = 15;
+
+        private readonly IUserRepository _userRepository;
+        private readonly IPasswordRecoveryRepository _passwordRecoveryRepository;
+        private readonly IMailService _mailService;
+        private readonly ISecurityService _securityService;
+        private readonly ILogger<RecoveryService> _logger;
+
+        public RecoveryService(
+            IUserRepository userRepository,
+            IPasswordRecoveryRepository passwordRecoveryRepository,
+            IMailService mailService,
+            ISecurityService securityService,
+            ILogger<RecoveryService> logger)
+        {
+            _userRepository = userRepository;
+            _passwordRecoveryRepository = passwordRecoveryRepository;
+            _mailService = mailService;
+            _securityService = securityService;
+            _logger = logger;
+        }
+
+        public async Task<PasswordRecoveryToken> CreateRecoveryTokenAsync(User user)
+        {
+            var recoveryToken = new PasswordRecoveryToken
+            {
+                Token = Guid.NewGuid().ToString(),
+                UserId = user.Id,
+                ExpirationDate = DateTime.UtcNow.AddMinutes(RecoveryTokenLifetimeMinutes),
+                IsUsed = false,
+                User = user
+            };
+
+            await _passwordRecoveryRepository.AddPasswordRecoveryTokenAsync(recoveryToken);
+            await _passwordRecoveryRepository.SaveChangesAsync();
+
+            return recoveryToken;
+        }
+
+        public async Task<bool> SendRecoveryEmailAsync(string email)
+        {
+            if (string.IsNullOrWhiteSpace(email))
+                throw new ArgumentException("Email cannot be null or empty.");
+
+            var user = await _userRepository.GetUserByEmailAsync(email);
+
+            if (user == null)
+                return false;
+
+            var recoveryToken = await CreateRecoveryTokenAsync(user);
+
+            await _mailService.SendPasswordRecoveryEmailAsync(
+                user.Email,
+                recoveryToken.Token
+            );
+
+            return true;
+        }
+
+        public async Task<RecoverPasswordResult> ResetPasswordAsync(string token, string newPassword)
+        {
+            var (result, user) = await _passwordRecoveryRepository.GetUserByRecoveryToken(token);
+
+            if (user == null)
+                return result;
+
+            if (result != RecoverPasswordResult.Success)
+                return result;
+
+            var hashedPassword = _securityService.HashPassword(newPassword);
+
+            await _userRepository.ChangePassword(user, hashedPassword);
+
+            await _passwordRecoveryRepository.InvalidateAllUserRecoveryTokensAsync(user.Id);
+
+            return RecoverPasswordResult.Success;
+        }
+    }
+}

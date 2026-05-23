@@ -17,6 +17,8 @@ namespace MatHelper.BLL.Services
         private readonly ILogger _logger;
 
         private const ushort AccessTokenLifetimeMinutes = 30;
+        private const ushort RefreshTokenLifetimeDaysRemembered = 28;
+        private const ushort RefreshTokenLifetimeHoursDefault = 6;
 
         public TokenService(ISecurityService secutiryService, ITokenGeneratorService tokenGeneratorService, IUserRepository userRepository, ILoginTokenRepository loginTokenRepository, ILogger<TokenService> logger)
         {
@@ -25,6 +27,35 @@ namespace MatHelper.BLL.Services
             _userRepository = userRepository;
             _loginTokenRepository = loginTokenRepository;
             _logger = logger;
+        }
+
+        public Task<LoginToken> IssueLoginTokenAsync(User user, DeviceInfo device, string ip, bool remember)
+        {
+            var accessToken = _tokenGeneratorService.GenerateJwtToken(user, device);
+            var refreshToken = _tokenGeneratorService.GenerateRefreshToken();
+
+            var refreshTokenExpiration = remember
+                ? DateTime.UtcNow.AddDays(RefreshTokenLifetimeDaysRemembered)
+                : DateTime.UtcNow.AddHours(RefreshTokenLifetimeHoursDefault);
+
+            var loginToken = new LoginToken
+            {
+                Token = accessToken,
+                RefreshToken = refreshToken,
+                Expiration = DateTime.UtcNow.AddMinutes(AccessTokenLifetimeMinutes),
+                RefreshTokenExpiration = refreshTokenExpiration,
+                UserId = user.Id,
+                DeviceInfo = device,
+                IpAddress = ip,
+                IsActive = true
+            };
+
+            return Task.FromResult(loginToken);
+        }
+
+        public void DeactivateToken(LoginToken token)
+        {
+            throw new NotImplementedException();
         }
 
         public async Task<LoginResponse> RefreshAccessTokenAsync(string refreshToken)

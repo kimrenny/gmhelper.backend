@@ -111,6 +111,12 @@ builder.Services.AddSingleton(jwtOptions);
 builder.Services.AddSingleton<IHttpContextAccessor, HttpContextAccessor>();
 
 builder.Services.AddScoped<IAuthenticationService, AuthenticationService>();
+builder.Services.AddScoped<IRegistrationService, RegistrationService>();
+builder.Services.AddScoped<ISecurityPolicyService, SecurityPolicyService>();
+builder.Services.AddScoped<ILoginService, LoginService>();
+builder.Services.AddScoped<IEmailAuthService, EmailAuthService>();
+builder.Services.AddScoped<IRecoveryService, RecoveryService>();
+builder.Services.AddScoped<ITwoFactorAuthService, TwoFactorAuthService>();
 builder.Services.AddScoped<ISecurityService, SecurityService>();
 builder.Services.AddScoped<ITokenService, TokenService>();
 builder.Services.AddScoped<ITokenGeneratorService,  TokenGeneratorService>();
