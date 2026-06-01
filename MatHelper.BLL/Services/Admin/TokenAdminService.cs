@@ -15,6 +15,8 @@ namespace MatHelper.BLL.Services
         private readonly ILogger _logger;
 
         private const string TokensVersionKey = "tokens:admin:version";
+        private const string TokensCachePrefix = "tokens:admin:v";
+        private const string TokensDashboardCacheKey = "tokens:dashboard";
 
         public TokenAdminService(
             IUserRepository userRepository,
@@ -37,14 +39,14 @@ namespace MatHelper.BLL.Services
         {
             try
             {
-                var version = await _cache.GetAsync<int?>(TokensVersionKey) ?? 1;
-
                 sortBy = string.IsNullOrWhiteSpace(sortBy)
                     ? "Id"
                     : char.ToUpper(sortBy[0]) + sortBy.Substring(1);
 
+                var version = await _cache.GetVersionAsync(TokensVersionKey);
+
                 var cacheKey =
-                    $"tokens:admin:v{version}:{page}:{pageSize}:{sortBy}:{descending}:{maxExpirationDate}";
+                    $"{TokensCachePrefix}{version}:{page}:{pageSize}:{sortBy}:{descending}:{maxExpirationDate}";
 
                 var cached = await _cache.GetAsync<PagedResult<TokenDto>>(cacheKey);
                 if (cached != null)
@@ -129,8 +131,7 @@ namespace MatHelper.BLL.Services
             {
                 await _loginTokenRepository.ActionTokenAsync(token, action);
 
-                var version = await _cache.GetAsync<int?>(TokensVersionKey) ?? 1;
-                await _cache.SetAsync(TokensVersionKey, version + 1, null);
+                await _cache.IncrementVersionAsync(TokensVersionKey);
             }
             catch (Exception ex)
             {
@@ -143,8 +144,8 @@ namespace MatHelper.BLL.Services
         {
             try
             {
-                var cacheKey = "tokens:dashboard";
-
+                var version = await _cache.GetVersionAsync(TokensVersionKey);
+                var cacheKey = $"{TokensDashboardCacheKey}:v{version}";
                 var cached = await _cache.GetAsync<DashboardTokensDto>(cacheKey);
                 if (cached != null)
                     return cached;

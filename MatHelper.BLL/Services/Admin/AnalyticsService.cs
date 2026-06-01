@@ -18,6 +18,7 @@ namespace MatHelper.BLL.Services
         private readonly ILogger _logger;
 
         private const string AnalyticsVersionKey = "analytics:version";
+        private const string AnalyticsCachePrefix = "analytics:v";
 
         public AnalyticsService(ISecurityService securityService, IUserRepository userRepository, ILoginTokenRepository loginTokenRepository, ICacheService cache, ILogger<AnalyticsService> logger)
         {
@@ -32,8 +33,8 @@ namespace MatHelper.BLL.Services
         {
             try
             {
-                var version = await GetVersionAsync();
-                var cacheKey = $"analytics:v{version}:registrations";
+                var version = await _cache.GetVersionAsync(AnalyticsVersionKey);
+                var cacheKey = $"{AnalyticsCachePrefix}{version}:registrations";
 
                 var cached = await _cache.GetAsync<List<RegistrationsDto>>(cacheKey);
                 if (cached != null)
@@ -56,8 +57,8 @@ namespace MatHelper.BLL.Services
         {
             try
             {
-                var version = await GetVersionAsync();
-                var cacheKey = $"analytics:v{version}:users-country";
+                var version = await _cache.GetVersionAsync(AnalyticsVersionKey);
+                var cacheKey = $"{AnalyticsCachePrefix}{version}:users-country";
 
                 var cached = await _cache.GetAsync<List<CountryStatsDto>>(cacheKey);
                 if (cached != null)
@@ -71,7 +72,7 @@ namespace MatHelper.BLL.Services
                     return new List<CountryStatsDto>();
                 }
 
-                var countryCounts = new ConcurrentDictionary<string, ushort>();
+                var countryCounts = new ConcurrentDictionary<string, int>();
                 var ipCache = new ConcurrentDictionary<string, string>();
 
                 await Parallel.ForEachAsync(userIpList, async (user, token) =>
@@ -85,7 +86,7 @@ namespace MatHelper.BLL.Services
                         ipCache.TryAdd(user.IpAddress, country);
                     }
 
-                    countryCounts.AddOrUpdate(country, 1, (_, count) => (ushort)(count + 1));
+                    countryCounts.AddOrUpdate(country, 1, (_, count) => (int)(count + 1));
                 });
 
                 var result = countryCounts
@@ -107,8 +108,8 @@ namespace MatHelper.BLL.Services
         {
             try
             {
-                var version = await GetVersionAsync();
-                var cacheKey = $"analytics:v{version}:role-stats";
+                var version = await _cache.GetVersionAsync(AnalyticsVersionKey);
+                var cacheKey = $"{AnalyticsCachePrefix}{version}:role-stats";
 
                 var cached = await _cache.GetAsync<List<RoleStatsDto>>(cacheKey);
                 if (cached != null)
@@ -142,8 +143,8 @@ namespace MatHelper.BLL.Services
         {
             try
             {
-                var version = await GetVersionAsync();
-                var cacheKey = $"analytics:v{version}:block-stats";
+                var version = await _cache.GetVersionAsync(AnalyticsVersionKey);
+                var cacheKey = $"{AnalyticsCachePrefix}{version}:block-stats";
 
                 var cached = await _cache.GetAsync<List<BlockStatsDto>>(cacheKey);
                 if (cached != null)
@@ -171,18 +172,6 @@ namespace MatHelper.BLL.Services
                 _logger.LogError(ex, "An error occured during calculating block stats.");
                 throw new InvalidOperationException("Could not calculate block stats.", ex);
             }
-        }
-
-        private async Task<int> GetVersionAsync()
-        {
-            var version = await _cache.GetAsync<int?>(AnalyticsVersionKey);
-            return version ?? 1;
-        }
-
-        private async Task BumpVersionAsync()
-        {
-            var version = await _cache.GetAsync<int?>(AnalyticsVersionKey) ?? 1;
-            await _cache.SetAsync(AnalyticsVersionKey, version + 1, null);
         }
     }
 }

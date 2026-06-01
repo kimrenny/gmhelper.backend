@@ -78,6 +78,22 @@ namespace MatHelper.BLL.Services
             }
         }
 
+        public async Task<int> GetVersionAsync(string key)
+        {
+            var version = await GetAsync<int?>(key);
+            return version ?? 1;
+        }
+
+        public async Task<int> IncrementVersionAsync(string key)
+        {
+            var version = await GetVersionAsync(key);
+            version++;
+
+            await SetAsync(key, version, null);
+
+            return version;
+        }
+
         private bool IsDisabled()
         {
             if (!_disabled)

@@ -15,6 +15,7 @@ namespace MatHelper.BLL.Services
         private readonly ILogger _logger;
 
         private const string UsersVersionKey = "admin:users:version";
+        private const string UsersCachePrefix = "admin:users:v";
 
         public UserAdminService(
             IUserRepository userRepository,
@@ -37,14 +38,14 @@ namespace MatHelper.BLL.Services
         {
             try
             {
-                var version = await _cache.GetAsync<int?>(UsersVersionKey) ?? 1;
-
                 sortBy = string.IsNullOrWhiteSpace(sortBy)
                     ? "Id"
                     : char.ToUpper(sortBy[0]) + sortBy.Substring(1);
 
+                var version = await _cache.GetVersionAsync(UsersVersionKey);
+
                 var cacheKey =
-                    $"admin:users:v{version}:{page}:{pageSize}:{sortBy}:{descending}:{maxRegistrationDate}";
+                    $"{UsersCachePrefix}{version}:{page}:{pageSize}:{sortBy}:{descending}:{maxRegistrationDate}";
 
                 var cached = await _cache.GetAsync<PagedResult<AdminUserDto>>(cacheKey);
                 if (cached != null)
@@ -115,8 +116,7 @@ namespace MatHelper.BLL.Services
 
                 await _userRepository.ActionUserAsync(userId, parsedAction);
 
-                var version = await _cache.GetAsync<int?>(UsersVersionKey) ?? 1;
-                await _cache.SetAsync(UsersVersionKey, version + 1, null);
+                await _cache.IncrementVersionAsync(UsersVersionKey);
             }
             catch (Exception ex)
             {

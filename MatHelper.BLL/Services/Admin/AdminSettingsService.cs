@@ -12,8 +12,8 @@ namespace MatHelper.BLL.Services
         private readonly ICacheService _cache;
         private readonly ILogger _logger;
 
-        private const string CacheVersionKey = "adminsettings:version";
-        private const string CacheBaseKey = "adminsettings";
+        private const string AdminSettingsVersionKey = "adminsettings:version";
+        private const string AdminSettingsCachePrefix = "adminsettings:v";
 
         public AdminSettingsService(
             IAdminSettingsRepository adminSettingsRepository,
@@ -31,8 +31,8 @@ namespace MatHelper.BLL.Services
         {
             try
             {
-                var version = await _cache.GetAsync<int?>(CacheVersionKey) ?? 1;
-                var cacheKey = $"{CacheBaseKey}:v{version}:{userId}";
+                var version = await _cache.GetVersionAsync(AdminSettingsVersionKey);
+                var cacheKey = $"{AdminSettingsCachePrefix}{version}:{userId}";
 
                 var cached = await _cache.GetAsync<bool[][]>(cacheKey);
                 if (cached != null)
@@ -68,8 +68,7 @@ namespace MatHelper.BLL.Services
 
                     await _adminSettingsRepository.CreateAsync(adminSettings);
 
-                    var currentVersion = await _cache.GetAsync<int?>(CacheVersionKey) ?? 1;
-                    await _cache.SetAsync(CacheVersionKey, currentVersion + 1, null);
+                    await _cache.IncrementVersionAsync(AdminSettingsVersionKey);
                 }
 
                 var result = adminSettings.Sections
@@ -104,8 +103,7 @@ namespace MatHelper.BLL.Services
                     formattedLabel,
                     newValue);
 
-                var version = await _cache.GetAsync<int?>(CacheVersionKey) ?? 1;
-                await _cache.SetAsync(CacheVersionKey, version + 1, null);
+                await _cache.IncrementVersionAsync(AdminSettingsVersionKey);
 
                 return result;
             }
