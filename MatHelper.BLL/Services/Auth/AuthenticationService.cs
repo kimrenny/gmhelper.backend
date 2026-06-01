@@ -26,9 +26,15 @@ namespace MatHelper.BLL.Services
         private readonly IRecoveryService _recoveryService;
         private readonly ITwoFactorAuthService _twoFactorAuthService;
         private readonly ITokenService _tokenService;
+        private readonly ICacheService _cache;
         private readonly ILogger<AuthenticationService> _logger;
 
-        public AuthenticationService(IUserRepository userRepository, IAppTwoFactorSessionRepository appTwoFactorSessionRepository, ITwoFactorService twoFactorService, IEmailConfirmationRepository emailConfirmationRepository, IEmailLoginCodeRepository emailLoginCodeRepository, IAuthLogRepository authLogRepository, IMailService mailService, ISecurityService securityService, ILoginAttemptService loginAttemptService, IRegistrationService registrationService, ISecurityPolicyService securityPolicy, IEmailAuthService emailAuthService, ILoginService loginService, IRecoveryService recoveryService, ITwoFactorAuthService twoFactorAuthService, ITokenService tokenService, ILogger<AuthenticationService> logger)
+        private const string UsersVersionKey = "admin:users:version";
+        private const string AnalyticsVersionKey = "analytics:version";
+        private const string TokensVersionKey = "tokens:admin:version";
+        private const string TokensDashboardCacheKey = "tokens:dashboard";
+
+        public AuthenticationService(IUserRepository userRepository, IAppTwoFactorSessionRepository appTwoFactorSessionRepository, ITwoFactorService twoFactorService, IEmailConfirmationRepository emailConfirmationRepository, IEmailLoginCodeRepository emailLoginCodeRepository, IAuthLogRepository authLogRepository, IMailService mailService, ISecurityService securityService, ILoginAttemptService loginAttemptService, IRegistrationService registrationService, ISecurityPolicyService securityPolicy, IEmailAuthService emailAuthService, ILoginService loginService, IRecoveryService recoveryService, ITwoFactorAuthService twoFactorAuthService, ITokenService tokenService, ICacheService cache, ILogger<AuthenticationService> logger)
         {
             _userRepository = userRepository;
             _twoFactorSessionRepository = appTwoFactorSessionRepository;
@@ -46,6 +52,7 @@ namespace MatHelper.BLL.Services
             _recoveryService = recoveryService;
             _twoFactorAuthService = twoFactorAuthService;
             _tokenService = tokenService;
+            _cache = cache;
             _logger = logger;
         }
 
@@ -85,6 +92,9 @@ namespace MatHelper.BLL.Services
 
             await _userRepository.SaveChangesAsync();
             await _emailConfirmationRepository.SaveChangesAsync();
+
+            await _cache.IncrementVersionAsync(UsersVersionKey);
+            await _cache.IncrementVersionAsync(AnalyticsVersionKey);
 
             await _mailService.SendConfirmationEmailAsync(user.Email, emailToken.Token);
 
@@ -150,6 +160,9 @@ namespace MatHelper.BLL.Services
                 user.LoginTokens!.Add(token);
                 await _userRepository.SaveChangesAsync();
 
+                await _cache.IncrementVersionAsync(TokensVersionKey);
+                await _cache.IncrementVersionAsync(TokensDashboardCacheKey);
+
                 if (await _securityService.CheckSuspiciousActivityAsync(ipAddress, deviceInfo.UserAgent!, deviceInfo.Platform!))
                     throw new UnauthorizedAccessException("Suspicious activity detected. Accounts blocked.");
 
@@ -211,6 +224,9 @@ namespace MatHelper.BLL.Services
             user.LoginTokens!.Add(loginToken);
             await _userRepository.SaveChangesAsync();
 
+            await _cache.IncrementVersionAsync(TokensVersionKey);
+            await _cache.IncrementVersionAsync(TokensDashboardCacheKey);
+
             await _authLogRepository.LogAuthAsync(
                 user.Id.ToString(),
                 emailCode.IpAddress,
@@ -266,6 +282,9 @@ namespace MatHelper.BLL.Services
             await _userRepository.SaveChangesAsync();
             await _twoFactorSessionRepository.SaveChangesAsync();
 
+            await _cache.IncrementVersionAsync(TokensVersionKey);
+            await _cache.IncrementVersionAsync(TokensDashboardCacheKey);
+
             await _authLogRepository.LogAuthAsync(
                 user.Id.ToString(),
                 session.IpAddress,
@@ -297,7 +316,15 @@ namespace MatHelper.BLL.Services
         {
             try
             {
-                return await _recoveryService.ResetPasswordAsync(token, password);
+                var result = await _recoveryService.ResetPasswordAsync(token, password);
+
+                if (result == RecoverPasswordResult.Success)
+                {
+                    await _cache.IncrementVersionAsync(TokensVersionKey);
+                    await _cache.IncrementVersionAsync(TokensDashboardCacheKey);
+                }
+
+                return result;
             }
             catch (Exception ex) 
             {

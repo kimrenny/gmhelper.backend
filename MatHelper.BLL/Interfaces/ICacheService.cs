@@ -7,6 +7,6 @@ namespace MatHelper.BLL.Interfaces
         Task RemoveAsync(string key);
 
         Task<int> GetVersionAsync(string key);
-        Task IncrementVersionAsync(string key);
+        Task<int> IncrementVersionAsync(string key);
     }
 }

@@ -15,6 +15,7 @@ namespace MatHelper.BLL.Services
         private readonly IUserRepository _userRepository;
         private readonly IPasswordRecoveryRepository _passwordRecoveryRepository;
         private readonly IMailService _mailService;
+        private readonly ITokenService _tokenService;
         private readonly ISecurityService _securityService;
         private readonly ILogger<RecoveryService> _logger;
 
@@ -22,12 +23,14 @@ namespace MatHelper.BLL.Services
             IUserRepository userRepository,
             IPasswordRecoveryRepository passwordRecoveryRepository,
             IMailService mailService,
+            ITokenService tokenService,
             ISecurityService securityService,
             ILogger<RecoveryService> logger)
         {
             _userRepository = userRepository;
             _passwordRecoveryRepository = passwordRecoveryRepository;
             _mailService = mailService;
+            _tokenService = tokenService;   
             _securityService = securityService;
             _logger = logger;
         }
@@ -84,6 +87,7 @@ namespace MatHelper.BLL.Services
             await _userRepository.ChangePassword(user, hashedPassword);
 
             await _passwordRecoveryRepository.InvalidateAllUserRecoveryTokensAsync(user.Id);
+            await _tokenService.DeactivateAllUserTokensAsync(user.Id);
 
             return RecoverPasswordResult.Success;
         }
