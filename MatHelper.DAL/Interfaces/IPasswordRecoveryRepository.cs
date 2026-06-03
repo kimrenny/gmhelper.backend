@@ -8,6 +8,7 @@ namespace MatHelper.DAL.Interfaces
     {
         Task AddPasswordRecoveryTokenAsync(PasswordRecoveryToken recoveryToken);
         Task<(RecoverPasswordResult Result, User? User)> GetUserByRecoveryToken(string token);
+        Task InvalidateAllUserRecoveryTokensAsync(Guid userId);
         Task SaveChangesAsync();
     }
 }

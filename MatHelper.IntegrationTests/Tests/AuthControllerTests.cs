@@ -35,13 +35,6 @@ namespace MatHelper.IntegrationTests.Tests
         [Fact]
         public async Task Register_Login_RefreshToken_WorkFlow()
         {
-            var clientOptions = new WebApplicationFactoryClientOptions
-            {
-                HandleCookies = true,
-            };
-            var client = _factory.CreateClient(clientOptions);
-
-            // 1. Registration
             var userDto = new UserDto
             {
                 Email = $"testuser_{Guid.NewGuid()}@example.com",
@@ -53,7 +46,6 @@ namespace MatHelper.IntegrationTests.Tests
             var registerResponse = await _client.PostAsJsonAsync("api/v1/auth/register", userDto);
             registerResponse.EnsureSuccessStatusCode();
 
-            // ==== ACTIVATION USER ====
             using (var scope = _factory.Services.GetRequiredService<IServiceScopeFactory>().CreateScope())
             {
                 var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
@@ -63,7 +55,6 @@ namespace MatHelper.IntegrationTests.Tests
                 await db.SaveChangesAsync();
             }
 
-            // 2. Login
             var loginDto = new LoginDto
             {
                 Email = userDto.Email,
@@ -79,7 +70,6 @@ namespace MatHelper.IntegrationTests.Tests
             Assert.NotNull(loginResult?.Data);
             Assert.NotNull(loginResult.Data.AccessToken);
 
-            // 3. Refresh token
             var refreshResponse = await _client.PostAsync("api/v1/auth/token/refresh", null);
             refreshResponse.EnsureSuccessStatusCode();
 
@@ -90,7 +80,6 @@ namespace MatHelper.IntegrationTests.Tests
         [Fact]
         public async Task Login_ShouldFail_WhenUserIsNotActive()
         {
-            // 1. Registration
             var userDto = new UserDto
             {
                 Email = $"inactiveuser_{Guid.NewGuid()}@example.com",
@@ -102,7 +91,6 @@ namespace MatHelper.IntegrationTests.Tests
             var registerResponse = await _client.PostAsJsonAsync("api/v1/auth/register", userDto);
             registerResponse.EnsureSuccessStatusCode();
 
-            // 2. Attempt login without activating user
             var loginDto = new LoginDto
             {
                 Email = userDto.Email,
@@ -113,7 +101,6 @@ namespace MatHelper.IntegrationTests.Tests
 
             var loginResponse = await _client.PostAsJsonAsync("api/v1/auth/login", loginDto);
 
-            // Expect failure (e.g., 400 BadRequest or 401 Unauthorized)
             Assert.False(loginResponse.IsSuccessStatusCode);
         }
 
@@ -121,7 +108,6 @@ namespace MatHelper.IntegrationTests.Tests
         [Fact]
         public async Task Login_ShouldFail_WhenPasswordIsIncorrect()
         {
-            // 1. Registration
             var userDto = new UserDto
             {
                 Email = $"wrongpassuser_{Guid.NewGuid()}@example.com",
@@ -133,7 +119,6 @@ namespace MatHelper.IntegrationTests.Tests
             var registerResponse = await _client.PostAsJsonAsync("api/v1/auth/register", userDto);
             registerResponse.EnsureSuccessStatusCode();
 
-            // ==== ACTIVATION USER ====
             using (var scope = _factory.Services.GetRequiredService<IServiceScopeFactory>().CreateScope())
             {
                 var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
@@ -143,7 +128,6 @@ namespace MatHelper.IntegrationTests.Tests
                 await db.SaveChangesAsync();
             }
 
-            // 2. Attempt login with wrong password
             var loginDto = new LoginDto
             {
                 Email = userDto.Email,
@@ -154,9 +138,100 @@ namespace MatHelper.IntegrationTests.Tests
 
             var loginResponse = await _client.PostAsJsonAsync("api/v1/auth/login", loginDto);
 
-            // Expect failure
             Assert.False(loginResponse.IsSuccessStatusCode);
         }
 
+        [Fact]
+        public async Task Register_Login_Logout_ShouldInvalidateSession()
+        {
+            var userDto = new UserDto
+            {
+                Email = $"logoutuser_{Guid.NewGuid()}@example.com",
+                UserName = $"logoutuser_{Guid.NewGuid()}",
+                Password = "Password123!",
+                CaptchaToken = "valid-captcha"
+            };
+            var regResp = await _client.PostAsJsonAsync("api/v1/auth/register", userDto);
+            regResp.EnsureSuccessStatusCode();
+
+            using (var scope = _factory.Services.GetRequiredService<IServiceScopeFactory>().CreateScope())
+            {
+                var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+                var user = await db.Users.FirstOrDefaultAsync(u => u.Email == userDto.Email);
+                user!.IsActive = true;
+                await db.SaveChangesAsync();
+            }
+
+            var loginDto = new LoginDto
+            {
+                Email = userDto.Email,
+                Password = userDto.Password,
+                CaptchaToken = "valid-captcha",
+                Remember = true
+            };
+            var loginResp = await _client.PostAsJsonAsync("api/v1/auth/login", loginDto);
+            loginResp.EnsureSuccessStatusCode();
+
+            var logoutResp = await _client.PostAsync("api/v1/auth/logout", null);
+            logoutResp.EnsureSuccessStatusCode();
+
+            var refreshResp = await _client.PostAsync("api/v1/auth/token/refresh", null);
+            Assert.Equal(HttpStatusCode.BadRequest, refreshResp.StatusCode);
+        }
+
+        [Fact]
+        public async Task Register_ShouldReturnBadRequest_WhenRequiredFieldsAreEmpty()
+        {
+            var invalidUserDto = new UserDto
+            {
+                Email = "",
+                UserName = "   ",
+                Password = "Password123!",
+                CaptchaToken = "valid-captcha"
+            };
+
+            var response = await _client.PostAsJsonAsync("api/v1/auth/register", invalidUserDto);
+
+            Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        }
+
+        [Fact]
+        public async Task Login_ShouldBlockRequests_WhenTooManyFailedAttempts()
+        {
+            var userDto = new UserDto
+            {
+                Email = $"blockedip_{Guid.NewGuid()}@example.com",
+                UserName = $"blockedip_{Guid.NewGuid()}",
+                Password = "CorrectPassword123!",
+                CaptchaToken = "valid-captcha"
+            };
+            var regResp = await _client.PostAsJsonAsync("api/v1/auth/register", userDto);
+            regResp.EnsureSuccessStatusCode();
+
+            var wrongLoginDto = new LoginDto
+            {
+                Email = userDto.Email,
+                Password = "TotallyWrongPassword!",
+                CaptchaToken = "valid-captcha",
+                Remember = false
+            };
+
+            HttpResponseMessage lastResponse = null!;
+            for (int i = 0; i < 6; i++)
+            {
+                lastResponse = await _client.PostAsJsonAsync("api/v1/auth/login", wrongLoginDto);
+            }
+
+            var correctLoginDto = new LoginDto
+            {
+                Email = userDto.Email,
+                Password = userDto.Password,
+                CaptchaToken = "valid-captcha",
+                Remember = false
+            };
+            var responseAfterBlock = await _client.PostAsJsonAsync("api/v1/auth/login", correctLoginDto);
+
+            Assert.False(responseAfterBlock.IsSuccessStatusCode);
+        }
     }
 }

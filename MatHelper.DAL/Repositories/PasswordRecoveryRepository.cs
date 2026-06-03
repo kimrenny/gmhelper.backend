@@ -49,6 +49,18 @@ namespace MatHelper.DAL.Repositories
             return (RecoverPasswordResult.Success, recoveryToken.User);
         }
 
+        public async Task InvalidateAllUserRecoveryTokensAsync(Guid userId)
+        {
+            var tokens = await _context.PasswordRecoveryTokens
+                .Where(t => t.UserId == userId && !t.IsUsed)
+                .ToListAsync();
+
+            foreach (var token in tokens)
+                token.IsUsed = true;
+
+            await _context.SaveChangesAsync();
+        }
+
         public async Task SaveChangesAsync()
         {
             await _context.SaveChangesAsync();
