@@ -20,9 +20,12 @@ namespace MatHelper.BLL.Services
         private readonly IUserRepository _userRepository;
         private readonly ILoginTokenRepository _loginTokenRepository;
         private readonly IUserMapper _userMapper;
+        private readonly ICacheService _cache;
         private readonly ILogger _logger;
 
-        public OwnerService(ISecurityService securityService, ITokenService tokenService, ITwoFactorService twoFactorService, IUserRepository userRepository, ILoginTokenRepository loginTokenRepository, IUserMapper userMapper, ILogger<AdminService> logger)
+        private const string UsersVersionKey = "admin:users:version";
+
+        public OwnerService(ISecurityService securityService, ITokenService tokenService, ITwoFactorService twoFactorService, IUserRepository userRepository, ILoginTokenRepository loginTokenRepository, IUserMapper userMapper, ICacheService cache, ILogger<AdminService> logger)
         {
             _securityService = securityService;
             _tokenService = tokenService;
@@ -30,6 +33,7 @@ namespace MatHelper.BLL.Services
             _userRepository = userRepository;
             _loginTokenRepository = loginTokenRepository;
             _userMapper = userMapper;
+            _cache = cache;
             _logger = logger;
         }
 
@@ -60,6 +64,8 @@ namespace MatHelper.BLL.Services
 
             await _userRepository.UpdateUserAsync(user);
             await _tokenService.DeactivateAllUserTokensAsync(user.Id);
+
+            await _cache.IncrementVersionAsync(UsersVersionKey);
 
             _logger.LogInformation(
                 "User role changed. UserId: {UserId}, NewRole: {Role}",
