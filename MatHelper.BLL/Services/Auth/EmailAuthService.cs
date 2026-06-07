@@ -11,21 +11,41 @@ namespace MatHelper.BLL.Services
     public class EmailAuthService : IEmailAuthService
     {
         private readonly IMailService _mailService;
-        private readonly IEmailConfirmationRepository _emailConfirmationRepository;
         private readonly IEmailLoginCodeRepository _emailLoginCodeRepository;
         private readonly ILogger _logger;
 
         private const byte EmailConfirmTokenLifetimeHours = 1;
 
-        public EmailAuthService(IMailService mailService, IEmailConfirmationRepository emailConfirmationRepository, IEmailLoginCodeRepository emailLoginCodeRepository, ILogger<EmailAuthService> logger)
+        public EmailAuthService(IMailService mailService, IEmailLoginCodeRepository emailLoginCodeRepository, ILogger<EmailAuthService> logger)
         {
             _mailService = mailService;
-            _emailConfirmationRepository = emailConfirmationRepository;
             _emailLoginCodeRepository = emailLoginCodeRepository;
             _logger = logger;
         }
 
+        public async Task<EmailLoginCode> CreateEmailRegisterCodeAsync(RegisterRequestDto dto, DeviceInfo device, string ip)
+        {
+            await _emailLoginCodeRepository.InvalidateActiveCodesByEmailAsync(dto.Email);
+
+            var emailCode = GenerateEmailCode(device, ip, false, null, dto.Email);
+
+            await _emailLoginCodeRepository.AddCodeAsync(emailCode);
+            await _mailService.SendRegistrationCodeEmailAsync(dto.Email, emailCode.Code);
+
+            return emailCode;
+        }
+
         public async Task<EmailLoginCode> CreateEmailLoginCodeAsync(User user, DeviceInfo device, string ip, bool remember)
+        {
+            var emailCode = GenerateEmailCode(device, ip, remember, user.Id, null);
+
+            await _emailLoginCodeRepository.AddCodeAsync(emailCode);
+            await _mailService.SendIpConfirmationCodeEmailAsync(user.Email, emailCode.Code);
+
+            return emailCode;
+        }
+
+        private EmailLoginCode GenerateEmailCode(DeviceInfo device, string ip, bool remember, Guid? userId, string? email)
         {
             int codeInt;
             using (var rng = RandomNumberGenerator.Create())
@@ -39,9 +59,10 @@ namespace MatHelper.BLL.Services
             var code = codeInt.ToString();
             var sessionKey = Convert.ToBase64String(RandomNumberGenerator.GetBytes(16));
 
-            var emailCode = new EmailLoginCode
+            return new EmailLoginCode
             {
-                UserId = user.Id,
+                UserId = userId,
+                Email = email,
                 Code = code,
                 SessionKey = sessionKey,
                 IpAddress = ip,
@@ -51,51 +72,13 @@ namespace MatHelper.BLL.Services
                 Expiration = DateTime.UtcNow.AddMinutes(15),
                 IsUsed = false
             };
-
-            await _emailLoginCodeRepository.AddCodeAsync(emailCode);
-            await _mailService.SendIpConfirmationCodeEmailAsync(user.Email, code);
-
-            return emailCode;
         }
 
-        public Task<EmailConfirmationToken> CreateEmailConfirmationTokenAsync(User user)
-        {
-            var token = new EmailConfirmationToken
-            {
-                Token = Guid.NewGuid().ToString(),
-                UserId = user.Id,
-                ExpirationDate = DateTime.UtcNow.AddHours(EmailConfirmTokenLifetimeHours),
-                IsUsed = false,
-                User = user,
-            };
-
-            return Task.FromResult(token);
-        }
-
-        public async Task<ConfirmTokenResult> ConfirmEmailAsync(string token)
+        public async Task<ConfirmTokenResult> ConfirmEmailAsync(string email, string code)
         {
             try
             {
-                var (result, user) = await _emailConfirmationRepository.ConfirmUserByTokenAsync(token);
-
-                if (result == ConfirmTokenResult.TokenExpired && user is not null)
-                {
-                    var newToken = Guid.NewGuid().ToString();
-
-                    var newEmailToken = new EmailConfirmationToken
-                    {
-                        Token = newToken,
-                        UserId = user.Id,
-                        ExpirationDate = DateTime.UtcNow.AddHours(EmailConfirmTokenLifetimeHours),
-                        IsUsed = false,
-                        User = user,
-                    };
-
-                    await _emailConfirmationRepository.AddEmailConfirmationTokenAsync(newEmailToken);
-                    await _emailConfirmationRepository.SaveChangesAsync();
-
-                    await _mailService.SendConfirmationEmailAsync(user.Email, newToken);
-                }
+                var result = await _emailLoginCodeRepository.ConfirmByEmailAndCodeAsync(email, code);
 
                 return result;
             }

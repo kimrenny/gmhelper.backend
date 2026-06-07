@@ -7,8 +7,8 @@ namespace MatHelper.BLL.Interfaces
 {
     public interface IEmailAuthService
     {
+        Task<EmailLoginCode> CreateEmailRegisterCodeAsync(RegisterRequestDto dto, DeviceInfo device, string ip);
         Task<EmailLoginCode> CreateEmailLoginCodeAsync(User user, DeviceInfo device, string ip, bool remember);
-        Task<EmailConfirmationToken> CreateEmailConfirmationTokenAsync(User user);
-        Task<ConfirmTokenResult> ConfirmEmailAsync(string token);
+        Task<ConfirmTokenResult> ConfirmEmailAsync(string email, string code);
     }
 }

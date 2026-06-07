@@ -12,16 +12,13 @@ namespace MatHelper.BLL.Services
     {
         private readonly ITokenGeneratorService _tokenGeneratorService;
         private readonly IUserRepository _userRepository;
-        private readonly IEmailConfirmationRepository _emailConfirmationRepository;
 
         public RegistrationService(
             ITokenGeneratorService tokenGeneratorService,
-            IUserRepository userRepository,
-            IEmailConfirmationRepository emailConfirmationRepository)
+            IUserRepository userRepository)
         {
             _tokenGeneratorService = tokenGeneratorService;
             _userRepository = userRepository;
-            _emailConfirmationRepository = emailConfirmationRepository;
         }
 
         public async Task EnsureEmailAndUsernameUniqueAsync(string email, string username)
@@ -30,25 +27,7 @@ namespace MatHelper.BLL.Services
 
             if (existingUserByEmail != null)
             {
-                if (!existingUserByEmail.IsActive)
-                {
-                    var existingToken = await _emailConfirmationRepository
-                        .GetTokenByUserIdAsync(existingUserByEmail.Id);
-
-                    if (existingToken != null && existingToken.ExpirationDate > DateTime.UtcNow)
-                    {
-                        throw new InvalidOperationException("The account awaits confirmation. Follow the link in the email.");
-                    }
-                    else
-                    {
-                        await _userRepository.DeleteUserAsync(existingUserByEmail);
-                        _userRepository.Detach(existingUserByEmail);
-                    }
-                }
-                else
-                {
-                    throw new InvalidOperationException("Email is already used by another user.");
-                }
+                throw new InvalidOperationException("Email is already used by another user.");
             }
 
             var existingUserByUsername = await _userRepository.GetUserByUsernameAsync(username);
@@ -70,7 +49,7 @@ namespace MatHelper.BLL.Services
                 PasswordHash = passwordHash,
                 Avatar = null,
                 Role = "User",
-                IsActive = false,
+                IsActive = true,
             };
 
             return Task.FromResult(user);

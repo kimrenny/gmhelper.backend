@@ -43,7 +43,7 @@ namespace MatHelper.Tests.BLL
             Environment.SetEnvironmentVariable("SMTP__From", null);
 
             await Assert.ThrowsAsync<InvalidOperationException>(() =>
-                _service.SendConfirmationEmailAsync("test@test.com", "token123"));
+                _service.SendConfirmationEmailAsync("test@test.com"));
         }
 
         [Fact]
@@ -56,7 +56,7 @@ namespace MatHelper.Tests.BLL
             Environment.SetEnvironmentVariable("SMTP__From", "noreply@test.com");
 
             await Assert.ThrowsAsync<InvalidOperationException>(() =>
-                _service.SendConfirmationEmailAsync("test@test.com", "token123"));
+                _service.SendConfirmationEmailAsync("test@test.com"));
         }
 
         [Fact]

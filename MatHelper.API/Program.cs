@@ -140,7 +140,6 @@ builder.Services.AddScoped<IUserMapper, UserMapper>();
 builder.Services.AddScoped<ICaptchaValidationService, CaptchaValidationService>();
 builder.Services.AddScoped<IErrorLogRepository, ErrorLogRepository>();
 builder.Services.AddScoped<IUserRepository, UserRepository>();
-builder.Services.AddScoped<IEmailConfirmationRepository, EmailConfirmationRepository>();
 builder.Services.AddScoped<IEmailLoginCodeRepository, EmailLoginCodeRepository>();
 builder.Services.AddScoped<ILoginTokenRepository, LoginTokenRepository>();
 builder.Services.AddScoped<IPasswordRecoveryRepository, PasswordRecoveryRepository>();

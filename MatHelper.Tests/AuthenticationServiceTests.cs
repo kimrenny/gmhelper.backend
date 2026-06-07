@@ -14,7 +14,6 @@ namespace MatHelper.Tests
         private readonly Mock<IUserRepository> _userRepoMock = new();
         private readonly Mock<IAppTwoFactorSessionRepository> _twoFactorSessionRepoMock = new();
         private readonly Mock<ITwoFactorService> _twoFactorMock = new();
-        private readonly Mock<IEmailConfirmationRepository> _emailConfirmRepoMock = new();
         private readonly Mock<IEmailLoginCodeRepository> _emailLoginCodeRepoMock = new();
         private readonly Mock<IAuthLogRepository> _authLogRepoMock = new();
         private readonly Mock<IMailService> _mailServiceMock = new();
@@ -34,7 +33,6 @@ namespace MatHelper.Tests
             _userRepoMock.Object,
             _twoFactorSessionRepoMock.Object,
             _twoFactorMock.Object,
-            _emailConfirmRepoMock.Object,
             _emailLoginCodeRepoMock.Object,
             _authLogRepoMock.Object,
             _mailServiceMock.Object,
@@ -55,42 +53,78 @@ namespace MatHelper.Tests
         public async Task RegisterUserAsync_ShouldThrow_WhenEmailIsEmpty()
         {
             var service = CreateService();
-            var userDto = new UserDto { Email = "", UserName = "test", Password = "pass", CaptchaToken = "token" };
-            await Assert.ThrowsAsync<ArgumentException>(() => service.RegisterUserAsync(userDto, new DeviceInfo(), "127.0.0.1"));
+
+            var userDto = new UserDto
+            {
+                Email = "",
+                UserName = "test",
+                Password = "pass",
+                CaptchaToken = "token",
+                Token = ""
+            };
+
+            await Assert.ThrowsAsync<ArgumentException>(() =>
+                service.RegisterUserAsync(userDto, new DeviceInfo(), "127.0.0.1"));
         }
 
         [Fact]
         public async Task RegisterUserAsync_ShouldThrow_WhenUsernameIsEmpty()
         {
             var service = CreateService();
-            var userDto = new UserDto { Email = "test@test.com", UserName = "", Password = "pass", CaptchaToken = "token" };
-            await Assert.ThrowsAsync<ArgumentException>(() => service.RegisterUserAsync(userDto, new DeviceInfo(), "127.0.0.1"));
+
+            var userDto = new UserDto
+            {
+                Email = "test@test.com",
+                UserName = "",
+                Password = "pass",
+                CaptchaToken = "token",
+                Token = ""
+            };
+
+            await Assert.ThrowsAsync<ArgumentException>(() =>
+                service.RegisterUserAsync(userDto, new DeviceInfo(), "127.0.0.1"));
         }
 
         [Fact]
         public async Task SendRecoverPasswordLinkAsync_ShouldCallRecoveryService()
         {
             var service = CreateService();
+
             var email = "test@test.com";
-            _recoveryServiceMock.Setup(x => x.SendRecoveryEmailAsync(email)).ReturnsAsync(true);
+
+            _recoveryServiceMock
+                .Setup(x => x.SendRecoveryEmailAsync(email))
+                .ReturnsAsync(true);
 
             var result = await service.SendRecoverPasswordLinkAsync(email);
 
             Assert.True(result);
-            _recoveryServiceMock.Verify(x => x.SendRecoveryEmailAsync(email), Times.Once);
+
+            _recoveryServiceMock.Verify(
+                x => x.SendRecoveryEmailAsync(email),
+                Times.Once);
         }
 
         [Fact]
         public async Task RecoverPassword_ShouldIncrementCache_WhenSuccess()
         {
             var service = CreateService();
-            _recoveryServiceMock.Setup(x => x.ResetPasswordAsync("token", "pass")).ReturnsAsync(RecoverPasswordResult.Success);
+
+            _recoveryServiceMock
+                .Setup(x => x.ResetPasswordAsync("token", "pass"))
+                .ReturnsAsync(RecoverPasswordResult.Success);
 
             var result = await service.RecoverPassword("token", "pass");
 
             Assert.Equal(RecoverPasswordResult.Success, result);
-            _cacheMock.Verify(x => x.IncrementVersionAsync("tokens:admin:version"), Times.Once);
-            _cacheMock.Verify(x => x.IncrementVersionAsync("tokens:dashboard"), Times.Once);
+
+            _cacheMock.Verify(
+                x => x.IncrementVersionAsync("tokens:admin:version"),
+                Times.Once);
+
+            _cacheMock.Verify(
+                x => x.IncrementVersionAsync("tokens:dashboard"),
+                Times.Once);
         }
     }
 }

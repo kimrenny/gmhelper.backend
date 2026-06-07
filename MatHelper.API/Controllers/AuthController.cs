@@ -30,22 +30,13 @@ namespace MatHelper.API.Controllers
             _captchaValidationService = captchaValidationService;
         }
 
-        [HttpPost("register")]
-        public async Task<IActionResult> Register([FromBody] UserDto userDto)
+        [HttpPost("register/code")]
+        public async Task<IActionResult> InitRegister([FromBody] RegisterRequestDto userDto)
         {
             if(userDto == null)
             {
-                _logger.LogError("Received null userDto.");
                 return BadRequest(ApiResponse<string>.Fail("Invalid data."));
             }
-
-            if (string.IsNullOrWhiteSpace(userDto.Password))
-            {
-                _logger.LogError("Password cannot be null.");
-                return BadRequest(ApiResponse<string>.Fail("Password cannot be null or empty."));
-            }
-
-            _logger.LogInformation("Register attempt for user: {Email}", userDto.Email);
 
             if (!await _captchaValidationService.ValidateCaptchaAsync(userDto.CaptchaToken))
             {
@@ -59,16 +50,13 @@ namespace MatHelper.API.Controllers
 
                 if(ipAddress == null)
                 {
-                    _logger.LogWarning("Failed to retrieve IP address for user: {Email}", userDto.Email);
                     return BadRequest(ApiResponse<string>.Fail("Unable to determine IP address."));
                 }
 
-                var result = await _authenticationService.RegisterUserAsync(userDto, deviceInfo, ipAddress);
-                if (result)
+                var emailCode = await _authenticationService.InitRegisterUserAsync(userDto, deviceInfo, ipAddress);
+                if (emailCode != null)
                 {
-                    _logger.LogInformation("Register successful for user: {Email}", userDto.Email);
-
-                    return Ok(ApiResponse<string>.Ok("Register successful. Please check your email for confirmation."));
+                    return Ok(ApiResponse<string>.Ok("Verification code sent to email."));
                 }
             }
             catch(InvalidOperationException ex)
@@ -96,38 +84,63 @@ namespace MatHelper.API.Controllers
             return BadRequest(ApiResponse<string>.Fail("Unknown error occured during registration."));
         }
 
-        [HttpPost("email/confirm")]
-        public async Task<IActionResult> ConfirmEmail([FromBody] ConfirmEmailDto dto)
+        [HttpPost("register")]
+        public async Task<IActionResult> Register([FromBody] UserDto userDto)
         {
-            if (!await _captchaValidationService.ValidateCaptchaAsync(dto.CaptchaToken))
+            if (userDto == null)
             {
-                _logger.LogWarning("Invalid CAPTCHA token for confirmation token: {Token}", dto.Token);
+                return BadRequest(ApiResponse<string>.Fail("Invalid data."));
+            }
+
+            if (userDto.Token == null)
+            {
+                return BadRequest(ApiResponse<string>.Fail("Verification token is required."));
+            }
+
+            if (!await _captchaValidationService.ValidateCaptchaAsync(userDto.CaptchaToken))
+            {
+                _logger.LogWarning("Invalid CAPTCHA token for user: {Email}", userDto.Email);
                 return BadRequest(ApiResponse<string>.Fail("Invalid CAPTCHA token."));
             }
 
             try
             {
-                var result = await _authenticationService.ConfirmEmailAsync(dto.Token);
+                var (deviceInfo, ipAddress) = _infoService.GetRequestInfo(HttpContext);
 
-                return result switch
+                if (ipAddress == null)
                 {
-                    ConfirmTokenResult.Success => Ok(ApiResponse<string>.Ok("Email confirmed successfully.")),
-                    ConfirmTokenResult.TokenNotFound => BadRequest(ApiResponse<string>.Fail("Invalid confirmation token.")),
-                    ConfirmTokenResult.TokenUsed => BadRequest(ApiResponse<string>.Fail("This confirmation link has already been used.")),
-                    ConfirmTokenResult.TokenExpired => BadRequest(ApiResponse<string>.Fail("Token expired. A new confirmation link has been sent to your email.")),
-                    _ => StatusCode(500, ApiResponse<string>.Fail("Unknown error occurred."))
-                };
+                    return BadRequest(ApiResponse<string>.Fail("Unable to determine IP address."));
+                }
+
+                var result = await _authenticationService.RegisterUserAsync(userDto, deviceInfo, ipAddress);
+                if (result == ConfirmTokenResult.Success)
+                {
+                    return Ok(ApiResponse<string>.Ok("Register successful."));
+                }
             }
-            catch(InvalidDataException ex)
+            catch (InvalidOperationException ex)
             {
-                _logger.LogWarning($"Invalid or expired token error occured: {ex.Message}");
-                return BadRequest(ApiResponse<string>.Fail("Invalid or expired token."));
+                if (ex.Message == "Violation of service rules. All user accounts have been blocked.")
+                {
+                    _logger.LogWarning("Register failed for user: {Email} due to violation of service rules.", userDto.Email);
+                    return BadRequest(ApiResponse<string>.Fail("Violation of service rules. All user accounts have been blocked."));
+                }
+                else if (ex.Message == "The account awaits confirmation. Follow the link in the email.")
+                {
+                    _logger.LogWarning("User account: {Email} expects confirmation by email.", userDto.Email);
+                    return BadRequest(ApiResponse<string>.Fail("The account awaits confirmation. Follow the link in the email."));
+                }
+
+                _logger.LogWarning("Register failed for user: {Email} due to error: {Error}", userDto.Email, ex.Message);
+                return BadRequest(ApiResponse<string>.Fail(ex.Message));
             }
             catch (Exception ex)
             {
-                _logger.LogWarning($"Email confirmation failed: {ex.Message}");
-                return StatusCode(500, ApiResponse<string>.Fail("An unexpected error occured."));
+                _logger.LogError("Register failed for user: {Email} due to error: {Error}", userDto.Email, ex.Message);
+                return BadRequest(ApiResponse<string>.Fail(ex.Message));
             }
+
+            return BadRequest(ApiResponse<string>.Fail("Unknown error occured during registration."));
         }
 
         [HttpPost("login")]

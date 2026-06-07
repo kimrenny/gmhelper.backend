@@ -13,7 +13,6 @@ namespace MatHelper.BLL.Services
         private readonly IUserRepository _userRepository;
         private readonly IAppTwoFactorSessionRepository _twoFactorSessionRepository;
         private readonly ITwoFactorService _twoFactorService;
-        private readonly IEmailConfirmationRepository _emailConfirmationRepository;
         private readonly IEmailLoginCodeRepository _emailLoginCodeRepository;
         private readonly IAuthLogRepository _authLogRepository;
         private readonly IMailService _mailService;
@@ -34,12 +33,11 @@ namespace MatHelper.BLL.Services
         private const string TokensVersionKey = "tokens:admin:version";
         private const string TokensDashboardCacheKey = "tokens:dashboard";
 
-        public AuthenticationService(IUserRepository userRepository, IAppTwoFactorSessionRepository appTwoFactorSessionRepository, ITwoFactorService twoFactorService, IEmailConfirmationRepository emailConfirmationRepository, IEmailLoginCodeRepository emailLoginCodeRepository, IAuthLogRepository authLogRepository, IMailService mailService, ISecurityService securityService, ILoginAttemptService loginAttemptService, IRegistrationService registrationService, ISecurityPolicyService securityPolicy, IEmailAuthService emailAuthService, ILoginService loginService, IRecoveryService recoveryService, ITwoFactorAuthService twoFactorAuthService, ITokenService tokenService, ICacheService cache, ILogger<AuthenticationService> logger)
+        public AuthenticationService(IUserRepository userRepository, IAppTwoFactorSessionRepository appTwoFactorSessionRepository, ITwoFactorService twoFactorService, IEmailLoginCodeRepository emailLoginCodeRepository, IAuthLogRepository authLogRepository, IMailService mailService, ISecurityService securityService, ILoginAttemptService loginAttemptService, IRegistrationService registrationService, ISecurityPolicyService securityPolicy, IEmailAuthService emailAuthService, ILoginService loginService, IRecoveryService recoveryService, ITwoFactorAuthService twoFactorAuthService, ITokenService tokenService, ICacheService cache, ILogger<AuthenticationService> logger)
         {
             _userRepository = userRepository;
             _twoFactorSessionRepository = appTwoFactorSessionRepository;
             _twoFactorService = twoFactorService;
-            _emailConfirmationRepository = emailConfirmationRepository;
             _emailLoginCodeRepository = emailLoginCodeRepository;
             _authLogRepository = authLogRepository;
             _mailService = mailService;
@@ -56,21 +54,60 @@ namespace MatHelper.BLL.Services
             _logger = logger;
         }
 
-        public async Task<bool> RegisterUserAsync(UserDto userDto, DeviceInfo deviceInfo, string ipAddress)
+        public async Task<EmailLoginCode> InitRegisterUserAsync(RegisterRequestDto userDto, DeviceInfo deviceInfo, string ipAddress)
         {
             if (string.IsNullOrWhiteSpace(userDto.Email))
             {
-                _logger.LogError("Email cannot be null or empty.");
                 throw new ArgumentException("Email cannot be null or empty.");
             }
             if (string.IsNullOrWhiteSpace(userDto.UserName))
             {
-                _logger.LogError("Username cannot be null or empty.");
                 throw new ArgumentException("Username cannot be null or empty.");
             }
             if (string.IsNullOrWhiteSpace(ipAddress))
             {
-                _logger.LogError("IP Address cannot be null or empty.");
+                throw new ArgumentException("IP Address cannot be null or empty.");
+            }
+
+            try
+            {
+                _mailService.ValidateEmailFormatAsync(userDto.Email);
+
+                await _securityPolicy.EnforceRegistrationIpLimitAsync(ipAddress);
+
+                await _registrationService.EnsureEmailAndUsernameUniqueAsync(userDto.Email, userDto.UserName);
+
+                var emailCode = await _emailAuthService.CreateEmailRegisterCodeAsync(userDto, deviceInfo, ipAddress);
+
+                return emailCode;
+            }
+            catch(ArgumentException)
+            {
+                throw;
+            }
+            catch(Exception ex)
+            {
+                _logger.LogError(ex, "Unknown error occurred during registration initialization.");
+                throw new Exception("Unknown error occurred during request", ex);
+            }
+        }
+
+        public async Task<ConfirmTokenResult> RegisterUserAsync(UserDto userDto, DeviceInfo deviceInfo, string ipAddress)
+        {
+            var confirmResult = await _emailAuthService.ConfirmEmailAsync(userDto.Email, userDto.Token);
+            if(confirmResult != ConfirmTokenResult.Success)
+                return confirmResult;
+
+            if (string.IsNullOrWhiteSpace(userDto.Email))
+            {
+                throw new ArgumentException("Email cannot be null or empty.");
+            }
+            if (string.IsNullOrWhiteSpace(userDto.UserName))
+            {
+                throw new ArgumentException("Username cannot be null or empty.");
+            }
+            if (string.IsNullOrWhiteSpace(ipAddress))
+            {
                 throw new ArgumentException("IP Address cannot be null or empty.");
             }
 
@@ -85,25 +122,14 @@ namespace MatHelper.BLL.Services
             await _registrationService.CreateInactiveInitialSessionAsync(user, deviceInfo, ipAddress);
 
             await _userRepository.AddUserAsync(user);
-            
-            var emailToken = await _emailAuthService.CreateEmailConfirmationTokenAsync(user);
-
-            await _emailConfirmationRepository.AddEmailConfirmationTokenAsync(emailToken);
-
             await _userRepository.SaveChangesAsync();
-            await _emailConfirmationRepository.SaveChangesAsync();
 
             await _cache.IncrementVersionAsync(UsersVersionKey);
             await _cache.IncrementVersionAsync(AnalyticsVersionKey);
 
-            await _mailService.SendConfirmationEmailAsync(user.Email, emailToken.Token);
+            await _mailService.SendConfirmationEmailAsync(user.Email);
 
-            return true;
-        }
-
-        public async Task<ConfirmTokenResult> ConfirmEmailAsync(string token)
-        {
-            return await _emailAuthService.ConfirmEmailAsync(token);
+            return ConfirmTokenResult.Success;
         }
 
         public async Task<LoginResponse> LoginUserAsync(LoginDto loginDto, DeviceInfo deviceInfo, string ipAddress)
@@ -198,7 +224,10 @@ namespace MatHelper.BLL.Services
             if (emailCode.Code != code)
                 throw new UnauthorizedAccessException("Invalid confirmation code.");
 
-            var user = await _userRepository.GetUserByIdAsync(emailCode.UserId);
+            if (emailCode.UserId == null)
+                throw new UnauthorizedAccessException("This code is not linked to a user.");
+
+            var user = await _userRepository.GetUserByIdAsync(emailCode.UserId.Value);
             if (user == null)
                 throw new UnauthorizedAccessException("User not found.");
 

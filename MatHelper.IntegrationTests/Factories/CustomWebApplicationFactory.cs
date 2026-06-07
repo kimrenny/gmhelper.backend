@@ -80,7 +80,6 @@ public class CustomWebApplicationFactory<TProgram> : WebApplicationFactory<TProg
             services.AddScoped<ICaptchaValidationService, MockCaptchaValidationService>();
             services.AddScoped<IErrorLogRepository, ErrorLogRepository>();
             services.AddScoped<IUserRepository, UserRepository>();
-            services.AddScoped<IEmailConfirmationRepository, EmailConfirmationRepository>();
             services.AddScoped<IEmailLoginCodeRepository, EmailLoginCodeRepository>();
             services.AddScoped<ILoginTokenRepository, LoginTokenRepository>();
             services.AddScoped<IPasswordRecoveryRepository, PasswordRecoveryRepository>();
