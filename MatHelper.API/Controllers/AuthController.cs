@@ -97,12 +97,6 @@ namespace MatHelper.API.Controllers
                 return BadRequest(ApiResponse<string>.Fail("Verification token is required."));
             }
 
-            if (!await _captchaValidationService.ValidateCaptchaAsync(userDto.CaptchaToken))
-            {
-                _logger.LogWarning("Invalid CAPTCHA token for user: {Email}", userDto.Email);
-                return BadRequest(ApiResponse<string>.Fail("Invalid CAPTCHA token."));
-            }
-
             try
             {
                 var (deviceInfo, ipAddress) = _infoService.GetRequestInfo(HttpContext);
