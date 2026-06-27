@@ -135,10 +135,8 @@ namespace MatHelper.API.Controllers
             catch (Exception ex)
             {
                 _logger.LogError("Register failed for user: {Email} due to error: {Error}", userDto.Email, ex.Message);
-                return BadRequest(ApiResponse<string>.Fail(ex.Message));
+                return BadRequest(ApiResponse<string>.Fail("Unknown error occured during registration."));
             }
-
-            return BadRequest(ApiResponse<string>.Fail("Unknown error occured during registration."));
         }
 
         [HttpPost("login")]
