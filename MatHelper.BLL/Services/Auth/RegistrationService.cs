@@ -24,17 +24,11 @@ namespace MatHelper.BLL.Services
         public async Task EnsureEmailAndUsernameUniqueAsync(string email, string username)
         {
             var existingUserByEmail = await _userRepository.GetUserByEmailAsync(email);
-
-            if (existingUserByEmail != null)
-            {
-                throw new InvalidOperationException("Email is already used by another user.");
-            }
-
             var existingUserByUsername = await _userRepository.GetUserByUsernameAsync(username);
 
-            if (existingUserByUsername != null)
+            if (existingUserByEmail != null || existingUserByUsername != null)
             {
-                throw new InvalidOperationException("Username is already used by another user.");
+                throw new InvalidOperationException("The account with the provided email or username already exists.");
             }
         }
 
