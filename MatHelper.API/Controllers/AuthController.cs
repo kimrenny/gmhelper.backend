@@ -111,6 +111,10 @@ namespace MatHelper.API.Controllers
                 {
                     return Ok(ApiResponse<string>.Ok("Register successful."));
                 }
+                else
+                {
+                    return BadRequest(ApiResponse<string>.Fail("Invalid code. Please try again."));
+                }
             }
             catch (InvalidOperationException ex)
             {
@@ -119,10 +123,10 @@ namespace MatHelper.API.Controllers
                     _logger.LogWarning("Register failed for user: {Email} due to violation of service rules.", userDto.Email);
                     return BadRequest(ApiResponse<string>.Fail("Violation of service rules. All user accounts have been blocked."));
                 }
-                else if (ex.Message == "The account awaits confirmation. Follow the link in the email.")
+                else if(ex.Message == "The account with the provided email or username already exists.")
                 {
-                    _logger.LogWarning("User account: {Email} expects confirmation by email.", userDto.Email);
-                    return BadRequest(ApiResponse<string>.Fail("The account awaits confirmation. Follow the link in the email."));
+                    _logger.LogWarning("Register failed for user: {Email} due to duplicate email or username.", userDto.Email);
+                    return BadRequest(ApiResponse<string>.Fail("The account with the provided email or username already exists."));
                 }
 
                 _logger.LogWarning("Register failed for user: {Email} due to error: {Error}", userDto.Email, ex.Message);

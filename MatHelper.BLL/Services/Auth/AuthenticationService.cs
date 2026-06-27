@@ -28,6 +28,7 @@ namespace MatHelper.BLL.Services
         private readonly ICacheService _cache;
         private readonly ILogger<AuthenticationService> _logger;
 
+        private const string RegisterAttemptsKey = "register:attempts";
         private const string UsersVersionKey = "admin:users:version";
         private const string AnalyticsVersionKey = "analytics:version";
         private const string TokensVersionKey = "tokens:admin:version";
@@ -71,6 +72,13 @@ namespace MatHelper.BLL.Services
 
             try
             {
+                var attempts = await _cache.GetAsync<int?>($"{RegisterAttemptsKey}:{userDto.Email}") ?? 0;
+
+                if (attempts >= 3)
+                {
+                    throw new InvalidOperationException("Too many invalid confirmation code attempts. Try again in 1 hour.");
+                }
+
                 _mailService.ValidateEmailFormatAsync(userDto.Email);
 
                 await _securityPolicy.EnforceRegistrationIpLimitAsync(ipAddress);
@@ -80,6 +88,10 @@ namespace MatHelper.BLL.Services
                 var emailCode = await _emailAuthService.CreateEmailRegisterCodeAsync(userDto, deviceInfo, ipAddress);
 
                 return emailCode;
+            }
+            catch (InvalidOperationException)
+            {
+                throw;
             }
             catch(ArgumentException)
             {
@@ -94,9 +106,34 @@ namespace MatHelper.BLL.Services
 
         public async Task<ConfirmTokenResult> RegisterUserAsync(UserDto userDto, DeviceInfo deviceInfo, string ipAddress)
         {
+            var attempts = await _cache.GetAsync<int?>($"{RegisterAttemptsKey}:{userDto.Email}") ?? 0;
+            _logger.LogInformation("Current registration confirmation attempts for {Email}: {Attempts}", userDto.Email, attempts);
+
+            if (attempts >= 3)
+            {
+                throw new InvalidOperationException("Too many invalid confirmation code attempts. Try again in 1 hour.");
+            }
+
             var confirmResult = await _emailAuthService.ConfirmEmailAsync(userDto.Email, userDto.Token);
-            if(confirmResult != ConfirmTokenResult.Success)
+            if (confirmResult != ConfirmTokenResult.Success)
+            {
+                attempts++;
+
+                await _cache.SetAsync(
+                   $"{RegisterAttemptsKey}:{userDto.Email}",
+                   attempts,
+                   TimeSpan.FromHours(1));
+
+                if (attempts >= 3)
+                {
+                    throw new InvalidOperationException(
+                        "Too many invalid confirmation code attempts. Try again in 1 hour.");
+                }
+
                 return confirmResult;
+            }
+
+            await _cache.RemoveAsync($"{RegisterAttemptsKey}:{userDto.Email}");
 
             if (string.IsNullOrWhiteSpace(userDto.Email))
             {
