@@ -94,12 +94,6 @@ namespace MatHelper.BLL.Services
                     .Take(pageSize)
                     .ToListAsync();
 
-                if (reports == null || reports.Count == 0)
-                {
-                    _logger.LogWarning("No notfound reports found in the database.");
-                    throw new InvalidOperationException("No notfound reports found.");
-                }
-
                 var result = new PagedResult<NotFoundReport>
                 {
                     Items = reports,

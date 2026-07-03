@@ -300,10 +300,10 @@ namespace MatHelper.API.Controllers
             try
             {
                 var reports = await _reportService.GetNotFoundReportsAsync(page, pageSize, sortBy, descending);
-                if (reports.Items == null || !reports.Items.Any())
-                {
-                    return NotFound(ApiResponse<string>.Fail("No reports found."));
-                }
+                //if (reports.Items == null || !reports.Items.Any())
+                //{
+                //    return NotFound(ApiResponse<string>.Fail("No reports found."));
+                //}
 
                 return Ok(ApiResponse<PagedResult<NotFoundReport>>.Ok(reports));
             }

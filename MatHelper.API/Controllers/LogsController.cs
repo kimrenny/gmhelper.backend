@@ -54,11 +54,11 @@ namespace MatHelper.API.Controllers
                 if (adminValidation != null) return adminValidation;
 
                 var pagedLogs = await _logService.GetRequestLogs(page, pageSize, sortBy, descending, maxLogDate);
-                if (pagedLogs == null || !pagedLogs.Items.Any())
-                {
-                    _logger.LogError("Requests data not found.");
-                    return NotFound(ApiResponse<string>.Fail("Requests data not found."));
-                }
+                //if (pagedLogs == null || !pagedLogs.Items.Any())
+                //{
+                //    _logger.LogError("Requests data not found.");
+                //    return NotFound(ApiResponse<string>.Fail("Requests data not found."));
+                //}
 
                 return Ok(ApiResponse<PagedResult<RequestLogDetail>>.Ok(pagedLogs));
             }
@@ -78,11 +78,11 @@ namespace MatHelper.API.Controllers
                 if (adminValidation != null) return adminValidation;
 
                 var pagedLogs = await _logService.GetAuthLogs(page, pageSize, sortBy, descending, maxLogDate);
-                if (pagedLogs == null || !pagedLogs.Items.Any())
-                {
-                    _logger.LogError("Auth logs not found.");
-                    return NotFound(ApiResponse<string>.Fail("Auth logs not found."));
-                }
+                //if (pagedLogs == null || !pagedLogs.Items.Any())
+                //{
+                //    _logger.LogError("Auth logs not found.");
+                //    return NotFound(ApiResponse<string>.Fail("Auth logs not found."));
+                //}
 
                 return Ok(ApiResponse<PagedResult<AuthLog>>.Ok(pagedLogs));
             }
@@ -102,11 +102,9 @@ namespace MatHelper.API.Controllers
                 if (adminValidation != null) return adminValidation;
 
                 var pagedLogs = await _logService.GetErrorLogs(page, pageSize, sortBy, descending, maxLogDate);
-                if (pagedLogs == null || !pagedLogs.Items.Any())
-                {
-                    _logger.LogError("Error logs not found.");
-                    return NotFound(ApiResponse<string>.Fail("Error logs not found."));
-                }
+                //if (pagedLogs == null || !pagedLogs.Items.Any())
+                //    return NotFound(ApiResponse<string>.Fail("Error logs not found."));
+                //}
 
                 return Ok(ApiResponse<PagedResult<ErrorLog>>.Ok(pagedLogs));
             }
