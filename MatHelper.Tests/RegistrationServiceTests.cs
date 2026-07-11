@@ -61,7 +61,7 @@ namespace MatHelper.Tests
             var ex = await Assert.ThrowsAsync<InvalidOperationException>(() =>
                 _service.EnsureEmailAndUsernameUniqueAsync("email", "user"));
 
-            Assert.Equal("Email is already used by another user.", ex.Message);
+            Assert.Equal("The account with the provided email or username already exists.", ex.Message);
         }
 
         [Fact]
@@ -78,7 +78,7 @@ namespace MatHelper.Tests
             var ex = await Assert.ThrowsAsync<InvalidOperationException>(() =>
                 _service.EnsureEmailAndUsernameUniqueAsync("email", "user"));
 
-            Assert.Equal("Username is already used by another user.", ex.Message);
+            Assert.Equal("The account with the provided email or username already exists.", ex.Message);
         }
 
         [Fact]
@@ -89,7 +89,6 @@ namespace MatHelper.Tests
                 UserName = "newuser",
                 Email = "new@example.com",
                 Password = "password",
-                CaptchaToken = "captcha",
                 Token = string.Empty
             };
 

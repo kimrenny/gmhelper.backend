@@ -59,7 +59,6 @@ namespace MatHelper.Tests
                 Email = "",
                 UserName = "test",
                 Password = "pass",
-                CaptchaToken = "token",
                 Token = ""
             };
 
@@ -77,7 +76,6 @@ namespace MatHelper.Tests
                 Email = "test@test.com",
                 UserName = "",
                 Password = "pass",
-                CaptchaToken = "token",
                 Token = ""
             };
 

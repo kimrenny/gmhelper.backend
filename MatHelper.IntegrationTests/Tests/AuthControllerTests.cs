@@ -57,7 +57,6 @@ namespace MatHelper.IntegrationTests.Tests
                 Email = email,
                 UserName = initDto.UserName,
                 Password = password,
-                CaptchaToken = "valid-captcha",
                 Token = code
             };
 
