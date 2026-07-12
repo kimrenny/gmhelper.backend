@@ -1,0 +1,233 @@
+{
+  "RequestLimiting": {
+    "Default": {
+      "MaxConcurrentPerIp": 5,
+      "MaxConcurrentApplication": 100,
+      "MaxConcurrentEndpoint": 10
+    },
+    "Endpoints": {
+      "GET:/api/v1/Admin": {
+        "MaxConcurrentPerIp": 5,
+        "MaxConcurrentApplication": 100,
+        "MaxConcurrentEndpoint": 20
+      },
+      "GET:/api/v1/Admin/users": {
+        "MaxConcurrentPerIp": 5,
+        "MaxConcurrentApplication": 100,
+        "MaxConcurrentEndpoint": 20
+      },
+      "PUT:/api/v1/Admin/users/{id}/action": {
+        "MaxConcurrentPerIp": 2,
+        "MaxConcurrentApplication": 100,
+        "MaxConcurrentEndpoint": 5
+      },
+      "GET:/api/v1/Admin/tokens": {
+        "MaxConcurrentPerIp": 5,
+        "MaxConcurrentApplication": 100,
+        "MaxConcurrentEndpoint": 20
+      },
+      "PUT:/api/v1/Admin/tokens/{id}/action": {
+        "MaxConcurrentPerIp": 2,
+        "MaxConcurrentApplication": 100,
+        "MaxConcurrentEndpoint": 5
+      },
+      "GET:/api/v1/Admin/dashboard/registrations": {
+        "MaxConcurrentPerIp": 5,
+        "MaxConcurrentApplication": 100,
+        "MaxConcurrentEndpoint": 20
+      },
+      "GET:/api/v1/Admin/dashboard/tokens": {
+        "MaxConcurrentPerIp": 5,
+        "MaxConcurrentApplication": 100,
+        "MaxConcurrentEndpoint": 20
+      },
+      "GET:/api/v1/Admin/stats/country": {
+        "MaxConcurrentPerIp": 5,
+        "MaxConcurrentApplication": 100,
+        "MaxConcurrentEndpoint": 20
+      },
+      "GET:/api/v1/Admin/stats/roles": {
+        "MaxConcurrentPerIp": 5,
+        "MaxConcurrentApplication": 100,
+        "MaxConcurrentEndpoint": 20
+      },
+      "GET:/api/v1/Admin/stats/blocked": {
+        "MaxConcurrentPerIp": 5,
+        "MaxConcurrentApplication": 100,
+        "MaxConcurrentEndpoint": 20
+      },
+      "GET:/api/v1/Admin/reports/notfound": {
+        "MaxConcurrentPerIp": 5,
+        "MaxConcurrentApplication": 100,
+        "MaxConcurrentEndpoint": 20
+      },
+      "PUT:/api/v1/Admin/reports/{id}/action": {
+        "MaxConcurrentPerIp": 2,
+        "MaxConcurrentApplication": 100,
+        "MaxConcurrentEndpoint": 5
+      },
+      "GET:/api/v1/Admin/settings": {
+        "MaxConcurrentPerIp": 5,
+        "MaxConcurrentApplication": 100,
+        "MaxConcurrentEndpoint": 20
+      },
+      "PATCH:/api/v1/Admin/settings/{section}/{label}": {
+        "MaxConcurrentPerIp": 2,
+        "MaxConcurrentApplication": 100,
+        "MaxConcurrentEndpoint": 5
+      },
+
+      "POST:/api/v1/Auth/register/code": {
+        "MaxConcurrentPerIp": 1,
+        "MaxConcurrentApplication": 100,
+        "MaxConcurrentEndpoint": 10
+      },
+      "POST:/api/v1/Auth/register": {
+        "MaxConcurrentPerIp": 1,
+        "MaxConcurrentApplication": 100,
+        "MaxConcurrentEndpoint": 10
+      },
+      "POST:/api/v1/Auth/login": {
+        "MaxConcurrentPerIp": 2,
+        "MaxConcurrentApplication": 100,
+        "MaxConcurrentEndpoint": 30
+      },
+      "POST:/api/v1/Auth/email/confirm/code": {
+        "MaxConcurrentPerIp": 2,
+        "MaxConcurrentApplication": 100,
+        "MaxConcurrentEndpoint": 15
+      },
+      "POST:/api/v1/Auth/2fa/confirm": {
+        "MaxConcurrentPerIp": 2,
+        "MaxConcurrentApplication": 100,
+        "MaxConcurrentEndpoint": 15
+      },
+      "POST:/api/v1/Auth/password/recover/request": {
+        "MaxConcurrentPerIp": 1,
+        "MaxConcurrentApplication": 100,
+        "MaxConcurrentEndpoint": 10
+      },
+      "POST:/api/v1/Auth/password/recover": {
+        "MaxConcurrentPerIp": 2,
+        "MaxConcurrentApplication": 100,
+        "MaxConcurrentEndpoint": 10
+      },
+      "POST:/api/v1/Auth/token/refresh": {
+        "MaxConcurrentPerIp": 3,
+        "MaxConcurrentApplication": 100,
+        "MaxConcurrentEndpoint": 20
+      },
+      "POST:/api/v1/Auth/logout": {
+        "MaxConcurrentPerIp": 3,
+        "MaxConcurrentApplication": 100,
+        "MaxConcurrentEndpoint": 20
+      },
+
+      "GET:/api/v1/admin/Logs/stats": {
+        "MaxConcurrentPerIp": 5,
+        "MaxConcurrentApplication": 100,
+        "MaxConcurrentEndpoint": 15
+      },
+      "GET:/api/v1/admin/Logs": {
+        "MaxConcurrentPerIp": 5,
+        "MaxConcurrentApplication": 100,
+        "MaxConcurrentEndpoint": 15
+      },
+      "GET:/api/v1/admin/Logs/auth": {
+        "MaxConcurrentPerIp": 5,
+        "MaxConcurrentApplication": 100,
+        "MaxConcurrentEndpoint": 15
+      },
+      "GET:/api/v1/admin/Logs/errors": {
+        "MaxConcurrentPerIp": 5,
+        "MaxConcurrentApplication": 100,
+        "MaxConcurrentEndpoint": 15
+      },
+
+      "PUT:/api/v1/Owner/users/{userId}/role": {
+        "MaxConcurrentPerIp": 1,
+        "MaxConcurrentApplication": 100,
+        "MaxConcurrentEndpoint": 3
+      },
+
+      "POST:/api/v1/Report/notfound": {
+        "MaxConcurrentPerIp": 2,
+        "MaxConcurrentApplication": 100,
+        "MaxConcurrentEndpoint": 10
+      },
+
+      "POST:/api/v1/Security/2fa": {
+        "MaxConcurrentPerIp": 2,
+        "MaxConcurrentApplication": 100,
+        "MaxConcurrentEndpoint": 10
+      },
+      "PATCH:/api/v1/Security/2fa": {
+        "MaxConcurrentPerIp": 2,
+        "MaxConcurrentApplication": 100,
+        "MaxConcurrentEndpoint": 10
+      },
+      "DELETE:/api/v1/Security/2fa": {
+        "MaxConcurrentPerIp": 2,
+        "MaxConcurrentApplication": 100,
+        "MaxConcurrentEndpoint": 10
+      },
+      "POST:/api/v1/Security/2fa/verify": {
+        "MaxConcurrentPerIp": 2,
+        "MaxConcurrentApplication": 100,
+        "MaxConcurrentEndpoint": 10
+      },
+
+      "POST:/api/v1/Tasks/{taskType}": {
+        "MaxConcurrentPerIp": 2,
+        "MaxConcurrentApplication": 100,
+        "MaxConcurrentEndpoint": 5
+      },
+      "GET:/api/v1/Tasks/{taskType}/{id}": {
+        "MaxConcurrentPerIp": 5,
+        "MaxConcurrentApplication": 100,
+        "MaxConcurrentEndpoint": 30
+      },
+      "POST:/api/v1/Tasks/{taskType}/{id}/rating": {
+        "MaxConcurrentPerIp": 3,
+        "MaxConcurrentApplication": 100,
+        "MaxConcurrentEndpoint": 15
+      },
+
+      "POST:/api/v1/User/avatar": {
+        "MaxConcurrentPerIp": 2,
+        "MaxConcurrentApplication": 100,
+        "MaxConcurrentEndpoint": 10
+      },
+      "GET:/api/v1/User/avatar": {
+        "MaxConcurrentPerIp": 5,
+        "MaxConcurrentApplication": 100,
+        "MaxConcurrentEndpoint": 30
+      },
+      "GET:/api/v1/User/details": {
+        "MaxConcurrentPerIp": 5,
+        "MaxConcurrentApplication": 100,
+        "MaxConcurrentEndpoint": 30
+      },
+      "GET:/api/v1/User/devices": {
+        "MaxConcurrentPerIp": 5,
+        "MaxConcurrentApplication": 100,
+        "MaxConcurrentEndpoint": 30
+      },
+      "PATCH:/api/v1/User/profile": {
+        "MaxConcurrentPerIp": 2,
+        "MaxConcurrentApplication": 100,
+        "MaxConcurrentEndpoint": 10
+      },
+      "PATCH:/api/v1/User/profile/language": {
+        "MaxConcurrentPerIp": 2,
+        "MaxConcurrentApplication": 100,
+        "MaxConcurrentEndpoint": 10
+      },
+      "PATCH:/api/v1/User/devices/deactivate": {
+        "MaxConcurrentPerIp": 2,
+        "MaxConcurrentApplication": 100,
+        "MaxConcurrentEndpoint": 10
+      }
+    }
+  }
+}
