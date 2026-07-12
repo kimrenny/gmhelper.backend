@@ -26,6 +26,11 @@ builder.WebHost.ConfigureKestrel(options =>
 
 Env.Load("../.env");
 
+builder.Configuration.AddJsonFile(
+    "Configuration/security.json",
+    optional: false,
+    reloadOnChange: false);
+
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddControllers(options =>
 {
@@ -53,6 +58,9 @@ builder.Services.AddCors(options =>
 
 builder.Services.Configure<DbOptions>(
     builder.Configuration.GetSection("DbOptions"));
+
+builder.Services.Configure<RequestLimitingOptions>(
+    builder.Configuration.GetSection("RequestLimiting"));
 
 builder.Services.AddDbContext<AppDbContext>((provider, ctx) =>
 {
@@ -109,6 +117,7 @@ builder.Services.AddStackExchangeRedisCache(options =>
 
 builder.Services.AddSingleton(jwtOptions);
 builder.Services.AddSingleton<IHttpContextAccessor, HttpContextAccessor>();
+builder.Services.AddSingleton<IRequestLimitingService, RequestLimitingService>();
 
 builder.Services.AddScoped<IAuthenticationService, AuthenticationService>();
 builder.Services.AddScoped<IRegistrationService, RegistrationService>();
@@ -216,6 +225,9 @@ app.UseForwardedHeaders(new ForwardedHeadersOptions
     ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto
 });
 
+app.UseRouting();
+
+app.UseMiddleware<RequestLimitingMiddleware>();
 app.UseMiddleware<ErrorLoggingMiddleware>();
 
 app.Use(async (context, next) =>
