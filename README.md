@@ -181,3 +181,4 @@ Swagger UI is available after running the backend. Open the following link to ex
 - Make sure Docker and Docker Compose are installed if running with containers.
 - All API endpoints are fully documented in Swagger; no additional endpoint documentation is needed in this README.
 - Code comments are included only for non-obvious logic. Method and variable names are self-explanatory.
+- Concurrency limiting settings are configured in `MatHelper.API/Configuration/security.json`. These values control the maximum number of simultaneously executing requests per IP, per endpoint, and for the whole application. You can modify these values according to your server resources and expected workload if needed.
