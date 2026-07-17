@@ -40,6 +40,9 @@ CAPTCHA_SecretKey=
 ConnectionStrings__DefaultConnection=
 ConnectionStrings__DevConnection=
 
+#Redis
+ConnectionStrings__Redis=
+
 #Development/Production mode
 ASPNETCORE_ENVIRONMENT=
 
@@ -55,6 +58,7 @@ JWT_AUDIENCE=
 
 #CORS
 CORS_ORIGINS=
+TRUSTED_PROXIES=
 ```
 
 > Fill in the values according to your environment. This is required for the backend to run correctly.
@@ -75,6 +79,9 @@ CAPTCHA_SecretKey=
 ConnectionStrings__DefaultConnection= # use a dedicated test database!
 ConnectionStrings__DevConnection=
 
+#Redis
+ConnectionStrings__Redis=
+
 #Development/Production mode
 ASPNETCORE_ENVIRONMENT=
 
@@ -90,6 +97,7 @@ JWT_AUDIENCE=
 
 #CORS
 CORS_ORIGINS=
+TRUSTED_PROXIES=
 ```
 
 > This ensures tests run in an isolated environment without affecting your development or production database.

@@ -16,6 +16,7 @@ using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using StackExchange.Redis;
 using SolutionHub;
+using System.Net;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -39,17 +40,16 @@ builder.Services.AddControllers(options =>
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
-/*
 var corsOrigins = Environment.GetEnvironmentVariable("CORS_ORIGINS")?
-    .Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
-*/
+    .Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+    ?? throw new InvalidOperationException("CORS_ORIGINS is not configured.");
 
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowFrontend", policy =>
     {
         policy
-              .SetIsOriginAllowed(_ => true)
+              .WithOrigins(corsOrigins)
               .AllowAnyMethod()
               .AllowAnyHeader()
               .AllowCredentials();
@@ -104,8 +104,20 @@ var jwtOptions = new JwtOptions
 
 builder.Services.AddStackExchangeRedisCache(options =>
 {
-    var redisConnection = builder.Configuration.GetConnectionString("Redis") ?? "localhost:6379";
+    var isTestEnv = builder.Environment.IsEnvironment("IntegrationTest");
+    var isDev = builder.Environment.IsDevelopment();
+
+    var redisConnection = builder.Configuration.GetConnectionString("Redis")
+    ?? (isDev || isTestEnv
+        ? "localhost:6379"
+        : throw new InvalidOperationException("Redis connection string is required in production."));
+
     var config = ConfigurationOptions.Parse(redisConnection);
+
+    if (!isDev && !isTestEnv && string.IsNullOrEmpty(config.Password))
+    {
+        throw new InvalidOperationException("Redis password is required outside Development.");
+    }
 
     config.AbortOnConnectFail = true;
     config.ConnectTimeout = 500;
@@ -220,10 +232,20 @@ if (app.Environment.IsDevelopment())
 
 app.UseHsts();
 
-app.UseForwardedHeaders(new ForwardedHeadersOptions
+var forwardedHeadersOptions = new ForwardedHeadersOptions
 {
     ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto
-});
+};
+forwardedHeadersOptions.KnownProxies.Clear();
+forwardedHeadersOptions.KnownNetworks.Clear();
+foreach (var proxyIp in (Environment.GetEnvironmentVariable("TRUSTED_PROXIES") ?? "")
+             .Split(';', StringSplitOptions.RemoveEmptyEntries))
+{
+    if (IPAddress.TryParse(proxyIp, out var ip))
+        forwardedHeadersOptions.KnownProxies.Add(ip);
+}
+
+app.UseForwardedHeaders(forwardedHeadersOptions);
 
 app.UseRouting();
 
@@ -237,12 +259,14 @@ app.Use(async (context, next) =>
 
     var remoteIp = context.Connection.RemoteIpAddress?.ToString();
 
-    if (context.Request.Headers.TryGetValue("X-Forwarded-For", out var forwardedFor))
-    {
-        remoteIp = forwardedFor.FirstOrDefault()?.Split(',').FirstOrDefault()?.Trim() ?? remoteIp;
-    }
+    var sensitiveHeaders = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+    { "Authorization", "Cookie", "Set-Cookie", "X-Api-Key" };
 
-    var headers = context.Request.Headers.Select(h => $"{h.Key}: {h.Value}").ToList();
+    var headers = context.Request.Headers
+        .Select(h => sensitiveHeaders.Contains(h.Key)
+            ? $"{h.Key}: [REDACTED]"
+            : $"{h.Key}: {h.Value}")
+        .ToList();
 
     context.Response.Headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains; preload";
     context.Response.Headers["X-Content-Type-Options"] = "nosniff";

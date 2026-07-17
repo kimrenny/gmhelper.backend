@@ -5,6 +5,7 @@ using Newtonsoft.Json.Linq;
 using System.Security.Cryptography;
 using Konscious.Security.Cryptography;
 using System.Text;
+using System.Net;
 
 namespace MatHelper.BLL.Services
 {
@@ -117,13 +118,19 @@ namespace MatHelper.BLL.Services
         {
             try
             {
-                if(ipAddress == "127.0.0.1")
+                if(!IPAddress.TryParse(ipAddress, out var parsedIp))
+                {
+                    _logger.LogWarning($"Invalid IP address format received: {ipAddress}");
+                    return "Unknown";
+                }
+
+                if(IPAddress.IsLoopback(parsedIp))
                 {
                     return "localhost";
                 }
 
                 using var client = new HttpClient();
-                var url = $"{GeoApiUrl}{ipAddress}";
+                var url = $"{GeoApiUrl}{Uri.EscapeDataString(parsedIp.ToString())}";
                 var response = await client.GetStringAsync(url);
 
                 var jsonArray = JArray.Parse(response);
